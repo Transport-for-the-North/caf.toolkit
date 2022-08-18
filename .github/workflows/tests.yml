@@ -31,7 +31,7 @@ jobs:
             pip install pytest pytest-md pytest-emoji
             pip install -r requirements.txt
       - name: Run Pytest
-      - uses: pavelzw/pytest-action@v2
+        uses: pavelzw/pytest-action@v2
         with:
           emoji: true
           verbose: false
