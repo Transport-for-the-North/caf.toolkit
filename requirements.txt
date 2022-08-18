@@ -14,3 +14,6 @@ mypy_extensions>=0.4.3
 pydocstyle>=6.1.1
 pylint>=2.14.5
 
+# Testing
+pytest~=7.1.2
+
