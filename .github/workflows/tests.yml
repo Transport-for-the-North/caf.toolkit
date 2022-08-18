@@ -3,14 +3,14 @@ name: Run Python tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   build:
-    name: Run tests
+    name: Run Pytest
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,7 +30,7 @@ jobs:
             python -m pip install --upgrade pip
             pip install pytest pytest-md pytest-emoji
             pip install -r requirements.txt
-      - name: Run Pytest
+      - name: Run tests
         uses: pavelzw/pytest-action@v2
         with:
           emoji: true
