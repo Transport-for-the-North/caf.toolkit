@@ -24,6 +24,7 @@ from typing import Any
 
 # # # CLASSES # # #
 
+
 # # # FUNCTIONS # # #
 def list_safe_remove(
     lst: list[Any],

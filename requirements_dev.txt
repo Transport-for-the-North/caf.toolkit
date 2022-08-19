@@ -1,0 +1,16 @@
+# Packaging controls
+setuptools>=61.2.0
+versioneer>=0.22
+packaging>=21.3
+
+# package linters
+black>=22.6.0
+mypy>=0.910
+mypy_extensions>=0.4.3
+pydocstyle>=6.1.1
+pylint>=2.14.5
+
+# Testing
+pytest~=7.1.2
+pytest-cov~=2.12.1
+tox~=3.24.3

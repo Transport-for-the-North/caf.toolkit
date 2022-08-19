@@ -23,7 +23,11 @@ max-attributes = 15
 max-statements = 100
 
 [tool.mypy]
+mypy_path = "src"
 ignore_missing_imports = true
 
 [tool.pydocstyle]
 convention = "numpy"
+
+[tool.pytest.ini_options]
+addopts = "--cov=caf.toolkit"
