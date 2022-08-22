@@ -9,9 +9,8 @@
 <a href="https://google.github.io/styleguide/pyguide.html"><img alt="code format: Google Style Guide" src="https://img.shields.io/badge/code%20style-Google%20Style%20Guide-blue"></a>
 <a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg"></a>
 </p>
-<p align="center">
+
 ![Tests](https://github.com/Transport-for-the-North/caf.toolkit/blob/main/.github/workflows/tests.yml/badge.svg)
-</p>
 
 The Common Analytical Framework (CAF) Toolkit is a toolkit of transport
 planning and appraisal functionalities. It's the beginning of a project to make
