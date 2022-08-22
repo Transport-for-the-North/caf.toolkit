@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on: 18/08/2022
-Updated on:
+"""A toolbox of generic useful functionality.
 
-Original author: Ben Taylor
-Last update made by:
-Other updates made by:
-
-File purpose:
-
+Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
 from typing import Any

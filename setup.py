@@ -1,3 +1,4 @@
+"""Setup file."""
 from setuptools import setup
 import versioneer
 

@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on: 15/08/2022
-Updated on:
-
-Original author: Ben Taylor
-Last update made by:
-Other updates made by:
-
-File purpose:
-
-"""
+"""Helper functions for handling pandas DataFrames."""
 # Built-Ins
 import functools
 
@@ -148,7 +138,7 @@ def reindex_and_groupby(
     **kwargs,
 ) -> pd.DataFrame:
     """
-    Reindexes and groups a pandas DataFrame
+    Reindexes and groups a pandas DataFrame.
 
     Wrapper around `df.reindex()` and `df.groupby()`.
     Optionally throws an error if `index_cols` aren't in `df`. Will throw an
