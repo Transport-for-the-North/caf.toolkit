@@ -17,6 +17,9 @@ disable = [
 [tool.pylint.basic]
 good-names = ["df", "ca", "tp", "to", "x", "i", "f", "q"]
 
+[tool.pylint.main]
+ignore = ["ignore_me.py", "__init__.py", "_version.py", "versioneer.py"]
+
 [tool.pylint.design]
 max-args = 10
 max-attributes = 15
@@ -25,6 +28,12 @@ max-statements = 100
 [tool.mypy]
 mypy_path = "src"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "my_namespace.slapping._version",
+]
+ignore_errors  = true
 
 [tool.pydocstyle]
 convention = "numpy"
