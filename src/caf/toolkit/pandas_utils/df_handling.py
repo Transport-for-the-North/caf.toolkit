@@ -88,9 +88,9 @@ def reindex_rows_and_cols(
     """
     Reindex a pandas DataFrame, making sure index/col types don't clash.
 
-    Wrapper around `df.reindex()`.
-    If the type of the index of the column names in df does not match the
-    types given in index or columns, the index types will be cast to the
+    Type checking wrapper around `df.reindex()`.
+    If the type of the index or columns of `df` does not match the
+    types given in `index` or `columns`, the index types will be cast to the
     desired types before calling the reindex.
 
     Parameters
@@ -99,33 +99,34 @@ def reindex_rows_and_cols(
         The pandas.DataFrame that should be re-indexed
 
     index:
-        The index to reindex df to.
+        The index to reindex `df` to.
 
     columns:
-        The columns to reindex df to.
+        The columns to reindex `df` to.
 
     fill_value:
         Value to use for missing values. Defaults to NaN, but can be
         any “compatible” value.
 
     kwargs:
-        Any extra arguments to pass into df.reindex
+        Any extra arguments to pass into `df.reindex()`
 
     Returns
     -------
     reindexed_df:
-        The given df, re-indexed to the index and columns given.
+        The given `df`, re-indexed to the `index` and `columns` given,
+        including typing
     """
-    # Init
-    idx_dtype = type(index[0])
-    col_dtype = type(columns[0])
+    # Cast dtypes if needed
+    if len(index) > 0:
+        idx_dtype = type(index[0])
+        if not isinstance(df.index.dtype, idx_dtype):
+            df.index = df.index.astype(idx_dtype)
 
-    # Cast types if needed
-    if df.index.dtype != idx_dtype:
-        df.index = df.index.astype(idx_dtype)
-
-    if df.columns.dtype != col_dtype:
-        df.columns = df.columns.astype(idx_dtype)
+    if len(columns) > 0:
+        col_dtype = type(columns[0])
+        if not isinstance(df.columns.dtype, type(columns[0])):
+            df.columns = df.columns.astype(col_dtype)
 
     return df.reindex(columns=columns, index=index, fill_value=fill_value, **kwargs)
 
