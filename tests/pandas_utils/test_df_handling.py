@@ -23,6 +23,7 @@ import numpy as np
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import toolbox
 from caf.toolkit import pandas_utils as pd_utils
+
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -205,30 +206,31 @@ class TestReindexAndGroupbySum:
 
 class TestFilterDf:
     """Tests for caf.toolkit.pandas_utils.filter_df()"""
+
     @pytest.fixture(name="filter_df", scope="class")
     def fixture_filter_df(self):
         """Test Dataframe"""
         return pd.DataFrame(
             data=[[1, 2, 3], [1, None, 4], [2, 1, 3], [1, 2, 2]],
             columns=["a", "b", "c"],
-            dtype=np.float,
+            dtype=float,
         )
 
-    @pytest.mark.parametrize("filter_dict", [{'a': [1], 'b': [2]}, {'a': 1, 'b': 2}])
+    @pytest.mark.parametrize("filter_dict", [{"a": [1], "b": [2]}, {"a": 1, "b": 2}])
     def test_mask(self, filter_df: pd.DataFrame, filter_dict: dict[str, Any]):
         """Test the mask is generated correctly"""
         expected_mask = pd.Series(data=[True, False, False, True])
         new_mask = pd_utils.filter_df_mask(df=filter_df, df_filter=filter_dict)
         pd.testing.assert_series_equal(new_mask, expected_mask)
 
-    @pytest.mark.parametrize("filter_dict", [{'a': [1], 'b': [2]}, {'a': 1, 'b': 2}])
+    @pytest.mark.parametrize("filter_dict", [{"a": [1], "b": [2]}, {"a": 1, "b": 2}])
     def test_filter_df(self, filter_df: pd.DataFrame, filter_dict: dict[str, Any]):
         """Test the mask is generated correctly"""
         expected_df = pd.DataFrame(
             data=[[1, 2, 3], [1, 2, 2]],
             columns=["a", "b", "c"],
             index=[0, 3],
-            dtype=np.float
+            dtype=float,
         )
 
         new_df = pd_utils.filter_df(df=filter_df, df_filter=filter_dict)
