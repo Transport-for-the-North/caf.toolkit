@@ -21,8 +21,8 @@ import numpy as np
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
+from caf.toolkit import toolbox
 from caf.toolkit import pandas_utils as pd_utils
-
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -137,6 +137,7 @@ class TestReindexRowsAndCols:
         pd.testing.assert_frame_equal(new_df, base_df)
 
     def test_reindex_with_cast(self, basic_wide_df: pd.DataFrame):
+        """Test that casting is working correctly"""
         # Generate the expected output
         col_idx = ["1", "2"]
         data = np.array([[0, 1], [5, 6]], dtype=basic_wide_df.values.dtype)
@@ -150,3 +151,53 @@ class TestReindexRowsAndCols:
         )
 
         pd.testing.assert_frame_equal(new_df, expected_df)
+
+
+class TestReindexAndGroupbySum:
+    """
+    Tests for caf.toolkit.pandas_utils.reindex_and_groupby
+
+    Builds on caf.toolkit.pandas_utils.reindex_cols(), so tests here are
+    quite simple
+    """
+
+    @pytest.fixture(name="group_df", scope="class")
+    def fixture_group_df(self):
+        """Test Dataframe"""
+        return pd.DataFrame(
+            data=[[1, 2, 3], [1, None, 4], [2, 1, 3], [1, 2, 2]],
+            columns=["a", "b", "c"],
+        )
+
+    @pytest.mark.parametrize(
+        "index_cols,value_cols", [(["a", "b", "c"], ["c"]), (["a", "b"], ["a"])]
+    )
+    def test_groupby(
+        self,
+        group_df: pd.DataFrame,
+        index_cols: list[str],
+        value_cols: list[str],
+    ):
+        """Test that it works exactly like pandas operations"""
+        # Function call
+        new_df = pd_utils.reindex_and_groupby_sum(
+            df=group_df,
+            index_cols=index_cols,
+            value_cols=value_cols,
+        )
+
+        # Generate the expected DF
+        df = group_df.reindex(columns=index_cols)
+        group_cols = toolbox.list_safe_remove(index_cols, value_cols)
+        expected_df = df.groupby(group_cols).sum().reset_index()
+
+        pd.testing.assert_frame_equal(new_df, expected_df)
+
+    def test_error(self, group_df: pd.DataFrame):
+        """Test that an error is thrown correctly"""
+        with pytest.raises(ValueError):
+            pd_utils.reindex_and_groupby_sum(
+                df=group_df,
+                index_cols=["a", "b"],
+                value_cols=["c"],
+            )

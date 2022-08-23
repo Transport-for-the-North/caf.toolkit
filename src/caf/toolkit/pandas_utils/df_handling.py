@@ -12,7 +12,6 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import toolbox
-
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -131,7 +130,7 @@ def reindex_rows_and_cols(
     return df.reindex(columns=columns, index=index, fill_value=fill_value, **kwargs)
 
 
-def reindex_and_groupby(
+def reindex_and_groupby_sum(
     df: pd.DataFrame,
     index_cols: list[str],
     value_cols: list[str],
@@ -154,8 +153,9 @@ def reindex_and_groupby(
         List of column names to reindex to.
 
     value_cols:
-        List of column names that contain values. `df.groupby()` will be performed
-        on any columns that are in `value_cols`, but not `index_cols`.
+        List of column names that contain values. `df.groupby()` will be
+        performed on any columns that remain in `index_cols` once all
+        `value_cols` have been removed.
 
     throw_error:
         Whether to throw an error if not all `index_cols` are in the `df`.
@@ -164,16 +164,18 @@ def reindex_and_groupby(
     -------
     new_df:
         A copy of `df` that has been reindexed and grouped.
-    """
-    # ## VALIDATE INPUTS ## #
-    if throw_error:
-        for col in index_cols:
-            if col not in df:
-                raise ValueError(
-                    f"No columns named '{col}' in the given dataframe.\n"
-                    f"Only found the following columns: {list(df)}"
-                )
 
+    Raises
+    ------
+    ValueError:
+        If any of `index_cols` don't exist within `df` and `throw_error` is
+        True.
+
+    See Also
+    --------
+    `caf.toolkit.pandas_utils.df_handling.reindex_cols()`
+    """
+    # Validate inputs
     for col in value_cols:
         if col not in index_cols:
             raise ValueError(
@@ -181,10 +183,9 @@ def reindex_and_groupby(
                 f"Can only accept value_cols that are in index_cols."
             )
 
-    # Generate the group cols
+    # Reindex and groupby
+    df = reindex_cols(df=df, columns=index_cols, throw_error=throw_error, **kwargs)
     group_cols = toolbox.list_safe_remove(index_cols, value_cols)
-
-    df = df.reindex(columns=index_cols, **kwargs)
     return df.groupby(group_cols).sum().reset_index()
 
 
