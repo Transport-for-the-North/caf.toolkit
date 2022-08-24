@@ -50,7 +50,7 @@ match = '(?!_test)(?!test_)(?!__init__).*\.py'
 # ((?!test_).)*\.py
 
 [tool.pytest.ini_options]
-addopts = "--cov=caf.toolkit"
+addopts = "--cov=caf.toolkit --cov-report=html"
 
 [tool.coverage.run]
 omit = ["*/_version.py"]

@@ -22,7 +22,7 @@ from typing import Any
 def list_safe_remove(
     lst: list[Any],
     remove: list[Any],
-    raise_error: bool = False,
+    throw_error: bool = False,
     inplace: bool = False,
 ) -> list[Any]:
     """
@@ -36,7 +36,7 @@ def list_safe_remove(
     remove:
         The items to remove from lst
 
-    raise_error:
+    throw_error:
         Whether to raise an error or not when an item in `remove` is
         not contained in lst
 
@@ -56,7 +56,7 @@ def list_safe_remove(
         try:
             lst.remove(item)
         except ValueError as exception:
-            if raise_error:
+            if throw_error:
                 raise exception
 
     return lst

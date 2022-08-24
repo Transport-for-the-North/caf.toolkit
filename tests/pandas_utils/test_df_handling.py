@@ -1,17 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Created on: 18/08/2022
-Updated on:
-
-Original author: Ben Taylor
-Last update made by:
-Other updates made by:
-
-File purpose:
-
-"""
+"""Tests for the caf.toolkit.pandas_utils.df_handling module"""
 # Built-Ins
-
 from typing import Any
 
 # Third Party
