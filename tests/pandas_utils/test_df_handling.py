@@ -235,3 +235,33 @@ class TestFilterDf:
 
         new_df = pd_utils.filter_df(df=filter_df, df_filter=filter_dict)
         pd.testing.assert_frame_equal(new_df, expected_df)
+
+
+class TestStrJoinCols:
+    """Tests for caf.toolkit.pandas_utils.str_join_cols"""
+
+    @pytest.mark.parametrize("col_vals", [["a", "b"], ["a", 1], [1.4, 1.0]])
+    def test_str_joining(self, col_vals: list[Any]):
+        """Test the whole process on different data types"""
+        separator = "_"
+        col_names = ["col1", "col2", "col3"]
+
+        # Build the starting df
+        starting_data = [[x] * 3 for x in col_vals]
+        start_df = pd.DataFrame(
+            data=starting_data,
+            columns=col_names,
+        )
+
+        # Build the expected ending df
+        exp_data = [[str(x)] * 3 for x in col_vals]
+        exp_data = [separator.join(x) for x in exp_data]  # type: ignore
+        exp_series = pd.Series(data=exp_data)
+
+        # Run and compare
+        end_series = pd_utils.str_join_cols(
+            df=start_df,
+            columns=col_names,
+            separator=separator,
+        )
+        pd.testing.assert_series_equal(exp_series, end_series)
