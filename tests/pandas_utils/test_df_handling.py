@@ -30,25 +30,18 @@ from caf.toolkit import pandas_utils as pd_utils
 
 
 # # # FIXTURES # # #
-@pytest.fixture(name="basic_long_df")
-def fixture_basic_long_df():
-    """Test long format dataframe"""
-    columns = ["col1", "col2", "col3", "col4", "col5"]
-    data = np.arange(50).reshape((-1, 5))
-    return pd.DataFrame(data=data, columns=columns)
-
-
-@pytest.fixture(name="basic_wide_df")
-def fixture_basic_wide_df():
-    """Test wide format dataframe"""
-    col_idx = [1, 2, 3, 4, 5]
-    data = np.arange(25).reshape((5, 5))
-    return pd.DataFrame(data=data, columns=col_idx, index=col_idx)
 
 
 # # # TESTS # # #
 class TestReindexCols:
     """Tests for caf.toolkit.pandas_utils.reindex_cols"""
+
+    @pytest.fixture(name="basic_long_df", scope="class")
+    def fixture_basic_long_df(self):
+        """Test long format dataframe"""
+        columns = ["col1", "col2", "col3", "col4", "col5"]
+        data = np.arange(50).reshape((-1, 5))
+        return pd.DataFrame(data=data, columns=columns)
 
     @pytest.mark.parametrize(
         "columns", [["col1"], ["col1", "A"], [], ["col3", "A", "B", "col2"]]
@@ -98,6 +91,13 @@ class TestReindexCols:
 
 class TestReindexRowsAndCols:
     """Tests for caf.toolkit.pandas_utils.reindex_rows_and_cols"""
+
+    @pytest.fixture(name="basic_wide_df", scope="class")
+    def fixture_basic_wide_df(self):
+        """Test wide format dataframe"""
+        col_idx = [1, 2, 3, 4, 5]
+        data = np.arange(25).reshape((5, 5))
+        return pd.DataFrame(data=data, columns=col_idx, index=col_idx)
 
     @pytest.mark.parametrize("index", [[1, 2], [], [5, 6]])
     @pytest.mark.parametrize("columns", [[1, 2], [], [5, 6]])
