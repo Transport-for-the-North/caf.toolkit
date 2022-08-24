@@ -1,8 +1,10 @@
+"""Setup file."""
 from setuptools import setup
 import versioneer
 
-setup(
-    name="caf.toolkit",
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
-)
+if __name__ == "__main__":
+    setup(
+        name="caf.toolkit",
+        version=versioneer.get_version(),
+        cmdclass=versioneer.get_cmdclass(),
+    )

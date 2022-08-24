@@ -10,6 +10,8 @@
 <a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg"></a>
 </p>
 
+![Tests](https://github.com/Transport-for-the-North/caf.toolkit/blob/main/.github/workflows/tests.yml/badge.svg)
+
 The Common Analytical Framework (CAF) Toolkit is a toolkit of transport
 planning and appraisal functionalities. It's the beginning of a project to make
 a lot of the useful stuff from
