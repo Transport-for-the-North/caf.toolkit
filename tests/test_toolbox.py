@@ -49,9 +49,17 @@ class TestListSafeRemove:
         # Check if an error is raised when it should be
         if throw_error and not all_items_in_list:
             with pytest.raises(ValueError):
-                toolbox.list_safe_remove(lst=base_list, remove=remove, throw_error=throw_error,)
+                toolbox.list_safe_remove(
+                    lst=base_list,
+                    remove=remove,
+                    throw_error=throw_error,
+                )
 
         else:
             # Should work as expected
-            new_lst = toolbox.list_safe_remove(lst=base_list, remove=remove, throw_error=throw_error, )
+            new_lst = toolbox.list_safe_remove(
+                lst=base_list,
+                remove=remove,
+                throw_error=throw_error,
+            )
             assert new_lst == expected_list
