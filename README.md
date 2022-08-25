@@ -6,6 +6,7 @@
 <p align="center">
 <a href=""><img alt="" src=""></a>
 <a href="https://pypi.org/project/caf.toolkit/"><img alt="PyPI Latest Release" src="https://img.shields.io/pypi/v/caf.toolkit.svg"></a>
+<a href="https://app.codecov.io/gh/Transport-for-the-North/caf.toolkit"><img alt="Coverage" src="https://codecov.io/gh/transport-for-the-north/caf.toolkit/branch/main/graphs/badge.svg?branch=main"></a>
 
 
 <a href="https://github.com/Transport-for-the-North/caf.toolkit/actions/workflows/tests.yml/badge.svg"><img alt="Testing Badge" src="https://github.com/Transport-for-the-North/caf.toolkit/actions/workflows/tests.yml/badge.svg"></a>
