@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
+import warnings
 import functools
 
 from typing import Any
+from typing import Generator
 
 # Third Party
 import numpy as np
@@ -12,6 +14,7 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import toolbox
+from caf.toolkit import math_utils
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -303,3 +306,312 @@ def str_join_cols(
     # Join the cols together
     join_cols = [df[x].astype(str) for x in columns]
     return functools.reduce(reducer, join_cols)
+
+
+def chunk_df(
+    df: pd.DataFrame,
+    chunk_size: int,
+) -> Generator[pd.DataFrame, None, None]:
+    """Split a dataframe into chunks, usually for multiprocessing.
+
+    Parameters
+    ----------
+    df:
+        the pandas.DataFrame to chunk.
+
+    chunk_size:
+        The size of the chunks to use, in terms of rows.
+
+    Yields
+    ------
+    df_chunk:
+        A chunk of `df` with `chunk_size` rows
+    """
+    for i in range(0, len(df), chunk_size):
+        chunk_end = i + chunk_size
+        yield df[i:chunk_end]
+
+
+def long_product_infill(
+    df: pd.DataFrame,
+    index_dict: dict[str, list[Any]],
+    infill: Any = 0,
+) -> pd.DataFrame:
+    """Infill columns with a complete product of one another.
+
+    Infills missing values of df in `index_cols.keys()` columns by generating
+    a new MultiIndex from a product of the values in `index_cols.values()`.
+    Where a None-like values is given, all unique values are taken from `df`
+    in that column.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to infill.
+
+    index_dict:
+        A dictionary mapping the columns of `df` to infill, and with what
+        values. Where a None-like values is given, all unique values are taken
+        from `df` in that column.
+        i.e, `df[index_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the return DataFrame.
+
+    Returns
+    -------
+    infilled_df:
+        An extended version of 'df' with a product of all `index_cols.values()`
+        in `index_cols.keys()`.
+    """
+    # Init and validation
+    for col in index_dict:
+        # Initialise any missing values
+        if toolbox.is_none_like(index_dict[col]):
+            index_dict[col] = df[col].unique()
+
+        # Make sure we're not dropping too much.
+        # Indication of problems in arguments.
+        missing_idx = set(index_dict[col]) - set(df[col].unique().tolist())
+        if len(missing_idx) >= len(set(index_dict[col])) * 0.9:
+            warnings.warn(
+                f"Almost all values given for column {col} for not exist in "
+                f"df['{col}']. Are the given data types matching?\n"
+                f"There are {len(missing_idx)} missing values."
+            )
+
+    # Make sure every possible combination exists
+    new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+    df = df.set_index(list(index_dict.keys()))
+    df = df.reindex(index=new_index, fill_value=infill).reset_index()
+    return df
+
+
+def long_to_wide_infill(
+    df: pd.DataFrame,
+    index_col: str,
+    columns_col: str,
+    values_col: str,
+    index_vals: list[Any] = None,
+    column_vals: list[Any] = None,
+    infill: Any = 0,
+    check_totals: bool = False,
+) -> pd.DataFrame:
+    """Convert a DataFrame from long to wide format, infilling missing values.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to convert to wide.
+
+    index_col:
+        The column of `df` to use as the index of the wide return DataFrame
+
+    columns_col:
+        The column of `df` to use as the columns of the wide return DataFrame
+
+    values_col:
+        The column of `df` to use as the values of the wide return DataFrame
+
+    index_vals:
+        The unique values to use as the index of the wide return DataFrame.
+        If left as None, `df[index_col].unique()` will be used.
+
+    column_vals:
+        The unique values to use as the columns of the wide return DataFrame.
+        If left as None, `df[columns_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the wide DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    wide_df:
+        A copy of `df`, in wide format, with index_col as the index,
+        columns_col as the column names, and values_col as the values.
+    """
+    # Init
+    index_vals = df[index_col].unique() if index_vals is None else index_vals
+    column_vals = df[columns_col].unique() if column_vals is None else column_vals
+    orig_total = df[values_col].values.sum()
+    df = reindex_cols(df, [index_col, columns_col, values_col])
+
+    # Make sure were not dropping too much. Indication of problems in arguments
+    missing_idx = set(index_vals) - set(df[index_col].unique().tolist())
+    if len(missing_idx) >= len(set(index_vals)) * 0.9:
+        warnings.warn(
+            f"Almost all index_vals do not exist in df[index_col]. "
+            "Are the given data types matching?\n"
+            f"There are {len(missing_idx)} missing values."
+        )
+
+    missing_cols = set(column_vals) - set(df[columns_col].unique().tolist())
+    if len(missing_cols) >= len(set(column_vals)) * 0.9:
+        warnings.warn(
+            f"Almost all column_vals do not exist in df[columns_col]. "
+            "Are the given data types matching?\n"
+            f"There are {len(missing_cols)} missing values."
+        )
+
+    index_dict = {index_col: index_vals, columns_col: column_vals}
+    df = long_product_infill(df=df, index_dict=index_dict, infill=infill)
+
+    # Convert to wide
+    df = df.pivot(
+        index=index_col,
+        columns=columns_col,
+        values=values_col,
+    )
+
+    if not check_totals:
+        return df
+
+    # Make sure nothing was dropped
+    after_total = df.values.sum()
+    if not math_utils.is_almost_equal(after_total, orig_total):
+        raise ValueError(
+            "Values have been dropped when reindexing the given dataframe.\n"
+            f"Starting total: {orig_total}\n"
+            f"Ending total: {after_total}."
+        )
+
+    return df
+
+
+def wide_to_long_infill(
+    df: pd.DataFrame,
+    index_col_1_name: str,
+    index_col_2_name: str,
+    value_col_name: str,
+    index_col_1_vals: list[Any] = None,
+    index_col_2_vals: list[Any] = None,
+    infill: Any = 0,
+    check_totals: bool = False,
+) -> pd.DataFrame:
+    """Convert a matrix from wide to long format, infilling missing values.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in wide format, to convert to long. The index of `df`
+        must be the values that are to become `index_col_1_name`, and the
+        columns of `df` will be melted to become `index_col_2_name`.
+
+    index_col_1_name:
+        The name to give to the column that was the index of `df`.
+
+    index_col_2_name:
+        The name to give to the column that was the column names of `df`.
+
+    value_col_name:
+        The name to give to the column that was the values of `df`.
+
+    index_col_1_vals:
+        The unique values to use as the first index of the return dataframe.
+        These unique values will be combined with every combination of
+        `index_col_2_vals` to create the full index.
+        If left as None, the unique values of `df` Index will be used.
+
+    index_col_2_vals:
+        The unique values to use as the second index of the return dataframe.
+        These unique values will be combined with every combination of
+        `index_col_1_vals` to create the full index.
+        If left as None, the unique values of `df` columns will be used.
+
+    infill:
+        The value to use to infill any missing cells in the return DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    long_df:
+        A copy of `df`, in long format, with 3 columns:
+        `[index_col_1_name, index_col_2_name, value_col_name]`
+    """
+    # Init
+    orig_total = df.values.sum()
+
+    # Assume the index is the first ID
+    df = df.reset_index()
+    df = df.rename(columns={df.columns[0]: index_col_1_name})
+
+    # Convert to long
+    df = df.melt(
+        id_vars=index_col_1_name,
+        var_name=index_col_2_name,
+        value_name=value_col_name,
+    )
+
+    # Infill anything that's missing
+    index_dict = {
+        index_col_1_name: index_col_1_vals,
+        index_col_2_name: index_col_2_vals,
+    }
+    df = long_product_infill(df=df, index_dict=index_dict, infill=infill)
+
+    if not check_totals:
+        return df
+
+    # Make sure nothing was dropped
+    after_total = df[value_col_name].values.sum()
+    if not math_utils.is_almost_equal(after_total, orig_total):
+        raise ValueError(
+            "Values have been dropped when reindexing the given dataframe.\n"
+            f"Starting total: {orig_total}\n"
+            f"Ending total: {after_total}."
+        )
+
+    return df
+
+
+def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
+    """Convert a DataFrame from long to wide format, infilling missing values.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to convert to a wide numpy array.
+
+    index_col:
+        The column of `df` to use as the index of the wide return DataFrame
+
+    columns_col:
+        The column of `df` to use as the columns of the wide return DataFrame
+
+    values_col:
+        The column of `df` to use as the values of the wide return DataFrame
+
+    index_vals:
+        The unique values to use as the index of the wide return DataFrame.
+        If left as None, `df[index_col].unique()` will be used.
+
+    column_vals:
+        The unique values to use as the columns of the wide return DataFrame.
+        If left as None, `df[columns_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the wide DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    wide_ndarray:
+        An ndarray, in wide format, with index_col as the index,
+        columns_col as the column names, and values_col as the values.
+
+    See Also
+    --------
+    long_to_wide_infill()
+    """
+    df = long_to_wide_infill(*args, **kwargs)
+    return df.values

@@ -60,3 +60,34 @@ def list_safe_remove(
                 raise exception
 
     return lst
+
+
+def is_none_like(obj) -> bool:
+    """Check if an object is None-like
+
+    An object is considered None-like if one of the following is True:
+    - The `obj is None` equates to True
+    - if obj is a string: it is equal to 'none' once stripped and lowered
+    - if obj is a list: if each item in the list is none-like
+
+    Parameters
+    ----------
+    obj:
+        Object to check
+
+    Returns
+    -------
+    bool:
+        True if obj is none-like else False
+    """
+    if obj is None:
+        return True
+
+    if isinstance(obj, str):
+        if obj.lower().strip() == 'none':
+            return True
+
+    if isinstance(obj, list):
+        return all(is_none_like(x) for x in obj)
+
+    return False
