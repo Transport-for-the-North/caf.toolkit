@@ -5,6 +5,7 @@ import warnings
 import functools
 
 from typing import Any
+from typing import Optional
 from typing import Generator
 
 # Third Party
@@ -334,7 +335,7 @@ def chunk_df(
 
 def long_product_infill(
     df: pd.DataFrame,
-    index_dict: dict[str, list[Any]],
+    index_dict: dict[str, Optional[list[Any]]],
     infill: Any = 0,
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
@@ -573,6 +574,9 @@ def wide_to_long_infill(
 
 def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
     """Convert a DataFrame from long to wide format, infilling missing values.
+
+    Similar to the `long_to_wide_infill()` function, but returns a numpy array
+    instead.
 
     Parameters
     ----------

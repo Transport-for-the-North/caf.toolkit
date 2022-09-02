@@ -62,7 +62,7 @@ def list_safe_remove(
     return lst
 
 
-def is_none_like(obj) -> bool:
+def is_none_like(obj: Any) -> bool:
     """Check if an object is None-like
 
     An object is considered None-like if one of the following is True:
@@ -84,7 +84,7 @@ def is_none_like(obj) -> bool:
         return True
 
     if isinstance(obj, str):
-        if obj.lower().strip() == 'none':
+        if obj.lower().strip() == "none":
             return True
 
     if isinstance(obj, list):
