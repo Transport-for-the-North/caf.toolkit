@@ -334,15 +334,16 @@ def chunk_df(
         If `chunk_size` is less than or equal to 0. Or if it is not and
         integer value.
     """
+    if not isinstance(chunk_size, int):
+        raise TypeError(
+            f"chunk_size must be an integer. Given: {chunk_size}"
+        )
+
     if chunk_size <= 0:
         raise ValueError(
             f"Cannot generate chunk sizes of size 0 or less. Given: {chunk_size}"
         )
 
-    if not isinstance(chunk_size, int):
-        raise ValueError(
-            f"chunk_size must be an integer. Given: {chunk_size}"
-        )
 
     for i in range(0, len(df), chunk_size):
         chunk_end = i + chunk_size
