@@ -254,3 +254,60 @@ class TestStrJoinCols:
             separator=separator,
         )
         pd.testing.assert_series_equal(exp_series, end_series)
+
+
+class TestChunkDf:
+    """Tests for caf.toolkit.pandas_utils.chunk_df"""
+
+    @pytest.fixture(name="basic_long_df", scope="class")
+    def fixture_basic_long_df(self):
+        """Test long format dataframe"""
+        columns = ["col1", "col2"]
+        data = np.arange(6).reshape((-1, 2))
+        return pd.DataFrame(data=data, columns=columns)
+
+    @pytest.mark.parametrize("chunk_size", [0, -1, 0.5, -0.5])
+    def test_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that giving an incorrect chunk_size generates an error"""
+        with pytest.raises(ValueError):
+            pd_utils.chunk_df(df=basic_long_df, chunk_size=chunk_size)
+
+    def test_chunk_size_one(self, basic_long_df: pd.DataFrame):
+        """Test that chunk_size operates correctly"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [
+            pd.DataFrame(data=[df.loc[0].values], columns=df.columns),
+            pd.DataFrame(data=[df.loc[1].values], columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+        ]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 1)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    def test_chunk_size_two(self, basic_long_df: pd.DataFrame):
+        """Test that chunk_size operates correctly"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [
+            pd.DataFrame(data=df.loc[[0, 1]].values, columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+        ]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 2)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    @pytest.mark.parametrize("chunk_size", [3, 4])
+    def test_chunk_size_big(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that chunk_size operates correctly when bigger than DataFrame"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [df.copy()]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, chunk_size)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?
