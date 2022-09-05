@@ -25,36 +25,40 @@ from caf.toolkit import math_utils
 
 # # # CLASSES # # #
 class ChunkDf:
-    """Generator to split a dataframe into chunks"""
+    """Generator to split a dataframe into chunks.
+
+    Similar to `chunk_df()`, but validates the input arguments and
+    throws and error if not valid.
+
+    Parameters
+    ----------
+    df:
+        the pandas.DataFrame to chunk.
+
+    chunk_size:
+        The size of the chunks to use, in terms of rows.
+
+    Raises
+    ------
+    ValueError:
+        If `chunk_size` is less than or equal to 0. Or if it is not and
+        integer value.
+
+    TypeError:
+        If `chunk_size` is not and integer
+
+    See Also
+    --------
+    `caf.toolkit.pandas_utils.chunk_df()`
+    """
 
     def __init__(
         self,
         df: pd.DataFrame,
         chunk_size: int,
     ):
-        """
-
-        Parameters
-        ----------
-        df:
-            the pandas.DataFrame to chunk.
-
-        chunk_size:
-            The size of the chunks to use, in terms of rows.
-
-        Raises
-        ------
-        ValueError:
-            If `chunk_size` is less than or equal to 0. Or if it is not and
-            integer value.
-
-        TypeError:
-            If `chunk_size` is not and integer
-        """
         if not isinstance(chunk_size, int):
-            raise TypeError(
-                f"chunk_size must be an integer. Given: {chunk_size}"
-            )
+            raise TypeError(f"chunk_size must be an integer. Given: {chunk_size}")
 
         if chunk_size <= 0:
             raise ValueError(
@@ -66,9 +70,11 @@ class ChunkDf:
         self.range_iterator = iter(range(0, len(self.df), self.chunk_size))
 
     def __iter__(self):
+        """Get an iterator over `self.df` chunks of size `self.chunk_size`."""
         return self
 
     def __next__(self) -> pd.DataFrame:
+        """Get the next chunk of `self.df` of size `self.chunk_size`."""
         i = next(self.range_iterator)
         chunk_end = i + self.chunk_size
         return self.df[i:chunk_end]
@@ -405,6 +411,7 @@ def chunk_df(
         yield item
 
 
+# pylint: disable=too-many-branches
 def long_product_infill(
     df: pd.DataFrame,
     index_dict: Mapping[str, Optional[list[Any]]],
@@ -521,7 +528,7 @@ def long_product_infill(
                 raise ValueError(final_msg)
 
     return df
-
+# pylint: enable=too-many-branches
 
 def long_to_wide_infill(
     df: pd.DataFrame,
@@ -581,7 +588,9 @@ def long_to_wide_infill(
     df = reindex_cols(df, [index_col, columns_col, values_col])
 
     index_dict = {index_col: index_vals, columns_col: column_vals}
-    df = long_product_infill(df=df, index_dict=index_dict, infill=infill, check_totals=check_totals)
+    df = long_product_infill(
+        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
+    )
 
     # Convert to wide
     df = df.pivot(
@@ -667,7 +676,9 @@ def wide_to_long_infill(
         index_col_1_name: index_col_1_vals,
         index_col_2_name: index_col_2_vals,
     }
-    df = long_product_infill(df=df, index_dict=index_dict, infill=infill, check_totals=check_totals)
+    df = long_product_infill(
+        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
+    )
     return df
 
 

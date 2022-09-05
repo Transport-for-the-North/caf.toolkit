@@ -26,7 +26,7 @@ def is_almost_equal(
     rel_tol: float = 0.0001,
     abs_tol: float = 0.0,
 ) -> bool:
-    """Check if two values are similar
+    """Check if two values are similar.
 
     Whether two values are considered close is determined according to given
     absolute and relative tolerances.
@@ -34,7 +34,7 @@ def is_almost_equal(
     `abs_tol`.
 
     Parameters
-    -----------
+    ----------
     val1:
         The first value to check if close to `val2`
 
