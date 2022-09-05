@@ -437,23 +437,35 @@ def long_product_infill(
         in `index_cols.keys()`.
     """
     # Init and validation
-    for col in index_dict:
+    for col, vals in index_dict.items():
         # Initialise any missing values
-        if toolbox.is_none_like(index_dict[col]):
+        if toolbox.is_none_like(vals):
             index_dict[col] = df[col].unique()
+            vals = index_dict[col]
+
+        # Assert for MyPY
+        assert vals is not None
 
         # Make sure we're not dropping too much.
         # Indication of problems in arguments.
-        missing_idx = set(index_dict[col]) - set(df[col].unique().tolist())
-        if len(missing_idx) >= len(set(index_dict[col])) * 0.9:
+        missing_idx = set(vals) - set(df[col].unique().tolist())
+        if len(missing_idx) >= len(vals) * 0.9:
             warnings.warn(
                 f"Almost all values given for column {col} for not exist in "
                 f"df['{col}']. Are the given data types matching?\n"
-                f"There are {len(missing_idx)} missing values."
+                f"There are {len(missing_idx)} missing values.",
+                category=UserWarning,
             )
 
+    # Handle a single index
+    if len(index_dict) == 1:
+        name = list(index_dict.keys())[0]
+        vals = index_dict[name]
+        new_index = pd.Index(name=name, data=vals)
+    else:
+        new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+
     # Make sure every possible combination exists
-    new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
     df = df.set_index(list(index_dict.keys()))
     df = df.reindex(index=new_index, fill_value=infill).reset_index()
     return df

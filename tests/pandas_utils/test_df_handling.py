@@ -321,3 +321,133 @@ class TestChunkDf:
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?
+
+
+class TestLongProductInfill:
+    """Tests for caf.toolkit.pandas_utils.long_product_infill"""
+
+    def test_single_idx_col(self):
+        """Test function with one index column"""
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "col1", "col2"]
+        index_dict = {"idx1": [1, 2, 3]}
+
+        # Build the input and expected dataframes
+        data = [[1, "a", "b"], [2, "a", "b"]]
+        expected_data = data.copy()
+        expected_data.append([3, infill_val, infill_val])
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check
+        df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            infill=infill_val,
+        )
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_double_idx_col(self):
+        """Test function with two index columns
+
+        Also tests indexing things back into order
+        """
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [1, 2], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [[1, 3, "b"], [2, 4, "b"]]
+        expected_data = [
+            [1, 3, "b"],
+            [1, 4, infill_val],
+            [2, 3, infill_val],
+            [2, 4, "b"],
+        ]
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check
+        df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            infill=infill_val,
+        )
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_triple_idx_col(self):
+        """Test function with three index columns
+
+        Also tests:
+         - string based indexes
+         - index with only 1 value
+         - Assuming index inputs
+        """
+        # Init
+        infill_val = 100
+        col_names = ["idx1", "idx2", "idx3", "col1"]
+        index_dict = {"idx1": ["a", "b"], "idx2": ["c", "d"], "idx3": []}
+
+        # Build the input and expected dataframes
+        data = [["a", "c", "z", 1], ["b", "d", "z", 3]]
+        expected_data = [
+            ["a", "c", "z", 1],
+            ["a", "d", "z", infill_val],
+            ["b", "c", "z", infill_val],
+            ["b", "d", "z", 3],
+        ]
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check
+        df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            infill=infill_val,
+        )
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_no_diff(self):
+        """Test that no change is made when not needed"""
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [1, 2], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [
+            [1, 3, "b"],
+            [1, 4, "c"],
+            [2, 3, "d"],
+            [2, 4, "a"],
+        ]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Check
+        generated_df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+        )
+        pd.testing.assert_frame_equal(df, generated_df)
+
+    def test_warning(self):
+        """Test that a warning is raised when reindex is too different"""
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "col1"]
+        index_dict = {"idx1": list(range(20))}
+
+        # Build the input dataframe
+        data = [[100, "a"]]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Test for warning
+        with pytest.warns(UserWarning):
+            df = pd_utils.long_product_infill(
+                df=df,
+                index_dict=index_dict,
+                infill=infill_val,
+            )
