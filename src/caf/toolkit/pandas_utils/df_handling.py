@@ -5,6 +5,7 @@ import warnings
 import functools
 
 from typing import Any
+from typing import Mapping
 from typing import Optional
 from typing import Generator
 
@@ -406,8 +407,9 @@ def chunk_df(
 
 def long_product_infill(
     df: pd.DataFrame,
-    index_dict: dict[str, Optional[list[Any]]],
+    index_dict: Mapping[str, Optional[list[Any]]],
     infill: Any = 0,
+    check_totals: bool = False,
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
 
@@ -430,13 +432,39 @@ def long_product_infill(
     infill:
         The value to use to infill any missing cells in the return DataFrame.
 
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion. Can only be performed on numeric columns.
+
     Returns
     -------
     infilled_df:
         An extended version of 'df' with a product of all `index_cols.values()`
         in `index_cols.keys()`.
+
+    Raises
+    ------
+    TypeError:
+        If none of the non-index columns are numeric and `check_totals` is True
     """
-    # Init and validation
+    # Init
+    val_cols = set(df.columns) - set(index_dict.keys())
+    index_dict = dict(index_dict)
+
+    # Get original value column totals where we can
+    orig_col_totals = dict()
+    for col in val_cols:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            orig_col_totals[col] = df[col].values.sum()
+
+    # Validate we can check totals if been told to
+    if check_totals and orig_col_totals == dict():
+        raise TypeError(
+            "Cannot check totals when none of the value columns of df are "
+            f"numeric. Implied value columns:\n{val_cols}"
+        )
+
+    # Validate the input index columns
     for col, vals in index_dict.items():
         # Initialise any missing values
         if toolbox.is_none_like(vals):
@@ -468,6 +496,30 @@ def long_product_infill(
     # Make sure every possible combination exists
     df = df.set_index(list(index_dict.keys()))
     df = df.reindex(index=new_index, fill_value=infill).reset_index()
+
+    # Just return if we can't check totals
+    if len(orig_col_totals) <= 0:
+        return df
+
+    #  ## Let the user know if the totals aren't similar ## #
+    msg = (
+        "Values have been dropped when reindexing the given dataframe.\n"
+        "Starting total: {orig_total}\n"
+        "Ending total: {after_total}."
+    )
+
+    # Check and warn / error about each column
+    for col, orig_total in orig_col_totals.items():
+        after_total = df[col].values.sum()
+
+        if not math_utils.is_almost_equal(after_total, orig_total):
+            final_msg = msg.format(orig_total=orig_total, after_total=after_total)
+
+            if not check_totals:
+                warnings.warn(final_msg, category=UserWarning)
+            else:
+                raise ValueError(final_msg)
+
     return df
 
 
@@ -517,32 +569,19 @@ def long_to_wide_infill(
     wide_df:
         A copy of `df`, in wide format, with index_col as the index,
         columns_col as the column names, and values_col as the values.
+
+    Raises
+    ------
+    TypeError:
+        If none of the `values_col` is not numeric and `check_totals` is True
     """
     # Init
     index_vals = df[index_col].unique() if index_vals is None else index_vals
     column_vals = df[columns_col].unique() if column_vals is None else column_vals
-    orig_total = df[values_col].values.sum()
     df = reindex_cols(df, [index_col, columns_col, values_col])
 
-    # Make sure were not dropping too much. Indication of problems in arguments
-    missing_idx = set(index_vals) - set(df[index_col].unique().tolist())
-    if len(missing_idx) >= len(set(index_vals)) * 0.9:
-        warnings.warn(
-            f"Almost all index_vals do not exist in df[index_col]. "
-            "Are the given data types matching?\n"
-            f"There are {len(missing_idx)} missing values."
-        )
-
-    missing_cols = set(column_vals) - set(df[columns_col].unique().tolist())
-    if len(missing_cols) >= len(set(column_vals)) * 0.9:
-        warnings.warn(
-            f"Almost all column_vals do not exist in df[columns_col]. "
-            "Are the given data types matching?\n"
-            f"There are {len(missing_cols)} missing values."
-        )
-
     index_dict = {index_col: index_vals, columns_col: column_vals}
-    df = long_product_infill(df=df, index_dict=index_dict, infill=infill)
+    df = long_product_infill(df=df, index_dict=index_dict, infill=infill, check_totals=check_totals)
 
     # Convert to wide
     df = df.pivot(
@@ -550,18 +589,6 @@ def long_to_wide_infill(
         columns=columns_col,
         values=values_col,
     )
-
-    if not check_totals:
-        return df
-
-    # Make sure nothing was dropped
-    after_total = df.values.sum()
-    if not math_utils.is_almost_equal(after_total, orig_total):
-        raise ValueError(
-            "Values have been dropped when reindexing the given dataframe.\n"
-            f"Starting total: {orig_total}\n"
-            f"Ending total: {after_total}."
-        )
 
     return df
 
@@ -618,10 +645,12 @@ def wide_to_long_infill(
     long_df:
         A copy of `df`, in long format, with 3 columns:
         `[index_col_1_name, index_col_2_name, value_col_name]`
-    """
-    # Init
-    orig_total = df.values.sum()
 
+    Raises
+    ------
+    TypeError:
+        If none of the `value_col_name` is not numeric and `check_totals` is True
+    """
     # Assume the index is the first ID
     df = df.reset_index()
     df = df.rename(columns={df.columns[0]: index_col_1_name})
@@ -638,20 +667,7 @@ def wide_to_long_infill(
         index_col_1_name: index_col_1_vals,
         index_col_2_name: index_col_2_vals,
     }
-    df = long_product_infill(df=df, index_dict=index_dict, infill=infill)
-
-    if not check_totals:
-        return df
-
-    # Make sure nothing was dropped
-    after_total = df[value_col_name].values.sum()
-    if not math_utils.is_almost_equal(after_total, orig_total):
-        raise ValueError(
-            "Values have been dropped when reindexing the given dataframe.\n"
-            f"Starting total: {orig_total}\n"
-            f"Ending total: {after_total}."
-        )
-
+    df = long_product_infill(df=df, index_dict=index_dict, infill=infill, check_totals=check_totals)
     return df
 
 
