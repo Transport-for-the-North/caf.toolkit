@@ -528,7 +528,10 @@ def long_product_infill(
                 raise ValueError(final_msg)
 
     return df
+
+
 # pylint: enable=too-many-branches
+
 
 def long_to_wide_infill(
     df: pd.DataFrame,
