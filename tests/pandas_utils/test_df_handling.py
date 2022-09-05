@@ -267,14 +267,20 @@ class TestChunkDf:
         return pd.DataFrame(data=data, columns=columns)
 
     @pytest.mark.parametrize("chunk_size", [0, -1, 0.5, -0.5])
-    def test_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
+    def test_class_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
         """Test that giving an incorrect chunk_size generates an error"""
         if not isinstance(chunk_size, int):
             with pytest.raises(TypeError):
-                pd_utils.chunk_df(df=basic_long_df, chunk_size=chunk_size)
+                pd_utils.ChunkDf(df=basic_long_df, chunk_size=chunk_size)
         else:
             with pytest.raises(ValueError):
-                pd_utils.chunk_df(df=basic_long_df, chunk_size=chunk_size)
+                pd_utils.ChunkDf(df=basic_long_df, chunk_size=chunk_size)
+
+    @pytest.mark.parametrize("chunk_size", [0, -1, 0.5, -0.5])
+    def test_function_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that giving an incorrect chunk_size works as python expects"""
+        chunks = pd_utils.chunk_df(df=basic_long_df, chunk_size=chunk_size)
+        assert list(chunks) == list()
 
     def test_chunk_size_one(self, basic_long_df: pd.DataFrame):
         """Test that chunk_size operates correctly"""

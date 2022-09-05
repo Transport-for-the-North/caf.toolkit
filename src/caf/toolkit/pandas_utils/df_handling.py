@@ -21,7 +21,56 @@ from caf.toolkit import math_utils
 
 # # # CONSTANTS # # #
 
+
 # # # CLASSES # # #
+class ChunkDf:
+    """Generator to split a dataframe into chunks"""
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        chunk_size: int,
+    ):
+        """
+
+        Parameters
+        ----------
+        df:
+            the pandas.DataFrame to chunk.
+
+        chunk_size:
+            The size of the chunks to use, in terms of rows.
+
+        Raises
+        ------
+        ValueError:
+            If `chunk_size` is less than or equal to 0. Or if it is not and
+            integer value.
+
+        TypeError:
+            If `chunk_size` is not and integer
+        """
+        if not isinstance(chunk_size, int):
+            raise TypeError(
+                f"chunk_size must be an integer. Given: {chunk_size}"
+            )
+
+        if chunk_size <= 0:
+            raise ValueError(
+                f"Cannot generate chunk sizes of size 0 or less. Given: {chunk_size}"
+            )
+
+        self.df = df
+        self.chunk_size = chunk_size
+        self.range_iterator = iter(range(0, len(self.df), self.chunk_size))
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> pd.DataFrame:
+        i = next(self.range_iterator)
+        chunk_end = i + self.chunk_size
+        return self.df[i:chunk_end]
 
 
 # # # FUNCTIONS # # #
@@ -315,6 +364,11 @@ def chunk_df(
 ) -> Generator[pd.DataFrame, None, None]:
     """Split a dataframe into chunks, usually for multiprocessing.
 
+    NOTE: If chunk_size is not a valid value (<=0, or not a integer) the
+    generator will NOT throw an exception and instead return an empty list.
+    This is a result of internal python functionality. If errors need to be
+    thrown, use the generator class instead: `caf.toolkit.pandas_utils.ChunkDf`
+
     Parameters
     ----------
     df:
@@ -333,21 +387,21 @@ def chunk_df(
     ValueError:
         If `chunk_size` is less than or equal to 0. Or if it is not and
         integer value.
+
+    TypeError:
+            If `chunk_size` is not and integer
+
+    See Also
+    --------
+    `caf.toolkit.pandas_utils.ChunkDf`
     """
-    if not isinstance(chunk_size, int):
-        raise TypeError(
-            f"chunk_size must be an integer. Given: {chunk_size}"
-        )
+    try:
+        iterator = ChunkDf(df, chunk_size)
+    except (ValueError, TypeError):
+        return
 
-    if chunk_size <= 0:
-        raise ValueError(
-            f"Cannot generate chunk sizes of size 0 or less. Given: {chunk_size}"
-        )
-
-
-    for i in range(0, len(df), chunk_size):
-        chunk_end = i + chunk_size
-        yield df[i:chunk_end]
+    for item in iterator:
+        yield item
 
 
 def long_product_infill(
