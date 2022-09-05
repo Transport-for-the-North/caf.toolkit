@@ -63,3 +63,27 @@ class TestListSafeRemove:
                 throw_error=throw_error,
             )
             assert new_lst == expected_list
+
+
+class TestIsNoneLike:
+    """Tests for caf.toolkit.toolbox.is_none_like"""
+
+    @pytest.mark.parametrize("obj", [None, "none", "NONE", " None   "])
+    def test_true_none_items(self, obj: Any):
+        """Test single items are identified as None"""
+        assert toolbox.is_none_like(obj)
+
+    @pytest.mark.parametrize("obj", [0, "not none", "string"])
+    def test_false_none_items(self, obj: Any):
+        """Test single items are not identified as None"""
+        assert not toolbox.is_none_like(obj)
+
+    @pytest.mark.parametrize("obj", [[], [None], [None, None], [None, "none"]])
+    def test_true_list_items(self, obj: list[Any]):
+        """Test lists of items are identified as None"""
+        assert toolbox.is_none_like(obj)
+
+    @pytest.mark.parametrize("obj", [[0], [None, 0], [None, None, "not none"]])
+    def test_false_list_items(self, obj: list[Any]):
+        """Test lists of items are not identified as None"""
+        assert not toolbox.is_none_like(obj)

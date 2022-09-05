@@ -2,6 +2,7 @@
 """Tests for the caf.toolkit.pandas_utils.df_handling module"""
 # Built-Ins
 from typing import Any
+from typing import NamedTuple
 
 # Third Party
 import pytest
@@ -254,3 +255,413 @@ class TestStrJoinCols:
             separator=separator,
         )
         pd.testing.assert_series_equal(exp_series, end_series)
+
+
+class TestChunkDf:
+    """Tests for caf.toolkit.pandas_utils.chunk_df"""
+
+    @pytest.fixture(name="basic_long_df", scope="class")
+    def fixture_basic_long_df(self):
+        """Test long format dataframe"""
+        columns = ["col1", "col2"]
+        data = np.arange(6).reshape((-1, 2))
+        return pd.DataFrame(data=data, columns=columns)
+
+    @pytest.mark.parametrize("chunk_size", [0, -1, 0.5, -0.5])
+    def test_class_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that giving an incorrect chunk_size generates an error"""
+        if not isinstance(chunk_size, int):
+            with pytest.raises(TypeError):
+                pd_utils.ChunkDf(df=basic_long_df, chunk_size=chunk_size)
+        else:
+            with pytest.raises(ValueError):
+                pd_utils.ChunkDf(df=basic_long_df, chunk_size=chunk_size)
+
+    @pytest.mark.parametrize("chunk_size", [0, -1, 0.5, -0.5])
+    def test_function_error(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that giving an incorrect chunk_size works as python expects"""
+        chunks = pd_utils.chunk_df(df=basic_long_df, chunk_size=chunk_size)
+        assert list(chunks) == list()
+
+    def test_chunk_size_one(self, basic_long_df: pd.DataFrame):
+        """Test that chunk_size operates correctly"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [
+            pd.DataFrame(data=[df.loc[0].values], columns=df.columns),
+            pd.DataFrame(data=[df.loc[1].values], columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+        ]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 1)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    def test_chunk_size_two(self, basic_long_df: pd.DataFrame):
+        """Test that chunk_size operates correctly"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [
+            pd.DataFrame(data=df.loc[[0, 1]].values, columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+        ]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 2)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    @pytest.mark.parametrize("chunk_size", [3, 4])
+    def test_chunk_size_big(self, basic_long_df: pd.DataFrame, chunk_size: int):
+        """Test that chunk_size operates correctly when bigger than DataFrame"""
+        # Create the expected output
+        df = basic_long_df
+        expected_output = [df.copy()]
+
+        # Check outputs
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, chunk_size)):
+            pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
+
+    # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?
+
+
+class TestLongProductInfill:
+    """Tests for caf.toolkit.pandas_utils.long_product_infill"""
+
+    def test_single_idx_col(self):
+        """Test function with one index column"""
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "col1", "col2"]
+        index_dict = {"idx1": [1, 2, 3]}
+
+        # Build the input and expected dataframes
+        data = [[1, "a", "b"], [2, "a", "b"]]
+        expected_data = data.copy()
+        expected_data.append([3, infill_val, infill_val])
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check
+        df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            infill=infill_val,
+            check_totals=False,
+        )
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_double_idx_col(self):
+        """Test function with two index columns
+
+        Also tests indexing things back into order
+        """
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [1, 2], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [[1, 3, "b"], [2, 4, "b"]]
+        expected_data = [
+            [1, 3, "b"],
+            [1, 4, infill_val],
+            [2, 3, infill_val],
+            [2, 4, "b"],
+        ]
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check
+        df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            infill=infill_val,
+            check_totals=False,
+        )
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_triple_idx_col(self):
+        """Test function with three index columns
+
+        Also tests:
+         - string based indexes
+         - index with only 1 value
+         - Assuming index inputs
+        """
+        # Init
+        infill_val = 100
+        col_names = ["idx1", "idx2", "idx3", "col1"]
+        index_dict = {"idx1": ["a", "b"], "idx2": ["c", "d"], "idx3": []}
+
+        # Build the input and expected dataframes
+        data = [["a", "c", "z", 1], ["b", "d", "z", 3]]
+        expected_data = [
+            ["a", "c", "z", 1],
+            ["a", "d", "z", infill_val],
+            ["b", "c", "z", infill_val],
+            ["b", "d", "z", 3],
+        ]
+
+        df = pd.DataFrame(data=data, columns=col_names)
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names)
+
+        # Check - expect warning as infill >0
+        with pytest.warns(UserWarning):
+            df = pd_utils.long_product_infill(
+                df=df,
+                index_dict=index_dict,
+                infill=infill_val,
+                check_totals=False,
+            )
+            pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_no_diff(self):
+        """Test that no change is made when not needed"""
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [1, 2], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [
+            [1, 3, "b"],
+            [1, 4, "c"],
+            [2, 3, "d"],
+            [2, 4, "a"],
+        ]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Check
+        generated_df = pd_utils.long_product_infill(
+            df=df,
+            index_dict=index_dict,
+            check_totals=False,
+        )
+        pd.testing.assert_frame_equal(df, generated_df)
+
+    def test_check_total(self):
+        """Test that an error is thrown when values aren't numeric"""
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [1, 2], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [
+            [1, 3, "a"],
+            [1, 4, "b"],
+            [2, 3, "c"],
+            [2, 4, "d"],
+        ]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Check
+        with pytest.raises(TypeError):
+            pd_utils.long_product_infill(
+                df=df,
+                index_dict=index_dict,
+                check_totals=True,
+            )
+
+    @pytest.mark.filterwarnings("ignore:Almost all values")
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_drop(self, check_totals: bool):
+        """Test error / warning if totals are being checked"""
+        col_names = ["idx1", "idx2", "col1"]
+        index_dict = {"idx1": [3, 4], "idx2": [3, 4]}
+
+        # Build the input and expected dataframes
+        data = [
+            [1, 3, 10.3],
+            [1, 4, 13.2],
+            [2, 3, 76.4],
+            [2, 4, 59.5],
+        ]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Check
+        if check_totals:
+            # Error should be throw if checking
+            with pytest.raises(ValueError):
+                pd_utils.long_product_infill(
+                    df=df,
+                    index_dict=index_dict,
+                    check_totals=check_totals,
+                )
+        else:
+            # Warning should be throw if checking and numeric values
+            with pytest.warns(UserWarning):
+                pd_utils.long_product_infill(
+                    df=df,
+                    index_dict=index_dict,
+                    check_totals=check_totals,
+                )
+
+    def test_warning(self):
+        """Test that a warning is raised when reindex is too different"""
+        # Init
+        infill_val = "z"
+        col_names = ["idx1", "col1"]
+        index_dict = {"idx1": list(range(20))}
+
+        # Build the input dataframe
+        data = [[100, "a"]]
+        df = pd.DataFrame(data=data, columns=col_names)
+
+        # Test for warning
+        with pytest.warns(UserWarning):
+            pd_utils.long_product_infill(
+                df=df,
+                index_dict=index_dict,
+                infill=infill_val,
+                check_totals=False,
+            )
+
+
+class TestLongWideConversions:
+    """Tests for long <-> wide conversions for dataframes
+
+    Covers:
+    - caf.toolkit.pandas_utils.wide_to_long_infill
+    - caf.toolkit.pandas_utils.long_to_wide_infill
+    - caf.toolkit.pandas_utils.long_df_to_wide_ndarray
+    """
+
+    index_col1: str = "idx1"
+    index_col2: str = "idx2"
+    value_col: str = "val"
+
+    class DfData(NamedTuple):
+        """Collection of wide/long dataframe data"""
+
+        long: pd.DataFrame
+        wide: pd.DataFrame
+        index_vals: list[Any]
+
+    @pytest.fixture(name="df_data_complete", scope="class")
+    def fixture_df_data_complete(self):
+        """Long and Wide dataframes without any missing vals"""
+        index_vals = [1, 2, 3]
+
+        # Make the wide df
+        data = np.arange(9).reshape((-1, 3))
+        wide_df = pd.DataFrame(
+            data=data,
+            index=pd.Index(data=index_vals, name=self.index_col1),
+            columns=pd.Index(data=index_vals, name=self.index_col2),
+        )
+
+        # Make the long df
+        df = wide_df.reset_index()
+        df = df.rename(columns={df.columns[0]: self.index_col1})
+
+        # Convert to long
+        long_df = df.melt(
+            id_vars=self.index_col1,
+            var_name=self.index_col2,
+            value_name=self.value_col,
+        )
+
+        # Need to reindex to get in right order for tests
+        index_cols = [self.index_col1, self.index_col2]
+        new_index = pd.MultiIndex.from_product(
+            [index_vals, index_vals],
+            names=index_cols,
+        )
+        long_df = long_df.set_index(index_cols)
+        long_df = long_df.reindex(index=new_index).reset_index()
+
+        # Package values together
+        return self.DfData(
+            long=long_df,
+            wide=wide_df,
+            index_vals=index_vals,
+        )
+
+    def test_long_to_wide_full(self, df_data_complete: DfData):
+        """Test long -> wide conversion with no add/del cols"""
+        wide_df = pd_utils.long_to_wide_infill(
+            df=df_data_complete.long,
+            index_col=self.index_col1,
+            columns_col=self.index_col2,
+            values_col=self.value_col,
+        )
+        pd.testing.assert_frame_equal(wide_df, df_data_complete.wide)
+
+    def test_long_to_wide_missing(self, df_data_complete: DfData):
+        """Test that missing indexes are added back in correctly"""
+        # Init
+        infill_val = 0
+
+        # Remove some random data
+        long_df = df_data_complete.long.copy()
+        mask = (long_df[self.index_col1] == 2) | (long_df[self.index_col2] == 2)
+        long_df = long_df[~mask].copy()
+
+        # Create the expected output
+        expected_wide = df_data_complete.wide.copy()
+        expected_wide[2] = infill_val
+        expected_wide.loc[2, :] = infill_val
+
+        # Check
+        wide_df = pd_utils.long_to_wide_infill(
+            df=long_df,
+            index_col=self.index_col1,
+            columns_col=self.index_col2,
+            values_col=self.value_col,
+            index_vals=df_data_complete.index_vals,
+            column_vals=df_data_complete.index_vals,
+        )
+        pd.testing.assert_frame_equal(
+            wide_df,
+            expected_wide,
+            check_dtype=False,
+        )
+
+    def test_wide_to_long_full(self, df_data_complete: DfData):
+        """Test wide -> long conversion with no add/del cols"""
+        long_df = pd_utils.wide_to_long_infill(
+            df=df_data_complete.wide,
+            index_col_1_name=self.index_col1,
+            index_col_2_name=self.index_col2,
+            value_col_name=self.value_col,
+        )
+        pd.testing.assert_frame_equal(long_df, df_data_complete.long)
+
+    def test_wide_to_long_missing(self, df_data_complete: DfData):
+        """Test that missing indexes are added back in correctly"""
+        # Init
+        infill_val = 0
+
+        # Remove random data
+        wide_df = df_data_complete.wide.copy()
+        wide_df = wide_df.drop(columns=2, index=2)
+
+        # Create expected output
+        exp_long = df_data_complete.long.copy()
+        mask = (exp_long[self.index_col1] == 2) | (exp_long[self.index_col2] == 2)
+        exp_long.loc[mask, self.value_col] = infill_val
+
+        # Check
+        long_df = pd_utils.wide_to_long_infill(
+            df=wide_df,
+            index_col_1_name=self.index_col1,
+            index_col_2_name=self.index_col2,
+            value_col_name=self.value_col,
+            index_col_1_vals=df_data_complete.index_vals,
+            index_col_2_vals=df_data_complete.index_vals,
+        )
+        pd.testing.assert_frame_equal(long_df, exp_long)
+
+    def test_long_df_to_wide_ndarray(self, df_data_complete: DfData):
+        """Test function is a numpy wrapper around long_to_wide_infill"""
+        # Init
+        kwargs = {
+            "df": df_data_complete.long,
+            "index_col": self.index_col1,
+            "columns_col": self.index_col2,
+            "values_col": self.value_col,
+        }
+
+        # Check
+        expected_array = pd_utils.long_to_wide_infill(**kwargs).values
+        wide_array = pd_utils.long_df_to_wide_ndarray(**kwargs)
+        np.testing.assert_array_equal(expected_array, wide_array)

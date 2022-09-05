@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
+import warnings
 import functools
 
 from typing import Any
+from typing import Mapping
+from typing import Optional
+from typing import Generator
 
 # Third Party
 import numpy as np
@@ -12,12 +16,68 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import toolbox
+from caf.toolkit import math_utils
 
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 
+
 # # # CLASSES # # #
+class ChunkDf:
+    """Generator to split a dataframe into chunks.
+
+    Similar to `chunk_df()`, but validates the input arguments and
+    throws and error if not valid.
+
+    Parameters
+    ----------
+    df:
+        the pandas.DataFrame to chunk.
+
+    chunk_size:
+        The size of the chunks to use, in terms of rows.
+
+    Raises
+    ------
+    ValueError:
+        If `chunk_size` is less than or equal to 0. Or if it is not and
+        integer value.
+
+    TypeError:
+        If `chunk_size` is not and integer
+
+    See Also
+    --------
+    `caf.toolkit.pandas_utils.chunk_df()`
+    """
+
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        chunk_size: int,
+    ):
+        if not isinstance(chunk_size, int):
+            raise TypeError(f"chunk_size must be an integer. Given: {chunk_size}")
+
+        if chunk_size <= 0:
+            raise ValueError(
+                f"Cannot generate chunk sizes of size 0 or less. Given: {chunk_size}"
+            )
+
+        self.df = df
+        self.chunk_size = chunk_size
+        self.range_iterator = iter(range(0, len(self.df), self.chunk_size))
+
+    def __iter__(self):
+        """Get an iterator over `self.df` chunks of size `self.chunk_size`."""
+        return self
+
+    def __next__(self) -> pd.DataFrame:
+        """Get the next chunk of `self.df` of size `self.chunk_size`."""
+        i = next(self.range_iterator)
+        chunk_end = i + self.chunk_size
+        return self.df[i:chunk_end]
 
 
 # # # FUNCTIONS # # #
@@ -303,3 +363,372 @@ def str_join_cols(
     # Join the cols together
     join_cols = [df[x].astype(str) for x in columns]
     return functools.reduce(reducer, join_cols)
+
+
+def chunk_df(
+    df: pd.DataFrame,
+    chunk_size: int,
+) -> Generator[pd.DataFrame, None, None]:
+    """Split a dataframe into chunks, usually for multiprocessing.
+
+    NOTE: If chunk_size is not a valid value (<=0, or not a integer) the
+    generator will NOT throw an exception and instead return an empty list.
+    This is a result of internal python functionality. If errors need to be
+    thrown, use the generator class instead: `caf.toolkit.pandas_utils.ChunkDf`
+
+    Parameters
+    ----------
+    df:
+        the pandas.DataFrame to chunk.
+
+    chunk_size:
+        The size of the chunks to use, in terms of rows.
+
+    Yields
+    ------
+    df_chunk:
+        A chunk of `df` with `chunk_size` rows
+
+    Raises
+    ------
+    ValueError:
+        If `chunk_size` is less than or equal to 0. Or if it is not and
+        integer value.
+
+    TypeError:
+            If `chunk_size` is not and integer
+
+    See Also
+    --------
+    `caf.toolkit.pandas_utils.ChunkDf`
+    """
+    try:
+        iterator = ChunkDf(df, chunk_size)
+    except (ValueError, TypeError):
+        return
+
+    for item in iterator:
+        yield item
+
+
+# pylint: disable=too-many-branches
+def long_product_infill(
+    df: pd.DataFrame,
+    index_dict: Mapping[str, Optional[list[Any]]],
+    infill: Any = 0,
+    check_totals: bool = False,
+) -> pd.DataFrame:
+    """Infill columns with a complete product of one another.
+
+    Infills missing values of df in `index_cols.keys()` columns by generating
+    a new MultiIndex from a product of the values in `index_cols.values()`.
+    Where a None-like values is given, all unique values are taken from `df`
+    in that column.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to infill.
+
+    index_dict:
+        A dictionary mapping the columns of `df` to infill, and with what
+        values. Where a None-like values is given, all unique values are taken
+        from `df` in that column.
+        i.e, `df[index_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the return DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion. Can only be performed on numeric columns.
+
+    Returns
+    -------
+    infilled_df:
+        An extended version of 'df' with a product of all `index_cols.values()`
+        in `index_cols.keys()`.
+
+    Raises
+    ------
+    TypeError:
+        If none of the non-index columns are numeric and `check_totals` is True
+    """
+    # Init
+    val_cols = set(df.columns) - set(index_dict.keys())
+    index_dict = dict(index_dict)
+
+    # Get original value column totals where we can
+    orig_col_totals = dict()
+    for col in val_cols:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            orig_col_totals[col] = df[col].values.sum()
+
+    # Validate we can check totals if been told to
+    if check_totals and orig_col_totals == dict():
+        raise TypeError(
+            "Cannot check totals when none of the value columns of df are "
+            f"numeric. Implied value columns:\n{val_cols}"
+        )
+
+    # Validate the input index columns
+    for col, vals in index_dict.items():
+        # Initialise any missing values
+        if toolbox.is_none_like(vals):
+            index_dict[col] = df[col].unique()
+            vals = index_dict[col]
+
+        # Assert for MyPY
+        assert vals is not None
+
+        # Make sure we're not dropping too much.
+        # Indication of problems in arguments.
+        missing_idx = set(vals) - set(df[col].unique().tolist())
+        if len(missing_idx) >= len(vals) * 0.9:
+            warnings.warn(
+                f"Almost all values given for column {col} for not exist in "
+                f"df['{col}']. Are the given data types matching?\n"
+                f"There are {len(missing_idx)} missing values.",
+                category=UserWarning,
+            )
+
+    # Handle a single index
+    if len(index_dict) == 1:
+        name = list(index_dict.keys())[0]
+        vals = index_dict[name]
+        new_index = pd.Index(name=name, data=vals)
+    else:
+        new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+
+    # Make sure every possible combination exists
+    df = df.set_index(list(index_dict.keys()))
+    df = df.reindex(index=new_index, fill_value=infill).reset_index()
+
+    # Just return if we can't check totals
+    if len(orig_col_totals) <= 0:
+        return df
+
+    #  ## Let the user know if the totals aren't similar ## #
+    msg = (
+        "Values have been dropped when reindexing the given dataframe.\n"
+        "Starting total: {orig_total}\n"
+        "Ending total: {after_total}."
+    )
+
+    # Check and warn / error about each column
+    for col, orig_total in orig_col_totals.items():
+        after_total = df[col].values.sum()
+
+        if not math_utils.is_almost_equal(after_total, orig_total):
+            final_msg = msg.format(orig_total=orig_total, after_total=after_total)
+
+            if not check_totals:
+                warnings.warn(final_msg, category=UserWarning)
+            else:
+                raise ValueError(final_msg)
+
+    return df
+
+
+# pylint: enable=too-many-branches
+
+
+def long_to_wide_infill(
+    df: pd.DataFrame,
+    index_col: str,
+    columns_col: str,
+    values_col: str,
+    index_vals: list[Any] = None,
+    column_vals: list[Any] = None,
+    infill: Any = 0,
+    check_totals: bool = False,
+) -> pd.DataFrame:
+    """Convert a DataFrame from long to wide format, infilling missing values.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to convert to wide.
+
+    index_col:
+        The column of `df` to use as the index of the wide return DataFrame
+
+    columns_col:
+        The column of `df` to use as the columns of the wide return DataFrame
+
+    values_col:
+        The column of `df` to use as the values of the wide return DataFrame
+
+    index_vals:
+        The unique values to use as the index of the wide return DataFrame.
+        If left as None, `df[index_col].unique()` will be used.
+
+    column_vals:
+        The unique values to use as the columns of the wide return DataFrame.
+        If left as None, `df[columns_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the wide DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    wide_df:
+        A copy of `df`, in wide format, with index_col as the index,
+        columns_col as the column names, and values_col as the values.
+
+    Raises
+    ------
+    TypeError:
+        If none of the `values_col` is not numeric and `check_totals` is True
+    """
+    # Init
+    index_vals = df[index_col].unique() if index_vals is None else index_vals
+    column_vals = df[columns_col].unique() if column_vals is None else column_vals
+    df = reindex_cols(df, [index_col, columns_col, values_col])
+
+    index_dict = {index_col: index_vals, columns_col: column_vals}
+    df = long_product_infill(
+        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
+    )
+
+    # Convert to wide
+    df = df.pivot(
+        index=index_col,
+        columns=columns_col,
+        values=values_col,
+    )
+
+    return df
+
+
+def wide_to_long_infill(
+    df: pd.DataFrame,
+    index_col_1_name: str,
+    index_col_2_name: str,
+    value_col_name: str,
+    index_col_1_vals: list[Any] = None,
+    index_col_2_vals: list[Any] = None,
+    infill: Any = 0,
+    check_totals: bool = False,
+) -> pd.DataFrame:
+    """Convert a matrix from wide to long format, infilling missing values.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in wide format, to convert to long. The index of `df`
+        must be the values that are to become `index_col_1_name`, and the
+        columns of `df` will be melted to become `index_col_2_name`.
+
+    index_col_1_name:
+        The name to give to the column that was the index of `df`.
+
+    index_col_2_name:
+        The name to give to the column that was the column names of `df`.
+
+    value_col_name:
+        The name to give to the column that was the values of `df`.
+
+    index_col_1_vals:
+        The unique values to use as the first index of the return dataframe.
+        These unique values will be combined with every combination of
+        `index_col_2_vals` to create the full index.
+        If left as None, the unique values of `df` Index will be used.
+
+    index_col_2_vals:
+        The unique values to use as the second index of the return dataframe.
+        These unique values will be combined with every combination of
+        `index_col_1_vals` to create the full index.
+        If left as None, the unique values of `df` columns will be used.
+
+    infill:
+        The value to use to infill any missing cells in the return DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    long_df:
+        A copy of `df`, in long format, with 3 columns:
+        `[index_col_1_name, index_col_2_name, value_col_name]`
+
+    Raises
+    ------
+    TypeError:
+        If none of the `value_col_name` is not numeric and `check_totals` is True
+    """
+    # Assume the index is the first ID
+    df = df.reset_index()
+    df = df.rename(columns={df.columns[0]: index_col_1_name})
+
+    # Convert to long
+    df = df.melt(
+        id_vars=index_col_1_name,
+        var_name=index_col_2_name,
+        value_name=value_col_name,
+    )
+
+    # Infill anything that's missing
+    index_dict = {
+        index_col_1_name: index_col_1_vals,
+        index_col_2_name: index_col_2_vals,
+    }
+    df = long_product_infill(
+        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
+    )
+    return df
+
+
+def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
+    """Convert a DataFrame from long to wide format, infilling missing values.
+
+    Similar to the `long_to_wide_infill()` function, but returns a numpy array
+    instead.
+
+    Parameters
+    ----------
+    df:
+        The dataframe, in long format, to convert to a wide numpy array.
+
+    index_col:
+        The column of `df` to use as the index of the wide return DataFrame
+
+    columns_col:
+        The column of `df` to use as the columns of the wide return DataFrame
+
+    values_col:
+        The column of `df` to use as the values of the wide return DataFrame
+
+    index_vals:
+        The unique values to use as the index of the wide return DataFrame.
+        If left as None, `df[index_col].unique()` will be used.
+
+    column_vals:
+        The unique values to use as the columns of the wide return DataFrame.
+        If left as None, `df[columns_col].unique()` will be used.
+
+    infill:
+        The value to use to infill any missing cells in the wide DataFrame.
+
+    check_totals:
+        Whether to check if the totals are almost equal before and after the
+        conversion.
+
+    Returns
+    -------
+    wide_ndarray:
+        An ndarray, in wide format, with index_col as the index,
+        columns_col as the column names, and values_col as the values.
+
+    See Also
+    --------
+    long_to_wide_infill()
+    """
+    df = long_to_wide_infill(*args, **kwargs)
+    return df.values
