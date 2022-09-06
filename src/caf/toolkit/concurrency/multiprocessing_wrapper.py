@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Library of multiprocessing functionality"""
-
+# Built-ins
 import os
 import sys
 import time
@@ -8,26 +8,19 @@ import warnings
 import traceback
 
 from typing import Any
+from typing import Mapping
 from typing import Iterable
 from typing import Callable
 
-import multiprocessing
-from multiprocessing import Event
-from multiprocessing import TimeoutError
-from multiprocessing import Pool as ProcessPool
+import multiprocessing as mp
 
+# Third Party
 import tqdm
 
 # Local imports
-
-
-class MultiprocessingError(Exception):
-    """
-    Custom Error Wrapper to throw in this module
-    """
-
-    def __init__(self, message):
-        super().__init__(message)
+# pylint: disable=import-error,wrong-import-position
+from caf.toolkit import tqdm_utils
+# pylint: enable=import-error,wrong-import-position
 
 
 def create_kill_pool_fn(
@@ -74,8 +67,8 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: list[multiprocessing.pool.AsyncResult],
-    terminate_process_event: multiprocessing.Event,
+    results: list[Any],   # Should be mp.pool.AsyncResult
+    terminate_process_event: Any, # Should be mp.synchronize.Event,
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
@@ -116,7 +109,7 @@ def wait_for_pool_results(
         pbar_kwargs = {"disable": True}
 
     # Context is meant to keep the pbar tidy
-    with du.std_out_err_redirect_tqdm() as orig_stdout:
+    with tqdm_utils.std_out_err_redirect_tqdm() as orig_stdout:
         # Additional args for context
         pbar_kwargs["file"] = orig_stdout
         pbar_kwargs["dynamic_ncols"] = True
@@ -138,11 +131,9 @@ def wait_for_pool_results(
 
             # Check for an event
             if terminate_process_event.is_set():
-                raise MultiprocessingError(
-                    "While getting results terminate_process_event was set."
-                )
+                raise mp.ProcessError("While getting results terminate_process_event was set.")
 
-            # Check if we've ran out of time
+            # Check if we've run out of time
             if (time.time() - start_time) > result_timeout:
                 raise TimeoutError("Ran out of time while waiting for results.")
 
@@ -153,7 +144,7 @@ def wait_for_pool_results(
                     continue
 
                 if not res.successful():
-                    raise MultiprocessingError("An error occurred in one of the processes.")
+                    raise mp.ProcessError("An error occurred in one of the processes.")
 
                 # Give a minute to get the result
                 # Shouldn't take this long as we know the result is ready
@@ -170,7 +161,7 @@ def wait_for_pool_results(
 
             # Quick sanity check
             if not len(results) + len(return_results) == n_start_results:
-                raise MultiprocessingError(
+                raise mp.ProcessError(
                     "While getting the multiprocessing results an error occurred."
                     + "Lost one or more results. Started with %d, now have %d."
                     % (n_start_results, len(results) + len(return_results))
@@ -196,14 +187,14 @@ def _call_order_wrapper(index, func, *args, **kwargs):
 
     NOTE:
         Originally tried to implement this as a function decorator, however
-        Pools do not like decorated functions as they become unpickleable.
+        Pools do not like decorated functions as they become un-pickleable.
     """
     return index, func(*args, **kwargs)
 
 
 def _check_args_kwargs(
-    args: list[Any],
-    kwargs: list[dict[str, Any]],
+    args: list[Iterable[Any]] = None,
+    kwargs: list[Mapping[str, Any]] = None,
     args_default: Any = None,
     kwargs_default: Any = None,
     length: int = None,
@@ -236,31 +227,29 @@ def _check_args_kwargs(
 
 
 def _process_pool_wrapper_kwargs_in_order(
-    fn,
-    args=None,
-    kwargs=None,
-    process_count=os.cpu_count() - 1,
-    pool_maxtasksperchild=4,
-    result_timeout=86400,
-    pbar_kwargs: dict[str, Any] = None,
+    fn: Callable,
+    args: list[Iterable[Any]],
+    kwargs: list[dict[str, Any]],
+    process_count: int,
+    pool_maxtasksperchild: int,
+    result_timeout: int,
+    pbar_kwargs: dict[str, Any],
 ) -> list[Any]:
     """
-    See process_pool_wrapper() for full documentation of this function.
-    Sister function with _process_pool_wrapper_kwargs_out_order().
-    Should only be called from process_pool_wrapper().
+    See `process_pool_wrapper()` for full documentation of this function.
+    Sibling function with `_process_pool_wrapper_kwargs_out_order()`.
+    Should only be called from `process_pool_wrapper()`.
     """
-    args, kwargs = _check_args_kwargs(args, kwargs)
-    terminate_processes_event = Event()
+    terminate_processes_event = mp.Event()
 
-    with ProcessPool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
+    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
-            results = list()
+            results: list[Any] = list()
 
-            # Add each function call to the pool
+            # Add each function call to the pool with an index identifier
             for i, (a, k) in enumerate(zip(args, kwargs)):
-                # Set up ready to use _call_order_wrapper()
                 new_args = (i, fn, *a)
                 results.append(
                     pool.apply_async(
@@ -279,12 +268,14 @@ def _process_pool_wrapper_kwargs_in_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
+        # pylint: disable=broad-except
         except BaseException:
             # If any exception, clean up and exit to be safe
             kill_pool(process_callback=False)
             traceback.print_exc()
             print("Everything cleaned up, exiting...")
             sys.exit(1)
+        # pylint: enable=broad-except
     del pool
 
     # Order the results, and separate from enumerator
@@ -293,24 +284,22 @@ def _process_pool_wrapper_kwargs_in_order(
 
 
 def _process_pool_wrapper_kwargs_out_order(
-    fn,
-    args=None,
-    kwargs=None,
-    process_count=os.cpu_count() - 1,
-    pool_maxtasksperchild=4,
-    result_timeout=86400,
-    pbar_kwargs: dict[str, Any] = None,
-):
+    fn: Callable,
+    args: list[Iterable[Any]],
+    kwargs: list[dict[str, Any]],
+    process_count: int,
+    pool_maxtasksperchild: int,
+    result_timeout: int,
+    pbar_kwargs: dict[str, Any],
+) -> list[Any]:
     """
-    See process_pool_wrapper() for full documentation of this function.
-    Sister function with _process_pool_wrapper_kwargs_in_order().
-    Should only be called from process_pool_wrapper().
+    See `process_pool_wrapper()` for full documentation of this function.
+    Sibling function with `_process_pool_wrapper_kwargs_in_order()`.
+    Should only be called from `process_pool_wrapper()`.
     """
-    args, kwargs = _check_args_kwargs(args, kwargs)
+    terminate_process_event = mp.Event()
 
-    terminate_process_event = Event()
-
-    with ProcessPool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
+    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_process_event)
 
         try:
@@ -328,12 +317,14 @@ def _process_pool_wrapper_kwargs_out_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
+        # pylint: disable=broad-except
         except BaseException:
             # If any exception, clean up and exit to be safe
             kill_pool(process_callback=False)
             traceback.print_exc()
             print("Everything cleaned up, exiting...")
             sys.exit(1)
+        # pylint: enable=broad-except
 
     del pool
     return results
@@ -342,8 +333,8 @@ def _process_pool_wrapper_kwargs_out_order(
 def multiprocess(
     fn: Callable,
     args: list[Iterable[Any]] = None,
-    kwargs: list[dict[str, Any]] = None,
-    process_count: int = os.cpu_count() - 1,
+    kwargs: list[Mapping[str, Any]] = None,
+    process_count: int = None,
     pool_maxtasksperchild: int = 4,
     in_order: bool = False,
     result_timeout: int = 86400,
@@ -392,7 +383,7 @@ def multiprocess(
         resources to be freed.
 
     in_order:
-        Whether the indexes of the return values need to directly corresspond 
+        Whether the indexes of the return values need to directly corresspond
         to the input values (`args` and `kwargs`) given. Setting this to `True`
         is slightly slower due to sorting the results.
 
@@ -441,28 +432,44 @@ def multiprocess(
             "times to call fn. Please set either args or kwargs."
         )
 
+    if args is not None and kwargs is not None:
+        if len(args) != len(kwargs):
+            raise ValueError(
+                "Both args and kwargs were given but they are not the same "
+                "length. Cannot infer the number of times to call fn.\n"
+                f"args length: {len(args)}\n"
+                f"kwargs length: {len(kwargs)}"
+            )
+
     # Format correctly where not given
     args, kwargs = _check_args_kwargs(args, kwargs)
+    assert args is not None
+    assert kwargs is not None
 
     # Validate process_count
-    if process_count < -os.cpu_count():
+    cpu_count = os.cpu_count()
+    if cpu_count is None:
+        raise OSError("Cannot determine CPU count of system.")
+
+    process_count = cpu_count - 1 if process_count is None else process_count
+    if process_count < -cpu_count:
         raise ValueError(
             f"Negative process_count given is too small. Cannot run "
             f"{process_count:d} less processes than cpu count as only "
             f"{os.cpu_count():d} cpus have been found by python."
         )
 
-    if process_count > os.cpu_count() - 1:
+    if process_count > cpu_count - 1:
         warnings.warn(
             f"Process_count given is too high ({process_count}). It is greater "
             f"than one less than the CPU count found by Python "
-            f"{os.cpu_count() - 1:d}. Only do this if you know what you're "
+            f"{cpu_count - 1:d}. Only do this if you know what you're "
             f"doing otherwise it may intermittently freeze your system."
         )
 
     # Determine the number of processes to use
     if process_count < 0:
-        process_count = os.cpu_count() + process_count
+        process_count = cpu_count + process_count
 
     # Just run a for-loop if the process count is 0
     if process_count == 0:
@@ -486,16 +493,16 @@ def multiprocess(
             result_timeout=result_timeout,
             pbar_kwargs=pbar_kwargs,
         )
-    else:
-        return _process_pool_wrapper_kwargs_out_order(
-            fn=fn,
-            args=args,
-            kwargs=kwargs,
-            process_count=process_count,
-            pool_maxtasksperchild=pool_maxtasksperchild,
-            result_timeout=result_timeout,
-            pbar_kwargs=pbar_kwargs,
-        )
+
+    return _process_pool_wrapper_kwargs_out_order(
+        fn=fn,
+        args=args,
+        kwargs=kwargs,
+        process_count=process_count,
+        pool_maxtasksperchild=pool_maxtasksperchild,
+        result_timeout=result_timeout,
+        pbar_kwargs=pbar_kwargs,
+    )
 
 
 def _test_my_sorted(iterator=None, reverse=None):
