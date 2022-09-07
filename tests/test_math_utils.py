@@ -11,6 +11,7 @@ import pytest
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
+
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -36,5 +37,10 @@ class TestIsAlmostEqual:
     ):
         """Test it works exactly like math.isclose"""
         expected = math.isclose(val1, val2, rel_tol=rel_tol, abs_tol=abs_tol)
-        got = math_utils.is_almost_equal(val1=val1, val2=val2, rel_tol=rel_tol, abs_tol=abs_tol,)
+        got = math_utils.is_almost_equal(
+            val1=val1,
+            val2=val2,
+            rel_tol=rel_tol,
+            abs_tol=abs_tol,
+        )
         assert expected == got
