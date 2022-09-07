@@ -5,6 +5,7 @@ Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
 from typing import Any
+from typing import Iterable
 
 # Third Party
 
@@ -91,3 +92,20 @@ def is_none_like(obj: Any) -> bool:
         return all(is_none_like(x) for x in obj)
 
     return False
+
+
+def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
+    """Check whether two iterables contain the same items, ignoring order
+
+    Only use when elements are neither hashable nor sortable, as this
+    method is quite slow.
+    if hashable use: set(a) == set(b)
+    if sortable use: sorted(a) ==  sorted(b)
+    """
+    unmatched = list(two)
+    for element in one:
+        try:
+            unmatched.remove(element)
+        except ValueError:
+            return False
+    return not unmatched

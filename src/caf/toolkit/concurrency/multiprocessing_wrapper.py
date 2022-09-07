@@ -2,7 +2,6 @@
 """Library of multiprocessing functionality"""
 # Built-ins
 import os
-import sys
 import time
 import warnings
 import traceback
@@ -11,6 +10,7 @@ from typing import Any
 from typing import Mapping
 from typing import Iterable
 from typing import Callable
+from typing import Collection
 
 import multiprocessing as mp
 
@@ -20,6 +20,7 @@ import tqdm
 # Local imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import tqdm_utils
+
 # pylint: enable=import-error,wrong-import-position
 
 
@@ -38,26 +39,12 @@ def create_kill_pool_fn(
         """
         Needs to accept a process_error arg to be used as a callback
         """
-        if process_callback:
-            print(
-                "-" * 15,
-                "WARNING: Got an error in a process - " + "Killing the whole pool.",
-                "-" * 15,
-            )
-        else:
-            print("Got the following exception while killing process:\n")
-
-        if process_error is not None:
+        if process_callback and process_error is not None:
             traceback.print_exception(
                 type(process_error),
                 process_error,
                 process_error.__traceback__,
             )
-        else:
-            print("Process error is None.")
-
-        if process_callback:
-            print("-" * 20, " End of process error. ", "-" * 20, "\n")
 
         pool.close()
         pool.terminate()
@@ -67,36 +54,53 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: list[Any],   # Should be mp.pool.AsyncResult
-    terminate_process_event: Any, # Should be mp.synchronize.Event,
+    results: list[Any],  # Should be mp.pool.AsyncResult
+    terminate_process_event: Any,  # Should be mp.synchronize.Event,
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
-    """
-    Returns the result when they arrive. Throws an error if event is set,
-    or result_timeout is reached.
+    """Wait for and grab results from a multiprocessing Pool.
+
+    Aims to return all results once processes have complete.
+    Will throw an error if `terminate_process_event` is set, or
+    `result_timeout` is reached.
 
     Parameters
     ----------
     results:
-        A list of multiprocessing.pool.AsyncResult. The results we're waiting
+        A list of `multiprocessing.pool.AsyncResult`. The results to wait
         for.
 
     terminate_process_event:
-        A multiprocessing.event. This event should get set if an error occurs
-        and the processpool is trying to terminate.
+        A `multiprocessing.Event`. This event should get set if an error occurs
+        and the `multiprocessing.Pool` (which is generating the `results`)
+        needs to terminate.
 
     result_timeout:
-        How long to wait before throwing an error.
+        How many seconds to wait for all `results` before throwing an error.
 
     pbar_kwargs:
-        A dictionary of keyword arguments to pass into a progress bar.
+        A dictionary of keyword arguments to pass into a tqdm progress bar.
+        Will be used as `tqdm.tqdm(**pbar_kwargs)`
 
     Returns
     -------
     results_out:
-        A list of the results collected from the original results.
-        May not be in the same order as received.
+        A list of the return values collected from `results`.
+        May not be in the same order as received `results`.
+
+    Raises
+    ------
+    multiprocessing.ProcessError:
+        Will be raised in the following cases:
+        - If `terminate_process_event`
+        - If an error is discovered in one of the processes
+        - If one or more of the results are lost when retrieving results
+
+    TimeoutError:
+        If the seconds spent waiting for `results` is greater than
+        `result_timeout`
+
     """
     # Initialise loop
     start_time = time.time()
@@ -162,9 +166,10 @@ def wait_for_pool_results(
             # Quick sanity check
             if not len(results) + len(return_results) == n_start_results:
                 raise mp.ProcessError(
-                    "While getting the multiprocessing results an error occurred."
-                    + "Lost one or more results. Started with %d, now have %d."
-                    % (n_start_results, len(results) + len(return_results))
+                    "While getting the multiprocessing results an error "
+                    "occurred. Lost one or more results. Started with "
+                    f"{n_start_results:d}, now have "
+                    f"{len(results) + len(return_results):d}."
                 )
 
             # Check if we have all results
@@ -193,8 +198,8 @@ def _call_order_wrapper(index, func, *args, **kwargs):
 
 
 def _check_args_kwargs(
-    args: list[Iterable[Any]] = None,
-    kwargs: list[Mapping[str, Any]] = None,
+    args: Collection[Iterable[Any]] = None,
+    kwargs: Collection[Mapping[str, Any]] = None,
     args_default: Any = None,
     kwargs_default: Any = None,
     length: int = None,
@@ -216,24 +221,24 @@ def _check_args_kwargs(
     elif args is None and kwargs is None and length is not None:
         args = [args_default for _ in range(length)]
         kwargs = [kwargs_default for _ in range(length)]
-    else:
-        # args is None and kwargs is None and length is None
+    elif args is None and kwargs is None and length is None:
         raise ValueError(
             "Both args and kwargs are None and length has not "
             "been set. Don't know how to proceed!"
         )
+    # If no branch taken, both args and kwargs must have been set
 
     return args, kwargs
 
 
 def _process_pool_wrapper_kwargs_in_order(
     fn: Callable,
-    args: list[Iterable[Any]],
-    kwargs: list[dict[str, Any]],
+    arg_list: Iterable[Iterable[Any]],
+    kwarg_list: Iterable[Mapping[str, Any]],
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: dict[str, Any],
+    pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
     """
     See `process_pool_wrapper()` for full documentation of this function.
@@ -246,16 +251,14 @@ def _process_pool_wrapper_kwargs_in_order(
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
-            results: list[Any] = list()
-
             # Add each function call to the pool with an index identifier
-            for i, (a, k) in enumerate(zip(args, kwargs)):
-                new_args = (i, fn, *a)
+            results: list[Any] = list()
+            for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):
                 results.append(
                     pool.apply_async(
                         func=_call_order_wrapper,
-                        args=new_args,
-                        kwds=k,
+                        args=(i, fn, *args),
+                        kwds=kwargs,
                         error_callback=kill_pool,
                     )
                 )
@@ -268,14 +271,11 @@ def _process_pool_wrapper_kwargs_in_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
-        # pylint: disable=broad-except
-        except BaseException:
-            # If any exception, clean up and exit to be safe
+        except BaseException as exception:
+            # If any exception, clean up and re-raise
             kill_pool(process_callback=False)
             traceback.print_exc()
-            print("Everything cleaned up, exiting...")
-            sys.exit(1)
-        # pylint: enable=broad-except
+            raise exception
     del pool
 
     # Order the results, and separate from enumerator
@@ -285,12 +285,12 @@ def _process_pool_wrapper_kwargs_in_order(
 
 def _process_pool_wrapper_kwargs_out_order(
     fn: Callable,
-    args: list[Iterable[Any]],
-    kwargs: list[dict[str, Any]],
+    arg_list: Iterable[Iterable[Any]],
+    kwarg_list: Iterable[Mapping[str, Any]],
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: dict[str, Any],
+    pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
     """
     See `process_pool_wrapper()` for full documentation of this function.
@@ -306,8 +306,15 @@ def _process_pool_wrapper_kwargs_out_order(
             results = list()
 
             # Add each function call to the pool
-            for a, k in zip(args, kwargs):
-                results.append(pool.apply_async(fn, args=a, kwds=k, error_callback=kill_pool))
+            for args, kwargs in zip(arg_list, kwarg_list):
+                results.append(
+                    pool.apply_async(
+                        fn,
+                        args=args,
+                        kwds=kwargs,
+                        error_callback=kill_pool,
+                    )
+                )
 
             result_timeout *= max(len(results), 1)
             results = wait_for_pool_results(
@@ -317,14 +324,11 @@ def _process_pool_wrapper_kwargs_out_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
-        # pylint: disable=broad-except
-        except BaseException:
-            # If any exception, clean up and exit to be safe
+        except BaseException as exception:
+            # If any exception, clean up and re-raise
             kill_pool(process_callback=False)
             traceback.print_exc()
-            print("Everything cleaned up, exiting...")
-            sys.exit(1)
-        # pylint: enable=broad-except
+            raise exception
 
     del pool
     return results
@@ -332,8 +336,8 @@ def _process_pool_wrapper_kwargs_out_order(
 
 def multiprocess(
     fn: Callable,
-    args: list[Iterable[Any]] = None,
-    kwargs: list[Mapping[str, Any]] = None,
+    arg_list: Collection[Iterable[Any]] = None,
+    kwarg_list: Collection[Mapping[str, Any]] = None,
     process_count: int = None,
     pool_maxtasksperchild: int = 4,
     in_order: bool = False,
@@ -357,13 +361,13 @@ def multiprocess(
     fn:
         The function to call.
 
-    args:
+    arg_list:
         A list of iterables e.g. tuples/lists. `len(args)` equals the
         number of times `fn` will be called. If `kwargs` is also provided,
         `args` should directly correspond to it. Each tuple should contain a
         full set of non-keyword arguments to be passed to a single call of fn.
 
-    kwargs:
+    kwarg_list:
         A list of dictionaries. The keys should be the keyword argument names,
         and the values the keyword argument values. `len(kwargs)` equals the
         number of times `fn` will be called. If `args` is also provided,
@@ -421,30 +425,30 @@ def multiprocess(
 
     >>> args_list = [a_args, b_args, c_args]
     >>> kwargs_list = [a_kwargs, b_kwargs, c_kwargs]
-    >>> a, b, c = multiprocess(sorted, args, kwargs)
+    >>> a, b, c = multiprocess(sorted, args_list, kwargs_list)
     """
     # TODO(BT): Maybe add functionality to allow calling a function without
     #  any arguments n times
     # Validate the args and kwargs
-    if args is None and kwargs is None:
+    if arg_list is None and kwarg_list is None:
         raise ValueError(
             "Both args and kwargs are set to None. Cannot infer the number of "
             "times to call fn. Please set either args or kwargs."
         )
 
-    if args is not None and kwargs is not None:
-        if len(args) != len(kwargs):
+    if arg_list is not None and kwarg_list is not None:
+        if len(arg_list) != len(kwarg_list):
             raise ValueError(
                 "Both args and kwargs were given but they are not the same "
                 "length. Cannot infer the number of times to call fn.\n"
-                f"args length: {len(args)}\n"
-                f"kwargs length: {len(kwargs)}"
+                f"args length: {len(arg_list)}\n"
+                f"kwargs length: {len(kwarg_list)}"
             )
 
     # Format correctly where not given
-    args, kwargs = _check_args_kwargs(args, kwargs)
-    assert args is not None
-    assert kwargs is not None
+    arg_list, kwarg_list = _check_args_kwargs(arg_list, kwarg_list)
+    assert arg_list is not None
+    assert kwarg_list is not None
 
     # Validate process_count
     cpu_count = os.cpu_count()
@@ -476,18 +480,20 @@ def multiprocess(
         if pbar_kwargs is not None:
             # If no total given, we can add one!
             if "total" not in pbar_kwargs or pbar_kwargs["total"] == 0:
-                pbar_kwargs["total"] = len(kwargs)
-            return [fn(*a, **k) for a, k in tqdm.tqdm(zip(args, kwargs), **pbar_kwargs)]
+                pbar_kwargs["total"] = len(kwarg_list)
+            return [
+                fn(*a, **k) for a, k in tqdm.tqdm(zip(arg_list, kwarg_list), **pbar_kwargs)
+            ]
 
-        return [fn(*a, **k) for a, k in zip(args, kwargs)]
+        return [fn(*a, **k) for a, k in zip(arg_list, kwarg_list)]
 
     # If we get here, the process count must be > 0 and valid
     # Now either run in order or not
     if in_order:
         return _process_pool_wrapper_kwargs_in_order(
             fn=fn,
-            args=args,
-            kwargs=kwargs,
+            arg_list=arg_list,
+            kwarg_list=kwarg_list,
             process_count=process_count,
             pool_maxtasksperchild=pool_maxtasksperchild,
             result_timeout=result_timeout,
@@ -496,99 +502,10 @@ def multiprocess(
 
     return _process_pool_wrapper_kwargs_out_order(
         fn=fn,
-        args=args,
-        kwargs=kwargs,
+        arg_list=arg_list,
+        kwarg_list=kwarg_list,
         process_count=process_count,
         pool_maxtasksperchild=pool_maxtasksperchild,
         result_timeout=result_timeout,
         pbar_kwargs=pbar_kwargs,
     )
-
-
-def _test_my_sorted(iterator=None, reverse=None):
-    if iterator is None or reverse is None:
-        raise ValueError
-    return sorted(iterator, reverse=reverse)
-
-
-def _test_raise_error(index):
-    if index == 4:
-        print("%d is Error!" % index)
-        raise ValueError("Throwing a test error!")
-    print("%d is waiting!" % index)
-    time.sleep(5)
-
-
-def process_pool_tests():
-    """
-    Run some tests to make sure the written functions are working correctly.
-
-    Also provides some examples for proper use.
-    """
-    print("Running multiprocessing_wrapper.py tests...")
-
-    # # Use this to test Exception catching and terminating
-    # args = [(x, ) for x in range(10)]
-    # process_pool_wrapper(_test_raise_error, args)
-    # process_pool_wrapper(_test_raise_error, args, in_order=True)
-    # print("Left Error Test")
-
-    # Set up
-    n_repeats = 10
-    arg_val = list(range(10))
-    kwarg_val = {"reverse": True}
-
-    args = list()
-    kwargs = list()
-    for i in range(n_repeats):
-        args.append((arg_val.copy(),))
-
-        # Test empty kwarg
-        if i == 1:
-            kwargs.append(dict())
-        else:
-            kwargs.append(kwarg_val.copy())
-
-    # Run normally to get baseline
-    baseline_results = list()
-    baseline_results_kw = list()
-    for a, k in zip(args, kwargs):
-        baseline_results.append(sorted(*a))
-        baseline_results_kw.append(sorted(*a, **k))
-
-    # Run tests and assert they are correct
-    result = process_pool_wrapper(sorted, args, kwargs, in_order=True)
-    assert result == baseline_results_kw
-
-    result = process_pool_wrapper(sorted, args, in_order=True)
-    assert result == baseline_results
-
-    result = process_pool_wrapper(sorted, args, None, in_order=True)
-    assert result == baseline_results
-
-    # Need special check here in case they are out of order
-    result = process_pool_wrapper(sorted, args, kwargs, in_order=False)
-    assert du.equal_ignore_order(result, baseline_results_kw)
-
-    result = process_pool_wrapper(sorted, args, in_order=False)
-    assert du.equal_ignore_order(result, baseline_results)
-
-    # Kwargs only set up
-    kwargs_dict = {"reverse": True, "iterator": arg_val.copy()}
-    args = [list() for _ in range(n_repeats)]
-    kwargs = [kwargs_dict for _ in range(n_repeats)]
-    baseline_results = [_test_my_sorted(**k) for k in kwargs]
-
-    # Test passing in empty args
-    results = process_pool_wrapper(_test_my_sorted, args, kwargs, in_order=True)
-    assert results == baseline_results
-
-    # Test passing in None args
-    results = process_pool_wrapper(_test_my_sorted, None, kwargs, in_order=True)
-    assert results == baseline_results
-
-    print("All tests passed!")
-
-
-if __name__ == "__main__":
-    process_pool_tests()
