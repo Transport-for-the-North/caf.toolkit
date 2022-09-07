@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Library of multiprocessing functionality"""
+"""Library of multiprocessing functionality."""
 # Built-ins
 import os
 import time
@@ -29,15 +29,17 @@ def create_kill_pool_fn(
     terminate_process_event,
 ):
     """
-    Creates a Callback function for each function in a Pool.
+    Create a Callback function for each function in a Pool.
 
     This is called whenever an exception is raised inside one of the processes in
     a Pool. This is mostly used to give a clean error output when an error occurs.
     """
 
     def kill_pool(process_error=None, process_callback=True):
-        """
-        Needs to accept a process_error arg to be used as a callback
+        """Print error and kill pool completely.
+
+        Needs to accept a `process_error` arg to be used as a callback in
+        `multiprocessing.Pool.apply_async()`
         """
         if process_callback and process_error is not None:
             traceback.print_exception(
@@ -183,14 +185,13 @@ def wait_for_pool_results(
 
 
 def _call_order_wrapper(index, func, *args, **kwargs):
-    """
-    A function wrapper allowing an index to be added to the function call
-    and return
+    """Wrap a function return values with a calling index.
 
     Useful when placing a function into an asynchronous Pool. The index of the
     function is returned alongside the results, allowing for sorting.
 
-    NOTE:
+    Note
+    ----
         Originally tried to implement this as a function decorator, however
         Pools do not like decorated functions as they become un-pickleable.
     """
@@ -204,7 +205,8 @@ def _check_args_kwargs(
     kwargs_default: Any = None,
     length: int = None,
 ):
-    """
+    """Format args and kwargs correctly if only one set.
+
     If args or kwargs are set to None they are filled with their default value
     to match the length of the other.
     If both are None, then they are set to length.
@@ -240,8 +242,8 @@ def _process_pool_wrapper_kwargs_in_order(
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
-    """
-    See `process_pool_wrapper()` for full documentation of this function.
+    """See `process_pool_wrapper()` for full documentation of this function.
+
     Sibling function with `_process_pool_wrapper_kwargs_out_order()`.
     Should only be called from `process_pool_wrapper()`.
     """
@@ -292,8 +294,8 @@ def _process_pool_wrapper_kwargs_out_order(
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
-    """
-    See `process_pool_wrapper()` for full documentation of this function.
+    """See `process_pool_wrapper()` for full documentation of this function.
+
     Sibling function with `_process_pool_wrapper_kwargs_in_order()`.
     Should only be called from `process_pool_wrapper()`.
     """
@@ -344,7 +346,7 @@ def multiprocess(
     result_timeout: int = 86400,
     pbar_kwargs: dict[str, Any] = None,
 ) -> list[Any]:
-    """Run a function and arguments across multiple cores of a CPU
+    """Run a function and arguments across multiple cores of a CPU.
 
     Runs the given function with the arguments given in a multiprocessing.Pool,
     returning the function output.

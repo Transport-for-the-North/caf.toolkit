@@ -95,7 +95,7 @@ def is_none_like(obj: Any) -> bool:
 
 
 def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
-    """Check whether two iterables contain the same items, ignoring order
+    """Check whether two iterables contain the same items, ignoring order.
 
     Only use when elements are neither hashable nor sortable, as this
     method is quite slow.

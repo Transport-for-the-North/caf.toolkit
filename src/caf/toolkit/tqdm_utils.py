@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""A collection of utilities to manage tqdm write outs to terminal"""
+"""A collection of utilities to manage tqdm write outs to terminal."""
 # Built-Ins
 import sys
 import contextlib
@@ -30,7 +30,7 @@ def std_out_err_redirect_tqdm():
     still cause formatting issues in terminal.
 
     Yields
-    -------
+    ------
     sys.stdout:
         Original stdout.
 
