@@ -5,6 +5,7 @@ Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
 from typing import Any
+from typing import Tuple
 from typing import Iterable
 
 # Third Party
@@ -101,7 +102,33 @@ def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
     method is quite slow.
     if hashable use: set(a) == set(b)
     if sortable use: sorted(a) ==  sorted(b)
+
+    Parameters
+    ----------
+    one:
+        The first iterable to check
+
+    two:
+        The second iterable to check
+
+    Returns
+    -------
+    equal:
+        `True` if one and two are equal regardless of order. False otherwise.
     """
+    # Try faster method if hashable
+    try:
+        return set(one) == set(two)
+    except TypeError:
+        pass
+
+    # Try faster method if sortable
+    try:
+        return sorted(one) == sorted(two)
+    except TypeError:
+        pass
+
+    # Default to slow comparison
     unmatched = list(two)
     for element in one:
         try:
@@ -109,3 +136,32 @@ def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
         except ValueError:
             return False
     return not unmatched
+
+
+def iterable_difference(one:  Iterable[Any], two: Iterable[Any],) -> Tuple[list[Any], list[Any]]:
+    """Get the difference between two iterables
+
+    Parameters
+    ----------
+    one:
+        The first iterable to get the difference of
+
+    two:
+        The second iterable to get the difference of
+
+    Returns
+    -------
+    one_not_two:
+        A list of items that are in `one` and not `two`.
+
+    two_not_one:
+        A list of items that are in `two` and not `one`.
+    """
+    # Convert to sets
+    one_set = set(one)
+    two_set = set(two)
+
+    return (
+        list(one_set - two_set),
+        list(two_set - one_set),
+    )
