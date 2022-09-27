@@ -2,6 +2,7 @@
 """Tests for the caf.toolkit.toolbox module"""
 # Built-Ins
 from typing import Any
+from typing import Iterable
 
 # Third Party
 import pytest
@@ -87,3 +88,24 @@ class TestIsNoneLike:
     def test_false_list_items(self, obj: list[Any]):
         """Test lists of items are not identified as None"""
         assert not toolbox.is_none_like(obj)
+
+
+class TestEqualIgnoreOrder:
+    """Tests for caf.toolkit.toolbox.equal_ignore_order"""
+
+    def test_order_match(self):
+        """Test when both iterables are the same"""
+        lst = [1, 2, 3]
+        assert toolbox.equal_ignore_order(lst, lst)
+
+    def test_out_of_order_match(self):
+        """Test when both iterables are the same, but in different order"""
+        lst = [1, 2, 3]
+        lst2 = [3, 1, 2]
+        assert toolbox.equal_ignore_order(lst, lst2)
+
+    @pytest.mark.parametrize("one", [[], [1], [1, 2]])
+    @pytest.mark.parametrize("two", [[2], [3, 4]])
+    def test_not_match(self, one: Iterable[Any], two: Iterable[Any]):
+        """Test when iterables do not match at all"""
+        assert not toolbox.equal_ignore_order(one, two)
