@@ -29,6 +29,7 @@ from caf.toolkit import iterative_proportional_fitting
 @dataclasses.dataclass
 class IpfData:
     """Collection of data to pass to an IPF call"""
+
     matrix: np.ndarray
     marginals: list[np.ndarray]
     dimensions: list[list[int]]
@@ -60,10 +61,12 @@ class TestIpf:
     @pytest.fixture(name="ipf_example", scope="function")
     def fixture_ipf_example(self):
         """Basic collection of arguments for testing"""
-        mat = np.array([
-            [[1, 2, 1], [3, 5, 5], [6, 2, 2], [1, 7, 2]],
-            [[5, 4, 2], [5, 5, 5], [3, 8, 7], [2, 7, 6]],
-        ])
+        mat = np.array(
+            [
+                [[1, 2, 1], [3, 5, 5], [6, 2, 2], [1, 7, 2]],
+                [[5, 4, 2], [5, 5, 5], [3, 8, 7], [2, 7, 6]],
+            ]
+        )
 
         # Marginals
         xipp = np.array([52, 48], dtype=float)
@@ -124,7 +127,7 @@ class TestIpf:
               [2.96858853,  7.96488389,  5.06654069],
               [2.97398518,  2.96297358,  2.06304125]]]
         )
-        # fmt: om
+        # fmt: on
         target_iters = 13
         target_conv = 2.5840564976941704e-10
 
@@ -152,7 +155,7 @@ class TestIpf:
               [2.96858402,  7.96487881,  5.06653717],
               [2.97398518,  2.96297357,  2.06304125]]]
         )
-        # fmt: om
+        # fmt: on
         target_iters = 12
         target_conv = 2.209143978859629e-10
 
