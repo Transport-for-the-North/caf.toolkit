@@ -110,7 +110,7 @@ def root_mean_squared_error(
     targets: list[np.ndarray],
     achieved: list[np.ndarray],
 ) -> float:
-    """Calculate the root-mean-squared error between targets and achieved
+    """Calculate the root-mean-squared error between targets and achieved.
 
     Two lists of corresponding values are zipped together, differences taken
     (residuals) and the RMSE calculated.

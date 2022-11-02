@@ -102,7 +102,7 @@ class TestIpf:
 
     def test_marginal_shapes(self, ipf_example: IpfData):
         """Test that invalid marginal shapes raises an error"""
-        bad_marginal = ipf_example.marginals[0]
+        bad_marginal = ipf_example.marginals[0] / 2
         bad_marginal = np.broadcast_to(np.expand_dims(bad_marginal, axis=1), (2, 2))
         ipf_example.marginals[0] = bad_marginal
 
@@ -178,8 +178,11 @@ class TestIpf:
             bad_marginals.append(np.zeros_like(marginal))
         ipf_example.marginals = bad_marginals
 
-        # Run and check the results
-        mat, iters, conv = iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+        # Check for warning
+        with pytest.warns(UserWarning, match="Given target_marginals of 0"):
+            mat, iters, conv = iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+
+        # Check the results
         np_testing.assert_allclose(mat, target_mat, rtol=1e-4)
         assert iters == target_iters
         assert math_utils.is_almost_equal(conv, target_conv)

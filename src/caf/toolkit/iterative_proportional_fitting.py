@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Implementation of iterative proportional fitting algorithm
+"""Implementation of iterative proportional fitting algorithm.
 
 See: https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 """
@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 # # # FUNCTIONS # # #
 def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
-    """Checks whether the marginals are valid"""
+    """Check whether the marginals are valid."""
     marginal_sums = [x.sum() for x in target_marginals]
     if not math_utils.list_is_almost_equal(marginal_sums):
         warnings.warn(
@@ -40,7 +40,7 @@ def _validate_dimensions(
     target_dimensions: list[list[int]],
     seed_mat: np.ndarray,
 ) -> None:
-    """Checks whether the dimensions are valid"""
+    """Check whether the dimensions are valid."""
     seed_n_dims = len(seed_mat.shape)
     for dimension in target_dimensions:
         if len(dimension) > seed_n_dims:
@@ -64,7 +64,7 @@ def _validate_marginal_shapes(
     target_dimensions: list[list[int]],
     seed_mat: np.ndarray,
 ) -> None:
-    """Checks whether the marginal shapes are valid"""
+    """Check whether the marginal shapes are valid."""
     seed_shape = seed_mat.shape
     for marginal, dimensions in zip(target_marginals, target_dimensions):
         target_shape = tuple(np.array(seed_shape)[dimensions])
@@ -81,7 +81,7 @@ def default_convergence(
     targets: list[np.ndarray],
     achieved: list[np.ndarray],
 ) -> float:
-    """Calculate the default convergence used by ipfn
+    """Calculate the default convergence used by ipfn.
 
     Two lists of corresponding values are zipped together, differences taken
     (residuals) and the RMSE calculated.
@@ -127,7 +127,7 @@ def adjust_towards_aggregates(
     target_dimensions: list[list[int]],
     convergence_fn: Callable,
 ) -> tuple[np.ndarray, float]:
-    """Adjusts a matrix towards aggregate targets
+    """Adjust a matrix towards aggregate targets.
 
     Uses `target_aggregates` and `target_dimensions` to calculate adjustment
     factors across each of the dimensions, brining mat closer to the targets.
@@ -210,7 +210,7 @@ def ipf(
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
 ) -> tuple[np.ndarray, int, float]:
-    """Iteratively adjust a matrix towards targets until convergence met
+    """Adjust a matrix iteratively towards targets until convergence met.
 
     https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 
@@ -268,7 +268,6 @@ def ipf(
     ValueError:
         If any of the marginals or dimensions are not valid when passed in.
     """
-
     # Validate inputs
     _validate_marginals(target_marginals)
     _validate_dimensions(target_dimensions, seed_mat)
