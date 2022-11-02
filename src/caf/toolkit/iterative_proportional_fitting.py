@@ -26,6 +26,56 @@ LOG = logging.getLogger(__name__)
 
 
 # # # FUNCTIONS # # #
+def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
+    """Checks whether the marginals are valid"""
+    marginal_sums = [x.sum() for x in target_marginals]
+    if not math_utils.list_is_almost_equal(marginal_sums):
+        warnings.warn(
+            "Given target_marginals do not sum to similar amounts. The "
+            "resulting matrix may not be very accurate.\n"
+            f"Sums of given marginals: {marginal_sums}"
+        )
+
+
+def _validate_marginal_shapes(
+    target_marginals: list[np.ndarray],
+    target_dimensions: list[list[int]],
+    seed_mat: np.ndarray,
+) -> None:
+    """Checks whether the marginal shapes are valid"""
+    seed_shape = seed_mat.shape
+    for marginal, dimensions in zip(target_marginals, target_dimensions):
+        target_shape = np.array(seed_shape)[dimensions]
+        if marginal.shape != target_shape:
+            raise ValueError(
+                "Marginal is not the expected shape for the given seed "
+                f"matrix. Marginal with dimensions {dimensions} is expected "
+                f"to have shape {target_shape}. Instead, got shape "
+                f"{marginal.shape}."
+            )
+
+
+def _validate_dimensions(
+    target_dimensions: list[list[int]],
+    seed_mat: np.ndarray,
+) -> None:
+    """Checks whether the dimensions are valid"""
+    seed_n_dims = len(seed_mat.shape)
+    for dimension in target_dimensions:
+        if len(dimension) > seed_n_dims:
+            raise ValueError(
+                "Cannot have more target dimensions than there are dimensions "
+                f"in the seed matrix. Expected a maximum of {seed_n_dims} "
+                f"dimensions, instead got a target of: {dimension}."
+            )
+        if np.max(dimension) > seed_n_dims - 1:
+            raise ValueError(
+                "Cannot have a higher axis number than is available in the "
+                f"seed matrix. Expected a maximum axis number of "
+                f"{seed_n_dims - 1}, got {np.max(dimension)} instead."
+            )
+
+
 def default_convergence(
     targets: list[np.ndarray],
     achieved: list[np.ndarray],
@@ -96,6 +146,8 @@ def adjust_towards_aggregates(
         Each target dimension lists the axes that should be preserved when
         calculating the achieved aggregates for the corresponding
         `target_marginals`.
+        Another way to look at this is a list of the numpy axis which should
+        NOT be summed from `mat` when calculating the achieved marginals.
 
     convergence_fn:
         The function that should be called to calculate the convergence of
@@ -118,17 +170,9 @@ def adjust_towards_aggregates(
     n_dims = len(mat.shape)
     out_mat = mat.copy()
 
-    # ## DO IT ## #
+    # Adjust the matrix once for each marginal
     for target, dimensions in zip(target_marginals, target_dimensions):
-
-        # Validate dims
-        if len(dimensions) == n_dims:
-            raise ValueError("IMPOSSIBLE")
-
-        if np.max(dimensions) > n_dims - 1:
-            raise ValueError("Invalid target dims - too high")
-
-        # Figure out which sum_axes to sum across
+        # Figure out which axes to sum across
         sum_axes = tuple(set(range(n_dims)) - set(dimensions))
 
         # Figure out the adjustment factor
@@ -147,7 +191,7 @@ def adjust_towards_aggregates(
         )
         out_mat *= adj_factor
 
-    # Calculate the achieved aggregates
+    # Calculate the achieved marginals
     achieved_aggregates = list()
     for dimensions in target_dimensions:
         sum_axes = tuple(set(range(n_dims)) - set(dimensions))
@@ -164,37 +208,84 @@ def ipf(
     max_iterations: int = 5000,
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
-) -> tuple[np.ndarray, int, float, list[float]]:
+) -> tuple[np.ndarray, int, float]:
+    """Iteratively adjust a matrix towards targets until convergence met
 
-    # ## VALIDATE INPUTS ## #
-    # Validate marginals sum to same
-    marginal_sums = [x.sum() for x in target_marginals]
-    if not math_utils.list_is_almost_equal(marginal_sums):
-        warnings.warn(
-            "Given target_marginals do not sum to similar amounts. The "
-            "resulting matrix may not be very accurate.\n"
-            f"Sums of given marginals: {marginal_sums}"
-        )
+    https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 
-    # Validate dimensions are valid
+    Parameters
+    ----------
+    seed_mat:
+        The starting matrix that should be adjusted.
 
-    # Validate shapes?
+    target_marginals:
+        A list of the aggregates to adjust `matrix` towards. Aggregates are
+        the target values to aim for when aggregating across one or several
+        other axis. Directly corresponds to `target_dimensions`.
 
-    # ## RUN FITTING ## #
+    target_dimensions:
+        A list of target dimensions for each aggregate.
+        Each target dimension lists the axes that should be preserved when
+        calculating the achieved aggregates for the corresponding
+        `target_marginals`.
+        Another way to look at this is a list of the numpy axis which should
+        NOT be summed from `mat` when calculating the achieved marginals.
+
+    convergence_fn:
+        The function that should be called to calculate the convergence of
+        `mat` after all `target_marginals` adjustments have been made. If
+        a callable is given it must take the form:
+        `fn(targets: list[np.ndarray], achieved: list[np.ndarray])`
+
+    max_iterations:
+        The maximum number of iterations to complete before exiting
+
+    tol:
+        The target convergence to achieve before exiting early. This is one
+        condition which allows exiting before `max_iterations` is reached.
+        The convergence is calculated via `convergence_fn`.
+
+    min_tol_rate:
+        The minimum value that the convergence can change by between
+        iterations before exiting early. This is one
+        condition which allows exiting before `max_iterations` is reached.
+        The convergence is calculated via `convergence_fn`.
+
+    Returns
+    -------
+    fit_matrix:
+        The final fit matrix.
+
+    completed_iterations:
+        The number of completed iterations before exiting.
+
+    achieved_convergence:
+        The final achieved convergence - achieved by `fit_matrix`
+
+    Raises
+    ------
+    ValueError:
+        If any of the marginals or dimensions are not valid when passed in.
+    """
+
+    # Validate inputs
+    _validate_marginals(target_marginals)
+    _validate_dimensions(target_dimensions, seed_mat)
+    _validate_marginal_shapes(target_marginals, target_dimensions, seed_mat)
+
     # Initialise variables for iterations
-    iter_num = 0
+    iter_num = -1
     convergence = np.inf
-    convergence_progress: list[float] = list()
     fit_mat = seed_mat.copy()
     early_exit = False
 
     # Can return early if all 0 - probably shouldn't happen!
     if all(x.sum() for x in target_marginals):
         warnings.warn("Given target_marginals of 0. Returning all 0's")
-        return np.zeros(seed_mat.shape), iter_num, convergence, convergence_progress
+        return np.zeros(seed_mat.shape), iter_num, convergence
 
     # Set up numpy overflow errors
-    with np.errstate(over='raise'):
+    with np.errstate(over="raise"):
 
         # Iteratively fit
         for iter_num in range(max_iterations):
@@ -206,22 +297,27 @@ def ipf(
                 target_dimensions=target_dimensions,
                 convergence_fn=convergence_fn,
             )
-            convergence_progress.append(convergence)
 
             # Check if we've hit targets
             if convergence < tol:
                 early_exit = True
+                break
 
             if iter_num > 1 and abs(convergence - prev_conv) < min_tol_rate:
                 early_exit = True
+                break
+
+            # Check for errors
+            if np.isnan(convergence):
+                return np.zeros(seed_mat.shape), iter_num + 1, np.inf
 
     # Warn the user if we exhausted our number of loops
     if not early_exit:
         warnings.warn(
-            f"WARNING! The iterative proportional fitting exhausted its max "
+            f"The iterative proportional fitting exhausted its max "
             f"number of loops ({max_iterations}), while achieving a "
             f"convergence value of {convergence}. The values returned may "
             f"not be accurate."
         )
 
-    return fit_mat, iter_num, convergence, convergence_progress
+    return fit_mat, iter_num + 1, convergence
