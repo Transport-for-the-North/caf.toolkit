@@ -11,7 +11,6 @@ from typing import Callable
 
 # Third Party
 import numpy as np
-import pandas as pd
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -37,24 +36,6 @@ def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
         )
 
 
-def _validate_marginal_shapes(
-    target_marginals: list[np.ndarray],
-    target_dimensions: list[list[int]],
-    seed_mat: np.ndarray,
-) -> None:
-    """Checks whether the marginal shapes are valid"""
-    seed_shape = seed_mat.shape
-    for marginal, dimensions in zip(target_marginals, target_dimensions):
-        target_shape = np.array(seed_shape)[dimensions]
-        if marginal.shape != target_shape:
-            raise ValueError(
-                "Marginal is not the expected shape for the given seed "
-                f"matrix. Marginal with dimensions {dimensions} is expected "
-                f"to have shape {target_shape}. Instead, got shape "
-                f"{marginal.shape}."
-            )
-
-
 def _validate_dimensions(
     target_dimensions: list[list[int]],
     seed_mat: np.ndarray,
@@ -64,15 +45,35 @@ def _validate_dimensions(
     for dimension in target_dimensions:
         if len(dimension) > seed_n_dims:
             raise ValueError(
+                "Too many dimensions. "
                 "Cannot have more target dimensions than there are dimensions "
                 f"in the seed matrix. Expected a maximum of {seed_n_dims} "
                 f"dimensions, instead got a target of: {dimension}."
             )
         if np.max(dimension) > seed_n_dims - 1:
             raise ValueError(
+                "Dimension numbers too high. "
                 "Cannot have a higher axis number than is available in the "
                 f"seed matrix. Expected a maximum axis number of "
                 f"{seed_n_dims - 1}, got {np.max(dimension)} instead."
+            )
+
+
+def _validate_marginal_shapes(
+    target_marginals: list[np.ndarray],
+    target_dimensions: list[list[int]],
+    seed_mat: np.ndarray,
+) -> None:
+    """Checks whether the marginal shapes are valid"""
+    seed_shape = seed_mat.shape
+    for marginal, dimensions in zip(target_marginals, target_dimensions):
+        target_shape = tuple(np.array(seed_shape)[dimensions])
+        if marginal.shape != target_shape:
+            raise ValueError(
+                "Marginal is not the expected shape for the given seed "
+                f"matrix. Marginal with dimensions {dimensions} is expected "
+                f"to have shape {target_shape}. Instead, got shape "
+                f"{marginal.shape}."
             )
 
 
@@ -168,7 +169,7 @@ def adjust_towards_aggregates(
     """
     # Init
     n_dims = len(mat.shape)
-    out_mat = mat.copy()
+    out_mat = mat.copy().astype(float)
 
     # Adjust the matrix once for each marginal
     for target, dimensions in zip(target_marginals, target_dimensions):
@@ -204,7 +205,7 @@ def ipf(
     seed_mat: np.ndarray,
     target_marginals: list[np.ndarray],
     target_dimensions: list[list[int]],
-    convergence_fn: Callable,
+    convergence_fn: Callable = None,
     max_iterations: int = 5000,
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
@@ -273,6 +274,9 @@ def ipf(
     _validate_dimensions(target_dimensions, seed_mat)
     _validate_marginal_shapes(target_marginals, target_dimensions, seed_mat)
 
+    if convergence_fn is None:
+        convergence_fn = math_utils.root_mean_squared_error
+
     # Initialise variables for iterations
     iter_num = -1
     convergence = np.inf
@@ -280,7 +284,7 @@ def ipf(
     early_exit = False
 
     # Can return early if all 0 - probably shouldn't happen!
-    if all(x.sum() for x in target_marginals):
+    if all(x.sum() == 0 for x in target_marginals):
         warnings.warn("Given target_marginals of 0. Returning all 0's")
         return np.zeros(seed_mat.shape), iter_num, convergence
 
