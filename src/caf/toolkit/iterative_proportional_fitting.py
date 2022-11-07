@@ -6,15 +6,19 @@ See: https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 # Built-Ins
 import logging
 import warnings
+import itertools
 
+from typing import Any
 from typing import Callable
 
 # Third Party
 import numpy as np
+import pandas as pd
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
+from caf.toolkit import pandas_utils as pd_utils
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -201,6 +205,104 @@ def adjust_towards_aggregates(
     return out_mat, convergence_fn(target_marginals, achieved_aggregates)
 
 
+def ipf_dataframe(
+    seed_df: pd.DataFrame,
+    target_marginals: list[pd.Series],
+    target_dimensions: list[list[Any]],
+    value_col: str,
+    convergence_fn: Callable = None,
+    max_iterations: int = 5000,
+    tol: float = 1e-9,
+    min_tol_rate: float = 1e-9,
+) -> tuple[pd.DataFrame, int, float]:
+    # ## VALIDATE INPUTS ## #
+    if not isinstance(seed_df, pd.DataFrame):
+        if isinstance(seed_df, np.ndarray):
+            raise ValueError(
+                "Given `seed_df` is a numpy array. "
+                "`ipf_dataframe()` cannot handle numpy arrays. Perhaps you want "
+                "to call `ipf()` instead."
+            )
+
+        raise ValueError(
+            "Given `seed_df` is not a pandas.DataFrame. Cannot run."
+        )
+
+    # TODO(BT): Validate index names match seed_df col names
+    if not all(isinstance(x, pd.Series) for x in target_marginals):
+        raise ValueError(
+            "`target_marginals` should be a list of pandas.Series where the "
+            "index of each series are the corresponding `target_dimensions`."
+        )
+
+    if value_col not in seed_df:
+        raise ValueError("`value_col` is not in `seed_df`.")
+
+    # Set and check dimension cols
+    dimension_cols = seed_df.columns.tolist()
+    dimension_cols.remove(value_col)
+    dimension_order = {x: seed_df[x].unique().tolist() for x in dimension_cols}
+
+    target_cols = set(itertools.chain.from_iterable(target_dimensions))
+    missing_cols = set(dimension_cols) - target_cols
+    if len(missing_cols) > 0:
+        raise ValueError(
+            "Not all columns defined in `target_dimensions` can be found in "
+            f"the `seed_df`. The following columns are missing:\n{missing_cols}"
+        )
+
+    # ## CONVERT TO NUMPY ## #
+    np_seed = pd_utils.dataframe_to_n_dimensional_array(
+        seed_df,
+        dimension_order,
+        fill_val=0,
+    )
+
+    np_marginals = list()
+    np_dimensions = list()
+    for pd_marginal, pd_dimension in zip(target_marginals, target_dimensions):
+        # Convert marginals
+        np_marginal_i = pd_utils.dataframe_to_n_dimensional_array(
+            df=pd_marginal.reset_index(),
+            dimension_cols={x: dimension_order[x] for x in pd_dimension},
+            fill_val=np.nan,
+        )
+
+        # Validate marginal
+        if np.any(np.isnan(np_marginal_i)):
+            full_idx = pd_utils.get_full_index({x: dimension_order[x] for x in pd_dimension})
+            err_df = pd.DataFrame(data=np_marginal_i, index=full_idx, columns=["Value"])
+            raise ValueError(
+                "Not all seed matrix dimensions were given in a marginal. See "
+                f"np.NaN below for missing values:\n{err_df}"
+            )
+        np_marginals.append(np_marginal_i)
+
+        # Convert the dimensions
+        axes = [dimension_cols.index(x) for x in pd_dimension]
+        np_dimensions.append(axes)
+
+    # ## CALL NUMPY VERSION AND WRAP RESULT IN DATAFRAME ## #
+    fit_mat, iter_num, conv = ipf(
+        seed_mat=np_seed,
+        target_marginals=np_marginals,
+        target_dimensions=np_dimensions,
+        convergence_fn=convergence_fn,
+        max_iterations=max_iterations,
+        tol=tol,
+        min_tol_rate=min_tol_rate,
+    )
+
+    fit_df = pd_utils.n_dimensional_array_to_dataframe(
+        mat=fit_mat,
+        dimension_cols=dimension_order,
+        value_col=value_col,
+        drop_zeros=True,
+    )
+
+    return fit_df.reset_index(), iter_num, conv
+
+
 def ipf(
     seed_mat: np.ndarray,
     target_marginals: list[np.ndarray],
@@ -268,6 +370,13 @@ def ipf(
     ValueError:
         If any of the marginals or dimensions are not valid when passed in.
     """
+    if isinstance(seed_mat, pd.DataFrame):
+        raise ValueError(
+            "Given `seed_mat` is a pandas.DataFrame. "
+            "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
+            "to call `ipf_dataframe()` instead."
+        )
+
     # Validate inputs
     _validate_marginals(target_marginals)
     _validate_dimensions(target_dimensions, seed_mat)
