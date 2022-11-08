@@ -208,7 +208,6 @@ def adjust_towards_aggregates(
 def ipf_dataframe(
     seed_df: pd.DataFrame,
     target_marginals: list[pd.Series],
-    target_dimensions: list[list[Any]],
     value_col: str,
     convergence_fn: Callable = None,
     max_iterations: int = 5000,
@@ -228,15 +227,18 @@ def ipf_dataframe(
             "Given `seed_df` is not a pandas.DataFrame. Cannot run."
         )
 
-    # TODO(BT): Validate index names match seed_df col names
     if not all(isinstance(x, pd.Series) for x in target_marginals):
         raise ValueError(
             "`target_marginals` should be a list of pandas.Series where the "
-            "index of each series are the corresponding `target_dimensions`."
+            "index names of each series are the corresponding dimensions to "
+            "control to with the marginal."
         )
 
     if value_col not in seed_df:
         raise ValueError("`value_col` is not in `seed_df`.")
+
+    # Infer dimensions from the target_marginals
+    target_dimensions = [list(x.index.names) for x in target_marginals]
 
     # Set and check dimension cols
     dimension_cols = seed_df.columns.tolist()
@@ -247,8 +249,9 @@ def ipf_dataframe(
     missing_cols = set(dimension_cols) - target_cols
     if len(missing_cols) > 0:
         raise ValueError(
-            "Not all columns defined in `target_dimensions` can be found in "
-            f"the `seed_df`. The following columns are missing:\n{missing_cols}"
+            "Not all dimension control columns defined in `target_marginals` "
+            "can be found in the `seed_df`. The following columns are "
+            f"missing:\n{missing_cols}"
         )
 
     # ## CONVERT TO NUMPY ## #

@@ -62,11 +62,17 @@ def dataframe_to_n_dimensional_array(
     if not isinstance(dimension_cols, dict):
         dimension_cols = {x: sorted(df[x].unique()) for x in dimension_cols}
 
-    # TODO(BT): What happens if more than one value columns? Error probs.
-    #  Need to add check in for this and throw error
+    # Validate that only one value column exists
+    full_idx = df_handling.get_full_index(dimension_cols)
+    value_cols = set(df.columns) - set(full_idx.names)
+    if len(value_cols) > 1:
+        raise ValueError(
+            "More than one value column found. Cannot convert to N-Dimensional "
+            "array. The following columns have not been accounted for in the "
+            f"`dimension_cols`:\n{value_cols}"
+        )
 
     # Convert
-    full_idx = df_handling.get_full_index(dimension_cols)
     np_df = df.set_index(list(dimension_cols.keys())).reindex(full_idx).fillna(fill_val)
     return np_df.values.reshape(final_shape)
 
