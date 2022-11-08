@@ -9,6 +9,7 @@ from typing import Any
 from typing import Callable
 
 import pandas as pd
+
 # Third Party
 import pytest
 
@@ -52,6 +53,7 @@ class IpfData:
         }
 
     def copy(self):
+        """Make a copt of this instance"""
         return IpfData(
             matrix=self.matrix,
             marginals=self.marginals,
@@ -66,8 +68,10 @@ class IpfData:
 @dataclasses.dataclass
 class IpfDataPandas:
     """Pandas version of IpfData"""
+
     matrix: pd.DataFrame
     marginals: list[pd.Series]
+    value_col: str = "total"
     convergence_fn: Callable = None
     max_iterations: int = 5000
     tol: float = 1e-9
@@ -76,18 +80,32 @@ class IpfDataPandas:
     def to_kwargs(self) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
-            "seed_mat": self.matrix,
+            "seed_df": self.matrix,
             "target_marginals": self.marginals,
+            "value_col": self.value_col,
             "convergence_fn": self.convergence_fn,
             "max_iterations": self.max_iterations,
             "tol": self.tol,
             "min_tol_rate": self.min_tol_rate,
         }
 
+    def copy(self):
+        """Make a copt of this instance"""
+        return IpfDataPandas(
+            matrix=self.matrix,
+            marginals=self.marginals,
+            value_col=self.value_col,
+            convergence_fn=self.convergence_fn,
+            max_iterations=self.max_iterations,
+            tol=self.tol,
+            min_tol_rate=self.min_tol_rate,
+        )
+
 
 @dataclasses.dataclass
 class IpfDataAndResults:
     """Collection of inputs and expected outputs for and IPF call"""
+
     inputs: IpfData
     final_matrix: np.ndarray
     completed_iters: int
@@ -97,6 +115,7 @@ class IpfDataAndResults:
 @dataclasses.dataclass
 class IpfDataAndResultsPandas:
     """Collection of inputs and expected outputs for and IPF call"""
+
     inputs: IpfDataPandas
     final_matrix: np.ndarray
     completed_iters: int
@@ -104,6 +123,34 @@ class IpfDataAndResultsPandas:
 
 
 # # # FIXTURES # # #
+@pytest.fixture(name="ipf_example_index", scope="function")
+def fixture_ipf_example_index() -> pd.MultiIndex:
+    """Generate the pandas MultiIndex for the pandas examples"""
+    # Convert the matrix
+    # fmt: off
+    dma = [
+        501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501,
+        502, 502, 502, 502, 502, 502, 502, 502, 502, 502, 502, 502,
+    ]
+    size = [
+        1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,
+        1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,
+    ]
+
+    age = [
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+        '20-25', '30-35', '40-45',
+    ]
+    # fmt: on
+    return pd.MultiIndex.from_arrays([dma, size, age], names=["dma", "size", "age"])
+
+
 @pytest.fixture(name="ipf_example", scope="function")
 def fixture_ipf_example() -> IpfData:
     """Basic collection of arguments for testing"""
@@ -155,7 +202,7 @@ def fixture_ipf_rmse_example_results(ipf_example: IpfData) -> IpfDataAndResults:
         inputs=local_ipf_example,
         final_matrix=target_mat,
         completed_iters=13,
-        final_convergence=2.5840564976941704e-10
+        final_convergence=2.5840564976941704e-10,
     )
 
 
@@ -182,41 +229,22 @@ def fixture_ipf_ipfn_example_results(ipf_example: IpfData) -> IpfDataAndResults:
         inputs=local_ipf_example,
         final_matrix=target_mat,
         completed_iters=12,
-        final_convergence=2.209143978859629e-10
+        final_convergence=2.209143978859629e-10,
     )
 
 
 @pytest.fixture(name="pandas_ipf_example", scope="function")
-def fixture_pandas_ipf_example(ipf_example: IpfData) -> IpfDataPandas:
+def fixture_pandas_ipf_example(
+    ipf_example: IpfData,
+    ipf_example_index: pd.MultiIndex,
+) -> IpfDataPandas:
     """Pandas wrapper for `fixture_ipf_example`"""
     # Convert the matrix
-    # fmt: off
-    dma = [
-        501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501,
-        502, 502, 502, 502, 502, 502, 502, 502, 502, 502, 502, 502,
-    ]
-    size = [
-        1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,
-        1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,
-    ]
-
-    age = [
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-        '20-25', '30-35', '40-45',
-    ]
-    # fmt: on
-
     pd_mat = pd.DataFrame(
         data=ipf_example.matrix.flatten(),
-        index=pd.MultiIndex([dma, size, age], names=["dma", "size", "age"]),
-        columns="total",
-    )
+        index=ipf_example_index,
+        columns=["total"],
+    ).reset_index()
 
     # Convert the marginals
     xipp = pd_mat.groupby("dma")["total"].sum()
@@ -225,18 +253,70 @@ def fixture_pandas_ipf_example(ipf_example: IpfData) -> IpfDataPandas:
     xijp = pd_mat.groupby(["dma", "size"])["total"].sum()
     xpjk = pd_mat.groupby(["size", "age"])["total"].sum()
 
-    xipp.values = ipf_example.marginals[0]
-    xpjp.values = ipf_example.marginals[1]
-    xppk.values = ipf_example.marginals[2]
-    xijp.values = ipf_example.marginals[3]
-    xpjk.values = ipf_example.marginals[4]
+    def _convert(template: pd.DataFrame, marginal_idx: int) -> pd.DataFrame:
+        """Convert marginals"""
+        return pd.Series(
+            data=ipf_example.marginals[marginal_idx].flatten(),
+            index=template.index,
+        )
 
-    marginals = [xipp, xpjp, xppk, xijp, xpjk]
+    marginals = [
+        _convert(xipp, 0),
+        _convert(xpjp, 1),
+        _convert(xppk, 2),
+        _convert(xijp, 3),
+        _convert(xpjk, 4),
+    ]
 
     # Wrap in an object
-    return IpfDataPandas(
-        matrix=pd_mat,
-        marginals=marginals
+    return IpfDataPandas(matrix=pd_mat, marginals=marginals)
+
+
+@pytest.fixture(name="ipf_pandas_rmse_example_results", scope="function")
+def fixture_pandas_ipf_rmse_example_results(
+    pandas_ipf_example: IpfDataPandas,
+    ipf_rmse_example_results: IpfDataAndResults,
+    ipf_example_index: pd.MultiIndex,
+) -> IpfDataAndResults:
+    """Pandas wrapper for `ipf_rmse_example_results`"""
+    # Convert the matrix
+    target_df = pd.DataFrame(
+        data=ipf_rmse_example_results.final_matrix.flatten(),
+        index=ipf_example_index,
+        columns=["total"],
+    ).reset_index()
+
+    local_ipf_example = pandas_ipf_example.copy()
+    local_ipf_example.convergence_fn = math_utils.root_mean_squared_error
+    return IpfDataAndResultsPandas(
+        inputs=local_ipf_example,
+        final_matrix=target_df,
+        completed_iters=ipf_rmse_example_results.completed_iters,
+        final_convergence=ipf_rmse_example_results.final_convergence,
+    )
+
+
+@pytest.fixture(name="ipf_pandas_ipfn_example_results", scope="function")
+def fixture_pandas_ipf_ipfn_example_results(
+    pandas_ipf_example: IpfDataPandas,
+    ipf_ipfn_example_results: IpfDataAndResults,
+    ipf_example_index: pd.MultiIndex,
+) -> IpfDataAndResults:
+    """Pandas wrapper for `ipf_rmse_example_results`"""
+    # Convert the matrix
+    target_df = pd.DataFrame(
+        data=ipf_ipfn_example_results.final_matrix.flatten(),
+        index=ipf_example_index,
+        columns=["total"],
+    ).reset_index()
+
+    local_ipf_example = pandas_ipf_example.copy()
+    local_ipf_example.convergence_fn = iterative_proportional_fitting.default_convergence
+    return IpfDataAndResultsPandas(
+        inputs=local_ipf_example,
+        final_matrix=target_df,
+        completed_iters=ipf_ipfn_example_results.completed_iters,
+        final_convergence=ipf_ipfn_example_results.final_convergence,
     )
 
 
@@ -244,6 +324,7 @@ def fixture_pandas_ipf_example(ipf_example: IpfData) -> IpfDataPandas:
 @pytest.mark.usefixtures("ipf_example", "ipf_rmse_example_results", "ipf_ipfn_example_results")
 class TestIpf:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf"""
+
     def test_invalid_marginals(self, ipf_example: IpfData):
         """Test that invalid marginals raise a warning"""
         ipf_example.marginals[0] /= 2
@@ -279,7 +360,6 @@ class TestIpf:
         )
 
         # Check the results
-        print(ipf_rmse_example_results.inputs.to_kwargs())
         np_testing.assert_allclose(mat, ipf_rmse_example_results.final_matrix, rtol=1e-4)
         assert iters == ipf_rmse_example_results.completed_iters
         assert math_utils.is_almost_equal(conv, ipf_rmse_example_results.final_convergence)
@@ -336,5 +416,37 @@ class TestIpf:
         assert math_utils.is_almost_equal(conv, target_conv)
 
 
-# TODO(BT): Tests for ipf pandas
+@pytest.mark.usefixtures(
+    "pandas_ipf_example", "ipf_pandas_rmse_example_results", "ipf_pandas_ipfn_example_results"
+)
+class TestIpfDataFrame:
+    """Tests for caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
+
+    # TODO(BT): Add error checking tests
+
+    def test_rmse_convergence(self, ipf_pandas_rmse_example_results: IpfDataAndResultsPandas):
+        """Test that correct result calculated with ipfn convergence"""
+        # Run
+        mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
+            **ipf_pandas_rmse_example_results.inputs.to_kwargs()
+        )
+
+        # Check the results
+        pd.testing.assert_frame_equal(mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4)
+        assert iters == ipf_pandas_rmse_example_results.completed_iters
+        assert math_utils.is_almost_equal(conv, ipf_pandas_rmse_example_results.final_convergence)
+
+    def test_ipfn_convergence(self, ipf_pandas_ipfn_example_results: IpfDataAndResultsPandas):
+        """Test that correct result calculated with ipfn convergence"""
+        # Run
+        mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
+            **ipf_pandas_ipfn_example_results.inputs.to_kwargs()
+        )
+
+        # Check the results
+        pd.testing.assert_frame_equal(mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4)
+        assert iters == ipf_pandas_ipfn_example_results.completed_iters
+        assert math_utils.is_almost_equal(conv, ipf_pandas_ipfn_example_results.final_convergence)
+
+
 # TODO(BT): Test that ipf pandas conversions make numpy matrices
