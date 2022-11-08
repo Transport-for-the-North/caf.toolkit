@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-"""
+"""Conversion methods between numpy and pandas formats."""
 # Built-Ins
 import logging
 
@@ -29,7 +28,7 @@ def dataframe_to_n_dimensional_array(
     dimension_cols: Union[list[str], dict[str, list[str]]],
     fill_val: Any = np.nan,
 ) -> np.ndarray:
-    """Convert a pandas.DataFrame into an N-Dimensional numpy array
+    """Convert a pandas.DataFrame into an N-Dimensional numpy array.
 
     Each column listed in `dimension_cols` will be another dimension in the
     final array. E.g. if `dimension_cols` was a list of 4 items then a
@@ -83,7 +82,7 @@ def n_dimensional_array_to_dataframe(
     value_col: str,
     drop_zeros: bool,
 ) -> pd.DataFrame:
-    """Convert an N-dimensional numpy array to a pandas.Dataframe
+    """Convert an N-dimensional numpy array to a pandas.Dataframe.
 
     Parameters
     ----------
@@ -92,7 +91,7 @@ def n_dimensional_array_to_dataframe(
 
     dimension_cols:
         A dictionary of `{col_name: col_values}` pairs. `dimension_cols.keys()`
-        MUST return a list of keys in the same order as the dimension each
+        MUST return a list of keys in the same order as the dimension that each
         `col_name` refers to. `dimension_cols.keys()` is defined by the order
         the keys are added to a dictionary. `col_values` MUST be in the same
         order as the values in the dimension they refer to.

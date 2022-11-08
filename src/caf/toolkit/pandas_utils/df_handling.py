@@ -735,7 +735,7 @@ def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
 
 
 def get_full_index(dimension_cols: dict[str, list[str]]) -> pd.Index:
-    """Create a pandas Index from a mapping of {col_name: col_values}
+    """Create a pandas Index from a mapping of {col_name: col_values}.
 
     Useful for N-dimensional conversions as MultiIndex can change types
     when only one index column is needed.
