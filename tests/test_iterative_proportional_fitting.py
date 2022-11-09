@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import re
 import dataclasses
 
 from typing import Any
@@ -327,30 +328,42 @@ class TestIpf:
 
     def test_invalid_marginals(self, ipf_example: IpfData):
         """Test that invalid marginals raise a warning"""
-        ipf_example.marginals[0] /= 2
+        bad_marginals = ipf_example.marginals.copy()
+        bad_marginals[0] /= 2
         with pytest.warns(UserWarning, match="do not sum to similar amounts"):
-            iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_marginals": bad_marginals})
+            )
 
     def test_too_many_dimensions(self, ipf_example: IpfData):
         """Test that invalid dimensions (too many) raise an error"""
-        ipf_example.dimensions[0] = [0, 1, 2, 3, 4]
+        bad_dimensions = ipf_example.dimensions.copy()
+        bad_dimensions[0] = [0, 1, 2, 3, 4]
         with pytest.raises(ValueError, match="Too many dimensions"):
-            iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_dimensions": bad_dimensions})
+            )
 
     def test_too_high_dimensions(self, ipf_example: IpfData):
         """Test that invalid dimensions (too high) raise an error"""
-        ipf_example.dimensions[0] = [3, 4]
+        bad_dimensions = ipf_example.dimensions.copy()
+        bad_dimensions[0] = [3, 4]
         with pytest.raises(ValueError, match="Dimension numbers too high."):
-            iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_dimensions": bad_dimensions})
+            )
 
     def test_marginal_shapes(self, ipf_example: IpfData):
         """Test that invalid marginal shapes raises an error"""
-        bad_marginal = ipf_example.marginals[0] / 2
+        marginals = ipf_example.marginals.copy()
+        bad_marginal = marginals[0] / 2
         bad_marginal = np.broadcast_to(np.expand_dims(bad_marginal, axis=1), (2, 2))
-        ipf_example.marginals[0] = bad_marginal
+        marginals[0] = bad_marginal
 
         with pytest.raises(ValueError, match="Marginal is not the expected shape"):
-            iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_marginals": marginals})
+            )
 
     def test_rmse_convergence(self, ipf_rmse_example_results: IpfDataAndResults):
         """Test that correct result calculated with RMSE convergence"""
@@ -387,11 +400,12 @@ class TestIpf:
         bad_marginals = list()
         for marginal in ipf_example.marginals:
             bad_marginals.append(np.zeros_like(marginal))
-        ipf_example.marginals = bad_marginals
 
         # Check for warning
         with pytest.warns(UserWarning, match="Given target_marginals of 0"):
-            mat, iters, conv = iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            mat, iters, conv = iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_marginals": bad_marginals})
+            )
 
         # Check the results
         np_testing.assert_allclose(mat, target_mat, rtol=1e-4)
@@ -407,8 +421,9 @@ class TestIpf:
 
         # Check for warning
         with pytest.warns(UserWarning, match="exhausted its max number of loops"):
-            ipf_example.max_iterations = 0
-            mat, iters, conv = iterative_proportional_fitting.ipf(**ipf_example.to_kwargs())
+            mat, iters, conv = iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"max_iterations": 0})
+            )
 
         # Check the results
         np_testing.assert_allclose(mat, target_mat, rtol=1e-4)
@@ -422,7 +437,48 @@ class TestIpf:
 class TestIpfDataFrame:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
 
-    # TODO(BT): Add error checking tests
+    def test_numpy_array_error(self, pandas_ipf_example: IpfDataPandas):
+        """Test an error is raised when a numpy matrix is passed"""
+        numpy_seed = pandas_ipf_example.matrix.values
+        with pytest.raises(ValueError, match=re.escape("call `ipf()` instead")):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"seed_df": numpy_seed})
+            )
+
+    def test_value_col_error(self, pandas_ipf_example: IpfDataPandas):
+        """Test an error is raised when the wrong value_col is passed"""
+        with pytest.raises(ValueError, match=re.escape("`value_col` is not in")):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"value_col": "broken"})
+            )
+
+    def test_dataframe_marginals_error(self, pandas_ipf_example: IpfDataPandas):
+        """Test an error is raised when non-series marginals is passed"""
+        new_marginals = pandas_ipf_example.marginals
+        new_marginals[0] = new_marginals[0].reset_index()
+        with pytest.raises(ValueError, match="list of pandas.Series"):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"target_marginals": new_marginals})
+            )
+
+    def test_mismatch_columns_error(self, pandas_ipf_example: IpfDataPandas):
+        """Test an error is raised when seed and marginal columns don't match"""
+        missing_col = pandas_ipf_example.matrix.columns[0]
+        new_seed = pandas_ipf_example.matrix.rename(columns={missing_col: "Broken"})
+        with pytest.raises(ValueError, match=re.escape(missing_col)):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"seed_df": new_seed})
+            )
+
+    def test_missing_marginals(self, pandas_ipf_example: IpfDataPandas):
+        """Test an error is raised when some values are missing from a marginal"""
+        new_marginals = pandas_ipf_example.marginals.copy()
+        new_marginals[0] = new_marginals[0].iloc[1:].copy()
+
+        with pytest.raises(ValueError, match="missing values"):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"target_marginals": new_marginals})
+            )
 
     def test_rmse_convergence(self, ipf_pandas_rmse_example_results: IpfDataAndResultsPandas):
         """Test that correct result calculated with ipfn convergence"""
@@ -432,9 +488,13 @@ class TestIpfDataFrame:
         )
 
         # Check the results
-        pd.testing.assert_frame_equal(mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4)
+        pd.testing.assert_frame_equal(
+            mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4
+        )
         assert iters == ipf_pandas_rmse_example_results.completed_iters
-        assert math_utils.is_almost_equal(conv, ipf_pandas_rmse_example_results.final_convergence)
+        assert math_utils.is_almost_equal(
+            conv, ipf_pandas_rmse_example_results.final_convergence
+        )
 
     def test_ipfn_convergence(self, ipf_pandas_ipfn_example_results: IpfDataAndResultsPandas):
         """Test that correct result calculated with ipfn convergence"""
@@ -444,9 +504,13 @@ class TestIpfDataFrame:
         )
 
         # Check the results
-        pd.testing.assert_frame_equal(mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4)
+        pd.testing.assert_frame_equal(
+            mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4
+        )
         assert iters == ipf_pandas_ipfn_example_results.completed_iters
-        assert math_utils.is_almost_equal(conv, ipf_pandas_ipfn_example_results.final_convergence)
+        assert math_utils.is_almost_equal(
+            conv, ipf_pandas_ipfn_example_results.final_convergence
+        )
 
 
 # TODO(BT): Test that ipf pandas conversions make numpy matrices

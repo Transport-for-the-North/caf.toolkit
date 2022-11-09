@@ -57,9 +57,9 @@ def dataframe_to_n_dimensional_array(
         A N-dimensional numpy array made from `df`.
     """
     # Init
-    final_shape = [len(df[x].unique()) for x in dimension_cols]
     if not isinstance(dimension_cols, dict):
         dimension_cols = {x: sorted(df[x].unique()) for x in dimension_cols}
+    final_shape = [len(x) for x in dimension_cols.values()]
 
     # Validate that only one value column exists
     full_idx = df_handling.get_full_index(dimension_cols)

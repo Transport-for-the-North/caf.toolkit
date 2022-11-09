@@ -124,7 +124,7 @@ def _validate_pd_marginals(
 
 def _validate_pd_dimensions(seed_cols: set[str], dimension_cols: set[str]) -> None:
     """Check whether the pandas target dimension columns are valid."""
-    missing_cols = seed_cols - dimension_cols
+    missing_cols = dimension_cols - seed_cols
     if len(missing_cols) > 0:
         raise ValueError(
             "Not all dimension control columns defined in `target_marginals` "
@@ -203,7 +203,12 @@ def pd_marginals_to_np(
         # Validate marginal
         if np.any(np.isnan(np_marginal_i)):
             full_idx = pd_utils.get_full_index({x: dimension_order[x] for x in pd_dimension})
-            err_df = pd.DataFrame(data=np_marginal_i, index=full_idx, columns=["Value"])
+            err_df = pd.DataFrame(
+                data=np_marginal_i.flatten(),
+                index=full_idx,
+                columns=["Value"],
+            )
+            err_df = err_df[np.isnan(err_df["Value"].values)]
             raise ValueError(
                 "Not all seed matrix dimensions were given in a marginal. See "
                 f"np.NaN below for missing values:\n{err_df}"
@@ -346,7 +351,6 @@ def ipf_dataframe(
     seed_df: pd.DataFrame,
     target_marginals: list[pd.Series],
     value_col: str,
-    *args,
     **kwargs,
 ) -> tuple[pd.DataFrame, int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
@@ -371,25 +375,8 @@ def ipf_dataframe(
         The column in `seed_df` that refers to the data. All other columns
         will be assumed to be dimensional columns.
 
-    convergence_fn:
-        The function that should be called to calculate the convergence of
-        `mat` after all `target_marginals` adjustments have been made. If
-        a callable is given it must take the form:
-        `fn(targets: list[np.ndarray], achieved: list[np.ndarray])`
-
-    max_iterations:
-        The maximum number of iterations to complete before exiting
-
-    tol:
-        The target convergence to achieve before exiting early. This is one
-        condition which allows exiting before `max_iterations` is reached.
-        The convergence is calculated via `convergence_fn`.
-
-    min_tol_rate:
-        The minimum value that the convergence can change by between
-        iterations before exiting early. This is one
-        condition which allows exiting before `max_iterations` is reached.
-        The convergence is calculated via `convergence_fn`.
+    **kwargs:
+        Any other arguments to pass to `iterative_proportional_fitting.ipf()`
 
     Returns
     -------
@@ -437,7 +424,6 @@ def ipf_dataframe(
         seed_mat=np_seed,
         target_marginals=np_marginals,
         target_dimensions=np_dimensions,
-        *args,
         **kwargs,
     )
 
