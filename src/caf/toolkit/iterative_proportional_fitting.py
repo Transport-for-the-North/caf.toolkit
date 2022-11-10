@@ -10,6 +10,7 @@ import itertools
 
 from typing import Any
 from typing import Callable
+from typing import Optional
 
 # Third Party
 import numpy as np
@@ -442,7 +443,7 @@ def ipf(
     seed_mat: np.ndarray,
     target_marginals: list[np.ndarray],
     target_dimensions: list[list[int]],
-    convergence_fn: Callable = None,
+    convergence_fn: Optional[Callable] = None,
     max_iterations: int = 5000,
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,

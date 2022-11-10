@@ -538,8 +538,8 @@ def long_to_wide_infill(
     index_col: str,
     columns_col: str,
     values_col: str,
-    index_vals: list[Any] = None,
-    column_vals: list[Any] = None,
+    index_vals: Optional[list[Any]] = None,
+    column_vals: Optional[list[Any]] = None,
     infill: Any = 0,
     check_totals: bool = False,
 ) -> pd.DataFrame:
@@ -610,8 +610,8 @@ def wide_to_long_infill(
     index_col_1_name: str,
     index_col_2_name: str,
     value_col_name: str,
-    index_col_1_vals: list[Any] = None,
-    index_col_2_vals: list[Any] = None,
+    index_col_1_vals: Optional[list[Any]] = None,
+    index_col_2_vals: Optional[list[Any]] = None,
     infill: Any = 0,
     check_totals: bool = False,
 ) -> pd.DataFrame:
