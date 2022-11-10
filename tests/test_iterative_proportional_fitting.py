@@ -7,6 +7,7 @@ import re
 import dataclasses
 
 from typing import Any
+from typing import Optional
 from typing import Callable
 
 import pandas as pd
@@ -36,7 +37,7 @@ class IpfData:
     matrix: np.ndarray
     marginals: list[np.ndarray]
     dimensions: list[list[int]]
-    convergence_fn: Callable = None
+    convergence_fn: Optional[Callable] = None
     max_iterations: int = 5000
     tol: float = 1e-9
     min_tol_rate: float = 1e-9
@@ -73,7 +74,7 @@ class IpfDataPandas:
     matrix: pd.DataFrame
     marginals: list[pd.Series]
     value_col: str = "total"
-    convergence_fn: Callable = None
+    convergence_fn: Optional[Callable] = None
     max_iterations: int = 5000
     tol: float = 1e-9
     min_tol_rate: float = 1e-9
@@ -278,7 +279,7 @@ def fixture_pandas_ipf_rmse_example_results(
     pandas_ipf_example: IpfDataPandas,
     ipf_rmse_example_results: IpfDataAndResults,
     ipf_example_index: pd.MultiIndex,
-) -> IpfDataAndResults:
+) -> IpfDataAndResultsPandas:
     """Pandas wrapper for `ipf_rmse_example_results`"""
     # Convert the matrix
     target_df = pd.DataFrame(
@@ -302,7 +303,7 @@ def fixture_pandas_ipf_ipfn_example_results(
     pandas_ipf_example: IpfDataPandas,
     ipf_ipfn_example_results: IpfDataAndResults,
     ipf_example_index: pd.MultiIndex,
-) -> IpfDataAndResults:
+) -> IpfDataAndResultsPandas:
     """Pandas wrapper for `ipf_rmse_example_results`"""
     # Convert the matrix
     target_df = pd.DataFrame(
@@ -325,6 +326,21 @@ def fixture_pandas_ipf_ipfn_example_results(
 @pytest.mark.usefixtures("ipf_example", "ipf_rmse_example_results", "ipf_ipfn_example_results")
 class TestIpf:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf"""
+
+    def test_invalid_seed_mat(self, ipf_example: IpfData):
+        """Test that invalid seed_mat type raises an error"""
+        with pytest.raises(ValueError, match="is not an np.ndarray"):
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"seed_mat": 1})
+            )
+
+    def test_pandas_seed_mat(self, ipf_example: IpfData):
+        """Test that a pandas seed_mat raises an error"""
+        seed_df = pd.DataFrame(ipf_example.matrix.flatten(), columns=['name'])
+        with pytest.raises(ValueError, match=re.escape("call `ipf_dataframe()` instead")):
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"seed_mat": seed_df})
+            )
 
     def test_invalid_marginals(self, ipf_example: IpfData):
         """Test that invalid marginals raise a warning"""
@@ -436,6 +452,13 @@ class TestIpf:
 )
 class TestIpfDataFrame:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
+
+    def test_invalid_seed_df(self, pandas_ipf_example: IpfData):
+        """Test that invalid seed_df type raises an error"""
+        with pytest.raises(ValueError, match="is not a pandas.DataFrame"):
+            iterative_proportional_fitting.ipf_dataframe(
+                **(pandas_ipf_example.to_kwargs() | {"seed_df": 1})
+            )
 
     def test_numpy_array_error(self, pandas_ipf_example: IpfDataPandas):
         """Test an error is raised when a numpy matrix is passed"""

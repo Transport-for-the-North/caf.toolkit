@@ -32,12 +32,15 @@ LOG = logging.getLogger(__name__)
 # # # PRIVATE FUNCTIONS # # #
 def _validate_seed_mat(seed_mat: np.ndarray) -> None:
     """Check whether the seed matrix is valid."""
-    if isinstance(seed_mat, pd.DataFrame):
-        raise ValueError(
-            "Given `seed_mat` is a pandas.DataFrame. "
-            "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
-            "to call `ipf_dataframe()` instead."
-        )
+    if not isinstance(seed_mat, np.ndarray):
+        if isinstance(seed_mat, pd.DataFrame):
+            raise ValueError(
+                "Given `seed_mat` is a pandas.DataFrame. "
+                "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
+                "to call `ipf_dataframe()` instead."
+            )
+
+        raise ValueError("Given `seed_mat` is not an np.ndarray. Cannot run.")
 
 
 def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
