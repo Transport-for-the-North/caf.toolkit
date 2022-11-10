@@ -22,3 +22,4 @@ Below, a brief summary of patches made since the previous version can be found.
 ### V0.1.0
 - Added an Iterative Proportional Fitting implementation
   - See [here](https://en.wikipedia.org/wiki/Iterative_proportional_fitting)
+  - Added both a numpy and a pandas front end 
