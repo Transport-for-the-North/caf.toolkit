@@ -128,7 +128,6 @@ class IpfDataAndResultsPandas:
 @pytest.fixture(name="ipf_example_index", scope="function")
 def fixture_ipf_example_index() -> pd.MultiIndex:
     """Generate the pandas MultiIndex for the pandas examples"""
-    # Convert the matrix
     # fmt: off
     dma = [
         501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501, 501,

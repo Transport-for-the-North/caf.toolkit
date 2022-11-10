@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.pandas_utils.df_handling module"""
+import dataclasses
 # Built-Ins
 from typing import Any
 from typing import NamedTuple
@@ -665,3 +666,56 @@ class TestLongWideConversions:
         expected_array = pd_utils.long_to_wide_infill(**kwargs).values
         wide_array = pd_utils.long_df_to_wide_ndarray(**kwargs)
         np.testing.assert_array_equal(expected_array, wide_array)
+
+
+class TestGetFullIndex:
+    """Tests for caf.toolkit.pandas_utils.get_full_index"""
+
+    @dataclasses.dataclass
+    class IndexData:
+        """Store expected input and output of an index creation"""
+        names_and_vals: dict[str, list[Any]]
+        output_index: pd.Index
+
+    @pytest.fixture(name="example_multi_index", scope="function")
+    def fixture_example_multi_index(self) -> IndexData:
+        """Generate the pandas MultiIndex for the pandas examples"""
+        # Define example params
+        names_and_vals = {
+            "dma": [501, 502],
+            "size": [1, 2, 3, 4],
+            "age": ['20-25', '30-35', '40-45'],
+        }
+
+        # Create the example
+        output_index = pd.MultiIndex.from_product(
+            names_and_vals.values(),
+            names=names_and_vals.keys(),
+        )
+        return self.IndexData(
+            names_and_vals=names_and_vals,
+            output_index=output_index,
+        )
+
+    @pytest.fixture(name="example_single_index", scope="function")
+    def fixture_example_single_index(self) -> IndexData:
+        """Generate the pandas MultiIndex for the pandas examples"""
+        names_and_vals = {"age": ['20-25', '30-35', '40-45'],}
+        return self.IndexData(
+            names_and_vals=names_and_vals,
+            output_index=pd.Index(data=names_and_vals["age"], name="age"),
+        )
+
+    def test_single_index(self, example_single_index: IndexData):
+        """Test correct return when sending a single index"""
+        gen_index = pd_utils.get_full_index(
+            dimension_cols=example_single_index.names_and_vals
+        )
+        pd.testing.assert_index_equal(gen_index, example_single_index.output_index)
+
+    def test_multi_index(self, example_multi_index: IndexData):
+        """Test correct return when sending a single index"""
+        gen_index = pd_utils.get_full_index(
+            dimension_cols=example_multi_index.names_and_vals
+        )
+        pd.testing.assert_index_equal(gen_index, example_multi_index.output_index)
