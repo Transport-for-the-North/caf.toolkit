@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 # # # FUNCTIONS # # #
 def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
-    dimension_cols: Union[list[str], dict[str, list[str]]],
+    dimension_cols: Union[list[str], dict[str, list[Any]]],
     fill_val: Any = np.nan,
 ) -> np.ndarray:
     """Convert a pandas.DataFrame into an N-Dimensional numpy array.
@@ -80,7 +80,7 @@ def n_dimensional_array_to_dataframe(
     mat: np.ndarray,
     dimension_cols: dict[str, list[Any]],
     value_col: str,
-    drop_zeros: bool,
+    drop_zeros: bool = False,
 ) -> pd.DataFrame:
     """Convert an N-dimensional numpy array to a pandas.Dataframe.
 
