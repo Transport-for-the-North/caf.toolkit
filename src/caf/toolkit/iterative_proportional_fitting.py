@@ -205,9 +205,27 @@ def _validate_pd_dimensions(seed_cols: set[str], dimension_cols: set[str]) -> No
         )
 
 
+def _infill_invalid_combos(
+    marginal: np.ndarray,
+    dimension_order: dict[str, list[Any]],
+    valid_dimension_combos: pd.DataFrame,
+    fill_val: float = 0,
+) -> np.ndarray:
+    """Infill invalid combinations of dimension values of a marginal"""
+    valid_zeros = valid_dimension_combos[dimension_order.keys()].drop_duplicates()
+    valid_zeros['val'] = 0
+    invalid_ones = pd_utils.dataframe_to_n_dimensional_array(
+        df=valid_zeros,
+        dimension_cols=dimension_order,
+        fill_val=1,
+    )
+    return np.where(invalid_ones, fill_val, marginal)
+
+
 def pd_marginals_to_np(
     target_marginals: list[pd.Series],
     dimension_order: dict[str, list[Any]],
+    valid_dimension_combos: pd.DataFrame,
 ) -> tuple[list[np.ndarray], list[list[int]]]:
     """Convert pandas marginals to numpy format for `ipf()`.
 
@@ -230,6 +248,12 @@ def pd_marginals_to_np(
         The values are used to ensure the returned marginals are in the correct
         order.
 
+    valid_dimension_combos:
+        A dataframe defining all the valid combinations of each of the
+        dimension values. This should be taken from the seed matrix. Used
+        internally to ensure the generated numpy marginals are valid with
+        no unexpected missing combinations.
+
     Returns
     -------
     target_marginals:
@@ -250,12 +274,16 @@ def pd_marginals_to_np(
     ValueError:
         If any of the marginal index names do not exist in the keys of
         `dimension_order`.
+
+    ValueError:
+        If the passed in marginals do not contain all the valid combinations
+        of `dimension_cols`, as defined in `valid_dimension_combos`
     """
     # Init
     dimension_col_order = list(dimension_order.keys())
     target_dimensions = [list(x.index.names) for x in target_marginals]
 
-    # Validate dimensions
+    # Validate inputs
     _validate_pd_dimensions(
         seed_cols=set(dimension_col_order),
         dimension_cols=set(itertools.chain.from_iterable(target_dimensions)),
@@ -265,16 +293,28 @@ def pd_marginals_to_np(
     np_marginals = list()
     np_dimensions = list()
     for pd_marginal, pd_dimension in zip(target_marginals, target_dimensions):
+        # Init
+        dimension_cols_i = {x: dimension_order[x] for x in pd_dimension}
+
         # Convert marginals
         np_marginal_i = pd_utils.dataframe_to_n_dimensional_array(
             df=pd_marginal.reset_index(),
-            dimension_cols={x: dimension_order[x] for x in pd_dimension},
+            dimension_cols=dimension_cols_i,
             fill_val=np.nan,
         )
 
-        # Validate marginal
+        # Remove any NaN where the combo isn't actually valid
         if np.any(np.isnan(np_marginal_i)):
-            full_idx = pd_utils.get_full_index({x: dimension_order[x] for x in pd_dimension})
+            np_marginal_i = _infill_invalid_combos(
+                marginal=np_marginal_i,
+                dimension_order=dimension_cols_i,
+                valid_dimension_combos=valid_dimension_combos,
+                fill_val=0,
+            )
+
+        # Check all valid combinations have been accounted for
+        if np.any(np.isnan(np_marginal_i)):
+            full_idx = pd_utils.get_full_index(dimension_cols_i)
             err_df = pd.DataFrame(
                 data=np_marginal_i.flatten(),
                 index=full_idx,
@@ -423,6 +463,7 @@ def ipf_dataframe(
     seed_df: pd.DataFrame,
     target_marginals: list[pd.Series],
     value_col: str,
+    drop_zeros_return: bool = False,
     **kwargs,
 ) -> tuple[pd.DataFrame, int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
@@ -479,6 +520,9 @@ def ipf_dataframe(
     seed_dimension_cols.remove(value_col)
     dimension_order = {x: seed_df[x].unique().tolist() for x in seed_dimension_cols}
 
+    # Get a df of all the valid combinations of dimensions
+    valid_dimension_combos = seed_df[seed_dimension_cols].copy()
+
     # Convert inputs to numpy
     np_seed = pd_utils.dataframe_to_n_dimensional_array(
         df=seed_df,
@@ -489,6 +533,7 @@ def ipf_dataframe(
     np_marginals, np_dimensions = pd_marginals_to_np(
         target_marginals=target_marginals,
         dimension_order=dimension_order,
+        valid_dimension_combos=valid_dimension_combos,
     )
 
     # Call numpy IPF
@@ -499,13 +544,34 @@ def ipf_dataframe(
         **kwargs,
     )
 
-    # Fit results back into a DataFrame
+    # Fit results back into starting dataframe shape
     fit_df = pd_utils.n_dimensional_array_to_dataframe(
         mat=fit_mat,
         dimension_cols=dimension_order,
         value_col=value_col,
-        drop_zeros=True,
     )
+
+    col_names = valid_dimension_combos.columns.to_list()
+    input_index = pd.MultiIndex.from_arrays(
+        [valid_dimension_combos[x].values for x in col_names],
+        names=col_names,
+    )
+
+    # Make sure no demand was dropped when fitting back in dataframe
+    pre_convert_total = fit_df.values.sum()
+    fit_df = fit_df.reindex(input_index)
+    post_convert_total = fit_df.values.sum()
+    if not math_utils.is_almost_equal(pre_convert_total, post_convert_total):
+        raise RuntimeError(
+            "When converting the resulting ipf matrix back into the `seed_df` "
+            "format some values were dropped. This shouldn't happen and is an "
+            "internal error."
+        )
+
+    # Drop any zeros
+    if drop_zeros_return:
+        zero_mask = fit_df[value_col] == 0
+        fit_df = fit_df[~zero_mask].copy()
 
     return fit_df.reset_index(), iter_num, conv
 
