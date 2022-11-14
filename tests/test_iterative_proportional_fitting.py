@@ -10,6 +10,7 @@ from typing import Any
 from typing import Optional
 from typing import Callable
 
+import numpy.testing
 import pandas as pd
 
 # Third Party
@@ -321,8 +322,118 @@ def fixture_pandas_ipf_ipfn_example_results(
     )
 
 
+@pytest.fixture(name="ipf_invalid_combos", scope="function")
+def fixture_ipf_invalid_combos(ipf_example: IpfData):
+    """Collection of arguments where the index is not a product of all values"""
+    # Remove any combinations where 1st col is 501, and second is 1
+    matrix = ipf_example.matrix.copy()
+    matrix[0, 0, :] = 0
+
+    marginals = ipf_example.marginals.copy()
+    marginals[3] = np.array([[0, 18, 21, 9], [12, 14, 17, 9]], dtype=float)
+
+    return IpfData(
+        matrix=matrix,
+        marginals=marginals,
+        dimensions=ipf_example.dimensions.copy(),
+    )
+
+
+@pytest.fixture(name="ipf_pandas_invalid_combos", scope="function")
+def fixture_ipf_pandas_invalid_combos(
+    ipf_invalid_combos: IpfData,
+    ipf_example_index: pd.MultiIndex,
+) -> IpfDataPandas:
+    """Pandas wrapper for `fixture_ipf_example`"""
+    # Convert the matrix
+    pd_mat = pd.DataFrame(
+        data=ipf_invalid_combos.matrix.flatten().tolist(),
+        index=ipf_example_index,
+        columns=["total"],
+    ).reset_index()
+    pd_mat = pd_mat.loc[3:].copy()
+
+    # Convert the marginals
+    xipp = pd_mat.groupby("dma")["total"].sum()
+    xpjp = pd_mat.groupby("size")["total"].sum()
+    xppk = pd_mat.groupby("age")["total"].sum()
+    xijp = pd_mat.groupby(["dma", "size"])["total"].sum()
+    xpjk = pd_mat.groupby(["size", "age"])["total"].sum()
+
+    def _convert(template: pd.DataFrame, marginal_idx: int) -> pd.DataFrame:
+        """Convert marginals"""
+        vals = ipf_invalid_combos.marginals[marginal_idx].flatten()
+        if marginal_idx == 3:
+            vals = vals[1:]
+
+        return pd.Series(data=vals, index=template.index)
+
+    marginals = [
+        _convert(xipp, 0),
+        _convert(xpjp, 1),
+        _convert(xppk, 2),
+        _convert(xijp, 3),
+        _convert(xpjk, 4),
+    ]
+
+    # Wrap in an object
+    return IpfDataPandas(matrix=pd_mat, marginals=marginals)
+
+
+@pytest.fixture(name="ipf_invalid_combos_results", scope="function")
+def fixture_ipf_invalid_combos_results(ipf_invalid_combos: IpfData) -> IpfDataAndResults:
+    """Collection of ipf arguments and results for testing"""
+    # Set targets
+    # fmt: off
+    target_mat = np.array(
+        [[[0.,  0.,  0.],
+          [3.75016167,  7.14309176,  5.95257647],
+          [12.19680352,  4.22737148,  3.06652879],
+          [2.19480828,  4.27076229,  1.02839926]],
+
+         [[7., 9., 4.],
+          [4.24983833,  4.85690824,  4.04742353],
+          [2.80319648,  7.77262852,  4.93347121],
+          [2.80519172,  2.72923771,  1.97160074]]]
+    )
+    # fmt: on
+    local_ipf_example = ipf_invalid_combos.copy()
+    local_ipf_example.convergence_fn = math_utils.root_mean_squared_error
+    return IpfDataAndResults(
+        inputs=local_ipf_example,
+        final_matrix=target_mat,
+        completed_iters=12,
+        final_convergence=2.681540527090612,
+    )
+
+
+@pytest.fixture(name="ipf_pandas_invalid_combos_results", scope="function")
+def fixture_ipf_pandas_invalid_combos_results(
+    ipf_pandas_invalid_combos: IpfDataPandas,
+    ipf_invalid_combos_results: IpfDataAndResults,
+    ipf_example_index: pd.MultiIndex,
+) -> IpfDataAndResultsPandas:
+    """Pandas wrapper for `ipf_rmse_example_results`"""
+    # Convert the matrix
+    target_df = pd.DataFrame(
+        data=ipf_invalid_combos_results.final_matrix.flatten().tolist(),
+        index=ipf_example_index,
+        columns=["total"],
+    ).reset_index()
+    target_df = target_df.loc[3:].reset_index(drop=True)
+
+    local_ipf_example = ipf_pandas_invalid_combos.copy()
+    local_ipf_example.convergence_fn = math_utils.root_mean_squared_error
+    return IpfDataAndResultsPandas(
+        inputs=local_ipf_example,
+        final_matrix=target_df,
+        completed_iters=ipf_invalid_combos_results.completed_iters,
+        final_convergence=ipf_invalid_combos_results.final_convergence,
+    )
+
+
 # # # TESTS # # #
-@pytest.mark.usefixtures("ipf_example", "ipf_rmse_example_results", "ipf_ipfn_example_results")
+@pytest.mark.usefixtures("ipf_example", "ipf_rmse_example_results", "ipf_ipfn_example_results", "ipf_invalid_combos_results")
 class TestIpf:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf"""
 
@@ -417,7 +528,7 @@ class TestIpf:
         # Check the results
         np_testing.assert_allclose(mat, ipf_rmse_example_results.final_matrix, rtol=1e-4)
         assert iters == ipf_rmse_example_results.completed_iters
-        assert math_utils.is_almost_equal(conv, ipf_rmse_example_results.final_convergence)
+        np.testing.assert_almost_equal(conv, ipf_rmse_example_results.final_convergence)
 
     def test_ipfn_convergence(self, ipf_ipfn_example_results: IpfDataAndResults):
         """Test that correct result calculated with ipfn convergence"""
@@ -429,7 +540,19 @@ class TestIpf:
         # Check the results
         np_testing.assert_allclose(mat, ipf_ipfn_example_results.final_matrix, rtol=1e-4)
         assert iters == ipf_ipfn_example_results.completed_iters
-        assert math_utils.is_almost_equal(conv, ipf_ipfn_example_results.final_convergence)
+        np.testing.assert_almost_equal(conv, ipf_ipfn_example_results.final_convergence)
+
+    def test_invalid_combos_run(self, ipf_invalid_combos_results: IpfDataAndResults):
+        """Test that correct result calculated with some invalid combos"""
+        # Run
+        mat, iters, conv = iterative_proportional_fitting.ipf(
+            **ipf_invalid_combos_results.inputs.to_kwargs()
+        )
+
+        # Check the results
+        np_testing.assert_allclose(mat, ipf_invalid_combos_results.final_matrix, rtol=1e-4)
+        assert iters == ipf_invalid_combos_results.completed_iters
+        np.testing.assert_almost_equal(conv, ipf_invalid_combos_results.final_convergence)
 
     def test_zero_marginals(self, ipf_example: IpfData):
         """Test warning and return when marginals are 0"""
@@ -452,7 +575,7 @@ class TestIpf:
         # Check the results
         np_testing.assert_allclose(mat, target_mat, rtol=1e-4)
         assert iters == target_iters
-        assert math_utils.is_almost_equal(conv, target_conv)
+        np.testing.assert_almost_equal(conv, target_conv)
 
     def test_non_early_exit(self, ipf_example: IpfData):
         """Test warning and return when marginals are 0"""
@@ -470,11 +593,11 @@ class TestIpf:
         # Check the results
         np_testing.assert_allclose(mat, target_mat, rtol=1e-4)
         assert iters == target_iters
-        assert math_utils.is_almost_equal(conv, target_conv)
+        np.testing.assert_almost_equal(conv, target_conv)
 
 
 @pytest.mark.usefixtures(
-    "pandas_ipf_example", "ipf_pandas_rmse_example_results", "ipf_pandas_ipfn_example_results"
+    "pandas_ipf_example", "ipf_pandas_rmse_example_results", "ipf_pandas_ipfn_example_results", "ipf_pandas_invalid_combos_results"
 )
 class TestIpfDataFrame:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
@@ -560,7 +683,7 @@ class TestIpfDataFrame:
             mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4
         )
         assert iters == ipf_pandas_rmse_example_results.completed_iters
-        assert math_utils.is_almost_equal(
+        np.testing.assert_almost_equal(
             conv, ipf_pandas_rmse_example_results.final_convergence
         )
 
@@ -576,9 +699,23 @@ class TestIpfDataFrame:
             mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4
         )
         assert iters == ipf_pandas_ipfn_example_results.completed_iters
-        assert math_utils.is_almost_equal(
+        np.testing.assert_almost_equal(
             conv, ipf_pandas_ipfn_example_results.final_convergence
         )
+
+    def test_invalid_combos_run(self, ipf_pandas_invalid_combos_results: IpfDataAndResultsPandas):
+        """Test that correct result calculated with some invalid combos"""
+        # Run
+        mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
+            **ipf_pandas_invalid_combos_results.inputs.to_kwargs()
+        )
+
+        # Check the results
+        pd.testing.assert_frame_equal(
+            mat, ipf_pandas_invalid_combos_results.final_matrix, rtol=1e-4
+        )
+        assert iters == ipf_pandas_invalid_combos_results.completed_iters
+        np.testing.assert_almost_equal(conv, ipf_pandas_invalid_combos_results.final_convergence)
 
 
 # TODO(BT): Test that ipf pandas conversions make numpy matrices

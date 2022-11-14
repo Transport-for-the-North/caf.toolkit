@@ -488,6 +488,12 @@ def ipf_dataframe(
         The column in `seed_df` that refers to the data. All other columns
         will be assumed to be dimensional columns.
 
+    drop_zeros_return:
+        Whether to drop any rows of the dataframe that contain 0 values on
+        return or now. If False, the return dataframe will be in the same
+        order as `seed_df`. That is, the return will be exactly the same as
+        `seed_df` except in the `value_col` column.
+
     **kwargs:
         Any other arguments to pass to `iterative_proportional_fitting.ipf()`
 
