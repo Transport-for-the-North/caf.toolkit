@@ -45,7 +45,7 @@ def _validate_seed_mat(seed_mat: np.ndarray) -> None:
     # Validate type
     if not np.issubdtype(seed_mat.dtype, np.number):
         raise ValueError(
-            "`seed_mat` expected to be a numeric dtype. Got "
+            "`seed_mat` expected to be numeric type. Got "
             f"'{seed_mat.dtype}' instead."
         )
 
@@ -64,7 +64,7 @@ def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
 
     if len(invalid_dtypes) > 0:
         raise ValueError(
-            "Marginals are expected to be numeric types. "
+            "Marginals are expected to be numeric type. "
             "Got the following non-numeric types:\n"
             f"{pd.DataFrame(invalid_dtypes)}"
         )
@@ -86,17 +86,17 @@ def _validate_dimensions(
     """Check whether the dimensions are valid."""
     # Check valid types
     invalid_dtypes = list()
-    for i, dimension in enumerate(target_dimensions):
-        dimension = np.array(dimension)
-        if not np.issubdtype(dimension.dtype, np.number):
+    for dimension in target_dimensions:
+        np_dimension = np.array(dimension)
+        if not np.issubdtype(np_dimension.dtype, np.number):
             invalid_dtypes.append({
                 "dimension": dimension,
-                "dtype": dimension.dtype
+                "dtype": np_dimension.dtype
             })
 
     if len(invalid_dtypes) > 0:
         raise ValueError(
-            "Dimensions are expected to be numeric types. "
+            "Dimensions are expected to be numeric type. "
             "Got the following non-numeric types:\n"
             f"{pd.DataFrame(invalid_dtypes)}"
         )
@@ -159,7 +159,7 @@ def _validate_seed_df(
     # Validate type
     if not pd.api.types.is_numeric_dtype(seed_df[value_col]):
         raise ValueError(
-            "`seed_df` expected to be a numeric dtype. Got "
+            "`seed_df` expected to be numeric type. Got "
             f"'{seed_df[value_col].dtype}' instead."
         )
 
