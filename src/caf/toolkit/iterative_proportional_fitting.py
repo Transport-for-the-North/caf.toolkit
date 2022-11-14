@@ -45,8 +45,7 @@ def _validate_seed_mat(seed_mat: np.ndarray) -> None:
     # Validate type
     if not np.issubdtype(seed_mat.dtype, np.number):
         raise TypeError(
-            "`seed_mat` expected to be numeric type. Got "
-            f"'{seed_mat.dtype}' instead."
+            "`seed_mat` expected to be numeric type. Got " f"'{seed_mat.dtype}' instead."
         )
 
 
@@ -56,11 +55,9 @@ def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
     invalid_dtypes = list()
     for i, marginal in enumerate(target_marginals):
         if not np.issubdtype(marginal.dtype, np.number):
-            invalid_dtypes.append({
-                "marginal_id": i,
-                "shape": marginal.shape,
-                "dtype": marginal.dtype
-            })
+            invalid_dtypes.append(
+                {"marginal_id": i, "shape": marginal.shape, "dtype": marginal.dtype}
+            )
 
     if len(invalid_dtypes) > 0:
         raise TypeError(
@@ -89,10 +86,7 @@ def _validate_dimensions(
     for dimension in target_dimensions:
         np_dimension = np.array(dimension)
         if not np.issubdtype(np_dimension.dtype, np.number):
-            invalid_dtypes.append({
-                "dimension": dimension,
-                "dtype": np_dimension.dtype
-            })
+            invalid_dtypes.append({"dimension": dimension, "dtype": np_dimension.dtype})
 
     if len(invalid_dtypes) > 0:
         raise TypeError(
@@ -179,10 +173,8 @@ def _validate_pd_marginals(
     invalid_dtypes = list()
     for i, marginal in enumerate(target_marginals):
         if not pd.api.types.is_numeric_dtype(marginal.dtype):
-            invalid_dtypes.append({
-                "marginal_id": i,
-                "controls": marginal.index.names,
-                "dtype": marginal.dtype}
+            invalid_dtypes.append(
+                {"marginal_id": i, "controls": marginal.index.names, "dtype": marginal.dtype}
             )
 
     if len(invalid_dtypes) > 0:
@@ -211,15 +203,54 @@ def _infill_invalid_combos(
     valid_dimension_combos: pd.DataFrame,
     fill_val: float = 0,
 ) -> np.ndarray:
-    """Infill invalid combinations of dimension values of a marginal"""
+    """Infill invalid combinations of dimension values of a marginal."""
     valid_zeros = valid_dimension_combos[dimension_order.keys()].drop_duplicates()
-    valid_zeros['val'] = 0
+    valid_zeros["val"] = 0
     invalid_ones = pd_utils.dataframe_to_n_dimensional_array(
         df=valid_zeros,
         dimension_cols=dimension_order,
         fill_val=1,
     )
     return np.where(invalid_ones, fill_val, marginal)
+
+
+def _ipf_mat_result_to_df(
+    results_array: np.ndarray,
+    dimension_cols: dict[str, list[Any]],
+    value_col: str,
+    valid_dimension_combos: pd.DataFrame,
+    drop_zeros_return: bool,
+) -> pd.DataFrame:
+    """Convert an np.ndarray ipf result back into a dataframe."""
+    fit_df = pd_utils.n_dimensional_array_to_dataframe(
+        mat=results_array,
+        dimension_cols=dimension_cols,
+        value_col=value_col,
+    )
+
+    col_names = valid_dimension_combos.columns.to_list()
+    input_index = pd.MultiIndex.from_arrays(
+        [valid_dimension_combos[x].values for x in col_names],
+        names=col_names,
+    )
+
+    # Make sure no demand was dropped when fitting back in dataframe
+    pre_convert_total = fit_df.values.sum()
+    fit_df = fit_df.reindex(input_index)
+    post_convert_total = fit_df.values.sum()
+    if not math_utils.is_almost_equal(pre_convert_total, post_convert_total):
+        raise RuntimeError(
+            "When converting the resulting ipf matrix back into the `seed_df` "
+            "format some values were dropped. This shouldn't happen and is an "
+            "internal error."
+        )
+
+    # Drop any zeros
+    if drop_zeros_return:
+        zero_mask = fit_df[value_col] == 0
+        fit_df = fit_df[~zero_mask].copy()
+
+    return fit_df.reset_index()
 
 
 def pd_marginals_to_np(
@@ -551,35 +582,15 @@ def ipf_dataframe(
     )
 
     # Fit results back into starting dataframe shape
-    fit_df = pd_utils.n_dimensional_array_to_dataframe(
-        mat=fit_mat,
+    fit_df = _ipf_mat_result_to_df(
+        results_array=fit_mat,
         dimension_cols=dimension_order,
         value_col=value_col,
+        valid_dimension_combos=valid_dimension_combos,
+        drop_zeros_return=drop_zeros_return,
     )
 
-    col_names = valid_dimension_combos.columns.to_list()
-    input_index = pd.MultiIndex.from_arrays(
-        [valid_dimension_combos[x].values for x in col_names],
-        names=col_names,
-    )
-
-    # Make sure no demand was dropped when fitting back in dataframe
-    pre_convert_total = fit_df.values.sum()
-    fit_df = fit_df.reindex(input_index)
-    post_convert_total = fit_df.values.sum()
-    if not math_utils.is_almost_equal(pre_convert_total, post_convert_total):
-        raise RuntimeError(
-            "When converting the resulting ipf matrix back into the `seed_df` "
-            "format some values were dropped. This shouldn't happen and is an "
-            "internal error."
-        )
-
-    # Drop any zeros
-    if drop_zeros_return:
-        zero_mask = fit_df[value_col] == 0
-        fit_df = fit_df[~zero_mask].copy()
-
-    return fit_df.reset_index(), iter_num, conv
+    return fit_df, iter_num, conv
 
 
 def ipf(

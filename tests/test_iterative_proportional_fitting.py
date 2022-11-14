@@ -433,7 +433,12 @@ def fixture_ipf_pandas_invalid_combos_results(
 
 
 # # # TESTS # # #
-@pytest.mark.usefixtures("ipf_example", "ipf_rmse_example_results", "ipf_ipfn_example_results", "ipf_invalid_combos_results")
+@pytest.mark.usefixtures(
+    "ipf_example",
+    "ipf_rmse_example_results",
+    "ipf_ipfn_example_results",
+    "ipf_invalid_combos_results",
+)
 class TestIpf:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf"""
 
@@ -467,13 +472,11 @@ class TestIpf:
     def test_invalid_seed_mat(self, ipf_example: IpfData):
         """Test that invalid seed_mat type raises an error"""
         with pytest.raises(TypeError, match="is not an np.ndarray"):
-            iterative_proportional_fitting.ipf(
-                **(ipf_example.to_kwargs() | {"seed_mat": 1})
-            )
+            iterative_proportional_fitting.ipf(**(ipf_example.to_kwargs() | {"seed_mat": 1}))
 
     def test_pandas_seed_mat(self, ipf_example: IpfData):
         """Test that a pandas seed_mat raises an error"""
-        seed_df = pd.DataFrame(ipf_example.matrix.flatten(), columns=['name'])
+        seed_df = pd.DataFrame(ipf_example.matrix.flatten(), columns=["name"])
         with pytest.raises(TypeError, match=re.escape("call `ipf_dataframe()` instead")):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"seed_mat": seed_df})
@@ -597,7 +600,10 @@ class TestIpf:
 
 
 @pytest.mark.usefixtures(
-    "pandas_ipf_example", "ipf_pandas_rmse_example_results", "ipf_pandas_ipfn_example_results", "ipf_pandas_invalid_combos_results"
+    "pandas_ipf_example",
+    "ipf_pandas_rmse_example_results",
+    "ipf_pandas_ipfn_example_results",
+    "ipf_pandas_invalid_combos_results",
 )
 class TestIpfDataFrame:
     """Tests for caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
@@ -683,9 +689,7 @@ class TestIpfDataFrame:
             mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4
         )
         assert iters == ipf_pandas_rmse_example_results.completed_iters
-        np.testing.assert_almost_equal(
-            conv, ipf_pandas_rmse_example_results.final_convergence
-        )
+        np.testing.assert_almost_equal(conv, ipf_pandas_rmse_example_results.final_convergence)
 
     def test_ipfn_convergence(self, ipf_pandas_ipfn_example_results: IpfDataAndResultsPandas):
         """Test that correct result calculated with ipfn convergence"""
@@ -699,11 +703,11 @@ class TestIpfDataFrame:
             mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4
         )
         assert iters == ipf_pandas_ipfn_example_results.completed_iters
-        np.testing.assert_almost_equal(
-            conv, ipf_pandas_ipfn_example_results.final_convergence
-        )
+        np.testing.assert_almost_equal(conv, ipf_pandas_ipfn_example_results.final_convergence)
 
-    def test_invalid_combos_run(self, ipf_pandas_invalid_combos_results: IpfDataAndResultsPandas):
+    def test_invalid_combos_run(
+        self, ipf_pandas_invalid_combos_results: IpfDataAndResultsPandas
+    ):
         """Test that correct result calculated with some invalid combos"""
         # Run
         mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
@@ -715,7 +719,9 @@ class TestIpfDataFrame:
             mat, ipf_pandas_invalid_combos_results.final_matrix, rtol=1e-4
         )
         assert iters == ipf_pandas_invalid_combos_results.completed_iters
-        np.testing.assert_almost_equal(conv, ipf_pandas_invalid_combos_results.final_convergence)
+        np.testing.assert_almost_equal(
+            conv, ipf_pandas_invalid_combos_results.final_convergence
+        )
 
 
 # TODO(BT): Test that ipf pandas conversions make numpy matrices

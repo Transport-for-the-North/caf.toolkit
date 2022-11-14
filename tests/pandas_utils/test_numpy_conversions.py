@@ -14,6 +14,7 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import pandas_utils as pd_utils
+
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -120,7 +121,10 @@ class TestDataframeToNDimensionalArray:
 
     # TODO(BT): Add Error tests
 
-    @pytest.mark.parametrize("conversion_data_str", ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"])
+    @pytest.mark.parametrize(
+        "conversion_data_str",
+        ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
+    )
     def test_correct_conversion(self, conversion_data_str: ConversionData, request):
         """Test 1-3 dimension correct conversions"""
         conversion_data = request.getfixturevalue(conversion_data_str)
@@ -137,14 +141,16 @@ class TestNDimensionalArrayToDataframe:
 
     # TODO(BT): Add Error tests
 
-    @pytest.mark.parametrize("conversion_data_str", ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"])
+    @pytest.mark.parametrize(
+        "conversion_data_str",
+        ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
+    )
     def test_correct_conversion(self, conversion_data_str: ConversionData, request):
         """Test 1-3 dimension correct conversions"""
         conversion_data = request.getfixturevalue(conversion_data_str)
         got_return = pd_utils.n_dimensional_array_to_dataframe(
             mat=conversion_data.np_matrix,
             dimension_cols=conversion_data.dimension_cols,
-            value_col=conversion_data.pd_value_col
+            value_col=conversion_data.pd_value_col,
         )
         pd.testing.assert_frame_equal(got_return.reset_index(), conversion_data.pd_matrix)
-

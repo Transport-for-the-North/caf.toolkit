@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.pandas_utils.df_handling module"""
 import dataclasses
+
 # Built-Ins
 from typing import Any
 from typing import NamedTuple
@@ -674,6 +675,7 @@ class TestGetFullIndex:
     @dataclasses.dataclass
     class IndexData:
         """Store expected input and output of an index creation"""
+
         names_and_vals: dict[str, list[Any]]
         output_index: pd.Index
 
@@ -684,7 +686,7 @@ class TestGetFullIndex:
         names_and_vals = {
             "dma": [501, 502],
             "size": [1, 2, 3, 4],
-            "age": ['20-25', '30-35', '40-45'],
+            "age": ["20-25", "30-35", "40-45"],
         }
 
         # Create the example
@@ -700,7 +702,7 @@ class TestGetFullIndex:
     @pytest.fixture(name="example_single_index", scope="function")
     def fixture_example_single_index(self) -> IndexData:
         """Generate the pandas MultiIndex for the pandas examples"""
-        names_and_vals = {"age": ['20-25', '30-35', '40-45'],}
+        names_and_vals = {"age": ["20-25", "30-35", "40-45"]}
         return self.IndexData(
             names_and_vals=names_and_vals,
             output_index=pd.Index(data=names_and_vals["age"], name="age"),
@@ -708,14 +710,10 @@ class TestGetFullIndex:
 
     def test_single_index(self, example_single_index: IndexData):
         """Test correct return when sending a single index"""
-        gen_index = pd_utils.get_full_index(
-            dimension_cols=example_single_index.names_and_vals
-        )
+        gen_index = pd_utils.get_full_index(dimension_cols=example_single_index.names_and_vals)
         pd.testing.assert_index_equal(gen_index, example_single_index.output_index)
 
     def test_multi_index(self, example_multi_index: IndexData):
         """Test correct return when sending a single index"""
-        gen_index = pd_utils.get_full_index(
-            dimension_cols=example_multi_index.names_and_vals
-        )
+        gen_index = pd_utils.get_full_index(dimension_cols=example_multi_index.names_and_vals)
         pd.testing.assert_index_equal(gen_index, example_multi_index.output_index)
