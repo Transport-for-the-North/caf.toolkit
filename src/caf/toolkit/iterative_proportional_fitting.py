@@ -125,6 +125,23 @@ def _validate_pd_marginals(
             "control to with the marginal."
         )
 
+    # Check valid types
+    invalid_dtypes = list()
+    for i, marginal in enumerate(target_marginals):
+        if not pd.api.types.is_numeric_dtype(marginal.dtype):
+            invalid_dtypes.append({
+                "marginal_id": i,
+                "controls": marginal.index.names,
+                "dtype": marginal.dtype}
+            )
+
+    if len(invalid_dtypes) > 0:
+        raise ValueError(
+            "Marginals are expected to be numeric types. Got the following "
+            f"types instead:\n{pd.DataFrame(invalid_dtypes)}"
+        )
+
+
 
 def _validate_pd_dimensions(seed_cols: set[str], dimension_cols: set[str]) -> None:
     """Check whether the pandas target dimension columns are valid."""
