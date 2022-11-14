@@ -330,7 +330,7 @@ class TestIpf:
         """Test that invalid seed_mat value type raises an error"""
         seed_mat = ipf_example.matrix.copy()
         seed_mat = seed_mat.astype(str)
-        with pytest.raises(ValueError, match="expected to be numeric type"):
+        with pytest.raises(TypeError, match="expected to be numeric type"):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"seed_mat": seed_mat})
             )
@@ -339,7 +339,7 @@ class TestIpf:
         """Test that invalid marginal value type raises an error"""
         marginals = ipf_example.marginals.copy()
         marginals[0] = marginals[0].astype(str)
-        with pytest.raises(ValueError, match="expected to be numeric type"):
+        with pytest.raises(TypeError, match="expected to be numeric type"):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"target_marginals": marginals})
             )
@@ -348,14 +348,14 @@ class TestIpf:
         """Test that invalid dimension value type raises an error"""
         dimensions = ipf_example.dimensions.copy()
         dimensions[0] = np.array(dimensions[0]).astype(str).tolist()
-        with pytest.raises(ValueError, match="expected to be numeric type"):
+        with pytest.raises(TypeError, match="expected to be numeric type"):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"target_dimensions": dimensions})
             )
 
     def test_invalid_seed_mat(self, ipf_example: IpfData):
         """Test that invalid seed_mat type raises an error"""
-        with pytest.raises(ValueError, match="is not an np.ndarray"):
+        with pytest.raises(TypeError, match="is not an np.ndarray"):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"seed_mat": 1})
             )
@@ -363,7 +363,7 @@ class TestIpf:
     def test_pandas_seed_mat(self, ipf_example: IpfData):
         """Test that a pandas seed_mat raises an error"""
         seed_df = pd.DataFrame(ipf_example.matrix.flatten(), columns=['name'])
-        with pytest.raises(ValueError, match=re.escape("call `ipf_dataframe()` instead")):
+        with pytest.raises(TypeError, match=re.escape("call `ipf_dataframe()` instead")):
             iterative_proportional_fitting.ipf(
                 **(ipf_example.to_kwargs() | {"seed_mat": seed_df})
             )
@@ -484,7 +484,7 @@ class TestIpfDataFrame:
         val_col = pandas_ipf_example.value_col
         seed_df = pandas_ipf_example.matrix.copy()
         seed_df[val_col] = seed_df[val_col].astype(str)
-        with pytest.raises(ValueError, match="expected to be numeric type"):
+        with pytest.raises(TypeError, match="expected to be numeric type"):
             iterative_proportional_fitting.ipf_dataframe(
                 **(pandas_ipf_example.to_kwargs() | {"seed_df": seed_df})
             )
@@ -493,14 +493,14 @@ class TestIpfDataFrame:
         """Test that invalid marginal value type raises an error"""
         marginals = pandas_ipf_example.marginals.copy()
         marginals[0] = marginals[0].astype(str)
-        with pytest.raises(ValueError, match="expected to be numeric types"):
+        with pytest.raises(TypeError, match="expected to be numeric types"):
             iterative_proportional_fitting.ipf_dataframe(
                 **(pandas_ipf_example.to_kwargs() | {"target_marginals": marginals})
             )
 
     def test_invalid_seed_df(self, pandas_ipf_example: IpfDataPandas):
         """Test that invalid seed_df type raises an error"""
-        with pytest.raises(ValueError, match="is not a pandas.DataFrame"):
+        with pytest.raises(TypeError, match="is not a pandas.DataFrame"):
             iterative_proportional_fitting.ipf_dataframe(
                 **(pandas_ipf_example.to_kwargs() | {"seed_df": 1})
             )
@@ -508,7 +508,7 @@ class TestIpfDataFrame:
     def test_numpy_array_error(self, pandas_ipf_example: IpfDataPandas):
         """Test an error is raised when a numpy matrix is passed"""
         numpy_seed = pandas_ipf_example.matrix.values
-        with pytest.raises(ValueError, match=re.escape("call `ipf()` instead")):
+        with pytest.raises(TypeError, match=re.escape("call `ipf()` instead")):
             iterative_proportional_fitting.ipf_dataframe(
                 **(pandas_ipf_example.to_kwargs() | {"seed_df": numpy_seed})
             )
@@ -524,7 +524,7 @@ class TestIpfDataFrame:
         """Test an error is raised when non-series marginals is passed"""
         new_marginals = pandas_ipf_example.marginals
         new_marginals[0] = new_marginals[0].reset_index()
-        with pytest.raises(ValueError, match="list of pandas.Series"):
+        with pytest.raises(TypeError, match="list of pandas.Series"):
             iterative_proportional_fitting.ipf_dataframe(
                 **(pandas_ipf_example.to_kwargs() | {"target_marginals": new_marginals})
             )

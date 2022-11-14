@@ -34,17 +34,17 @@ def _validate_seed_mat(seed_mat: np.ndarray) -> None:
     """Check whether the seed matrix is valid."""
     if not isinstance(seed_mat, np.ndarray):
         if isinstance(seed_mat, pd.DataFrame):
-            raise ValueError(
+            raise TypeError(
                 "Given `seed_mat` is a pandas.DataFrame. "
                 "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
                 "to call `ipf_dataframe()` instead."
             )
 
-        raise ValueError("Given `seed_mat` is not an np.ndarray. Cannot run.")
+        raise TypeError("Given `seed_mat` is not an np.ndarray. Cannot run.")
 
     # Validate type
     if not np.issubdtype(seed_mat.dtype, np.number):
-        raise ValueError(
+        raise TypeError(
             "`seed_mat` expected to be numeric type. Got "
             f"'{seed_mat.dtype}' instead."
         )
@@ -63,7 +63,7 @@ def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
             })
 
     if len(invalid_dtypes) > 0:
-        raise ValueError(
+        raise TypeError(
             "Marginals are expected to be numeric type. "
             "Got the following non-numeric types:\n"
             f"{pd.DataFrame(invalid_dtypes)}"
@@ -95,7 +95,7 @@ def _validate_dimensions(
             })
 
     if len(invalid_dtypes) > 0:
-        raise ValueError(
+        raise TypeError(
             "Dimensions are expected to be numeric type. "
             "Got the following non-numeric types:\n"
             f"{pd.DataFrame(invalid_dtypes)}"
@@ -145,20 +145,20 @@ def _validate_seed_df(
     """Check whether the seed_df and value_col are valid."""
     if not isinstance(seed_df, pd.DataFrame):
         if isinstance(seed_df, np.ndarray):
-            raise ValueError(
+            raise TypeError(
                 "Given `seed_df` is a numpy array. "
                 "`ipf_dataframe()` cannot handle numpy arrays. Perhaps you want "
                 "to call `ipf()` instead."
             )
 
-        raise ValueError("Given `seed_df` is not a pandas.DataFrame. Cannot run.")
+        raise TypeError("Given `seed_df` is not a pandas.DataFrame. Cannot run.")
 
     if value_col not in seed_df:
         raise ValueError("`value_col` is not in `seed_df`.")
 
     # Validate type
     if not pd.api.types.is_numeric_dtype(seed_df[value_col]):
-        raise ValueError(
+        raise TypeError(
             "`seed_df` expected to be numeric type. Got "
             f"'{seed_df[value_col].dtype}' instead."
         )
@@ -169,7 +169,7 @@ def _validate_pd_marginals(
 ) -> None:
     """Check whether the pandas target marginals are valid."""
     if not all(isinstance(x, pd.Series) for x in target_marginals):
-        raise ValueError(
+        raise TypeError(
             "`target_marginals` should be a list of pandas.Series where the "
             "index names of each series are the corresponding dimensions to "
             "control to with the marginal."
@@ -186,7 +186,7 @@ def _validate_pd_marginals(
             )
 
     if len(invalid_dtypes) > 0:
-        raise ValueError(
+        raise TypeError(
             "Marginals are expected to be numeric types. Try using "
             "`pd.to_numeric()` to cast the marginals to the correct types. "
             "Got the following non-numeric types:\n"
