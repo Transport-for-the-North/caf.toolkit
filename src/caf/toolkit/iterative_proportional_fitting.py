@@ -603,7 +603,7 @@ def ipf(
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
     show_pbar: bool = False,
-    pbar_kwargs: dict[str, Any] = None,
+    pbar_kwargs: Optional[dict[str, Any]] = None,
 ) -> tuple[np.ndarray, int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
 
