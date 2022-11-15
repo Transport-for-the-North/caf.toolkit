@@ -63,9 +63,9 @@ def fixture_all_conversion_data(example_index: pd.MultiIndex):
     value_col = "value"
     data_length = len(example_index)
 
-    # Create the base dataframe
+    # Create the base dataframe - ensure 0 value
     df = pd.DataFrame(
-        data=np.random.randint(0, 10, data_length),
+        data=np.random.randint(0, 10, data_length - 1).tolist() + [0],
         index=example_index,
         columns=[value_col],
     ).reset_index()
@@ -119,7 +119,20 @@ def fixture_conversion_data_3d(all_conversion_data: pd.MultiIndex):
 class TestDataframeToNDimensionalArray:
     """Tests for caf.toolkit.pandas_utils.numpy_conversions.dataframe_to_n_dimensional_array"""
 
-    # TODO(BT): Add Error tests
+    @pytest.mark.parametrize(
+        "conversion_data_str",
+        ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
+    )
+    def test_too_many_value_cols(self, conversion_data_str: ConversionData, request):
+        """Test error raising when extra value cols given"""
+        conversion_data = request.getfixturevalue(conversion_data_str)
+        bad_df = conversion_data.pd_matrix.copy()
+        bad_df["bad_value"] = 0
+        with pytest.raises(ValueError, match="More than one value column found"):
+            pd_utils.dataframe_to_n_dimensional_array(
+                df=bad_df,
+                dimension_cols=conversion_data.dimension_cols.keys(),
+            )
 
     @pytest.mark.parametrize(
         "conversion_data_str",
@@ -134,12 +147,23 @@ class TestDataframeToNDimensionalArray:
         )
         np.testing.assert_array_equal(got_return, conversion_data.np_matrix)
 
+    @pytest.mark.parametrize(
+        "conversion_data_str",
+        ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
+    )
+    def test_list_cols(self, conversion_data_str: ConversionData, request):
+        """Test dimension_cols given as a list"""
+        conversion_data = request.getfixturevalue(conversion_data_str)
+        got_return = pd_utils.dataframe_to_n_dimensional_array(
+            df=conversion_data.pd_matrix,
+            dimension_cols=conversion_data.dimension_cols.keys(),
+        )
+        np.testing.assert_array_equal(got_return, conversion_data.np_matrix)
+
 
 @pytest.mark.usefixtures("conversion_data_1d", "conversion_data_2d", "conversion_data_3d")
 class TestNDimensionalArrayToDataframe:
     """Tests for caf.toolkit.pandas_utils.numpy_conversions.n_dimensional_array_to_dataframe"""
-
-    # TODO(BT): Add Error tests
 
     @pytest.mark.parametrize(
         "conversion_data_str",
@@ -154,3 +178,23 @@ class TestNDimensionalArrayToDataframe:
             value_col=conversion_data.pd_value_col,
         )
         pd.testing.assert_frame_equal(got_return.reset_index(), conversion_data.pd_matrix)
+
+    @pytest.mark.parametrize(
+        "conversion_data_str",
+        ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
+    )
+    def test_drop_zeros(self, conversion_data_str: ConversionData, request):
+        """Test 1-3 dimension correct conversions"""
+        conversion_data = request.getfixturevalue(conversion_data_str)
+        got_return = pd_utils.n_dimensional_array_to_dataframe(
+            mat=conversion_data.np_matrix,
+            dimension_cols=conversion_data.dimension_cols,
+            value_col=conversion_data.pd_value_col,
+            drop_zeros=True,
+        )
+
+        # Drop any rows where the value is 0
+        zero_mask = conversion_data.pd_matrix[conversion_data.pd_value_col] == 0
+        non_zero_df = conversion_data.pd_matrix[~zero_mask].reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(got_return.reset_index(), non_zero_df)

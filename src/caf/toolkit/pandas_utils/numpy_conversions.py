@@ -58,7 +58,7 @@ def dataframe_to_n_dimensional_array(
     """
     # Init
     if not isinstance(dimension_cols, dict):
-        dimension_cols = {x: sorted(df[x].unique()) for x in dimension_cols}
+        dimension_cols = {x: df[x].unique().tolist() for x in dimension_cols}
     final_shape = [len(x) for x in dimension_cols.values()]
 
     # Validate that only one value column exists
