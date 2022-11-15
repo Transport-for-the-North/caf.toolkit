@@ -13,6 +13,7 @@ from typing import Callable
 from typing import Optional
 
 # Third Party
+import tqdm
 import numpy as np
 import pandas as pd
 
@@ -601,6 +602,8 @@ def ipf(
     max_iterations: int = 5000,
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
+    show_pbar: bool = False,
+    pbar_kwargs: dict[str, Any] = None,
 ) -> tuple[np.ndarray, int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
 
@@ -644,6 +647,17 @@ def ipf(
         condition which allows exiting before `max_iterations` is reached.
         The convergence is calculated via `convergence_fn`.
 
+    show_pbar:
+        Whether to show a progress bar of the current ipf iterations or not.
+        If `pbar_kwargs` is not None, then this argument is ignored.
+        If `pbar_kwargs` is set, and you want to disable it, add
+        `{"disable": True}` as a kwarg.
+
+    pbar_kwargs:
+        A dictionary of keyword arguments to pass into a progress bar.
+        This dictionary is passed into `tqdm.tqdm(**pbar_kwargs)` when
+        building the progress bar.
+
     Returns
     -------
     fit_matrix:
@@ -660,6 +674,12 @@ def ipf(
     ValueError:
         If any of the marginals or dimensions are not valid when passed in.
     """
+    # Init
+    if pbar_kwargs is None and not show_pbar:
+        pbar_kwargs = {"disable": True}
+    elif pbar_kwargs is None and show_pbar:
+        pbar_kwargs = {"desc": "IPF Iterations"}
+
     # Validate inputs
     _validate_seed_mat(seed_mat)
     _validate_marginals(target_marginals)
@@ -684,7 +704,8 @@ def ipf(
     with np.errstate(over="raise"):
 
         # Iteratively fit
-        for iter_num in range(max_iterations):
+        iterator = tqdm.tqdm(range(max_iterations), **pbar_kwargs)
+        for iter_num in iterator:
             # Adjust matrix and log convergence changes
             prev_conv = convergence
             fit_mat, convergence = adjust_towards_aggregates(
