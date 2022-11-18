@@ -61,11 +61,11 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: list[mp.pool.ApplyResult[_T]],
-    terminate_process_event: Any,  # Should be mp.synchronize.Event,
+    results: Any,       # should be list[mp.pool.ApplyResult[_T]]
+    terminate_process_event: Any,       # mp.synchronize.Event
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
-) -> list[_T]:
+) -> list[Any]:         # should be list[_T]
     """Wait for and grab results from a multiprocessing Pool.
 
     Aims to return all results once processes have complete.
@@ -252,15 +252,16 @@ def _process_pool_wrapper_kwargs_in_order(
     Sibling function with `_process_pool_wrapper_kwargs_out_order()`.
     Should only be called from `process_pool_wrapper()`.
     """
+    # pylint: disable=too-many-locals
     terminate_processes_event = mp.Event()
 
     with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
-            apply_results: list[mp.pool.ApplyResult[tuple[int, _T]]] = list()
 
             # Add each function call to the pool with an index identifier
+            apply_results: list[mp.pool.ApplyResult[tuple[int, _T]]] = list()
             for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):
                 apply_results.append(
                     pool.apply_async(
