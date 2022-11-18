@@ -9,6 +9,7 @@ import traceback
 from typing import Any
 from typing import TypeVar
 from typing import Mapping
+from typing import Optional
 from typing import Iterable
 from typing import Callable
 from typing import Collection
@@ -64,7 +65,7 @@ def wait_for_pool_results(
     results: Any,  # should be list[mp.pool.ApplyResult[_T]]
     terminate_process_event: Any,  # mp.synchronize.Event
     result_timeout: int,
-    pbar_kwargs: dict[str, Any] = None,
+    pbar_kwargs: Optional[dict[str, Any]] = None,
 ) -> list[Any]:  # should be list[_T]
     """Wait for and grab results from a multiprocessing Pool.
 
@@ -206,11 +207,11 @@ def _call_order_wrapper(
 
 
 def _check_args_kwargs(
-    args: Collection[Iterable[Any]] = None,
-    kwargs: Collection[Mapping[str, Any]] = None,
-    args_default: Any = None,
-    kwargs_default: Any = None,
-    length: int = None,
+    args: Optional[Collection[Iterable[Any]]] = None,
+    kwargs: Optional[Collection[Mapping[str, Any]]] = None,
+    args_default: Optional[Any] = None,
+    kwargs_default: Optional[Any] = None,
+    length: Optional[int] = None,
 ):
     """Format args and kwargs correctly if only one set.
 
@@ -247,7 +248,7 @@ def _process_pool_wrapper_kwargs_in_order(
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: dict[str, Any] = None,
+    pbar_kwargs: Optional[dict[str, Any]] = None,
 ) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
@@ -301,7 +302,7 @@ def _process_pool_wrapper_kwargs_out_order(
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: dict[str, Any] = None,
+    pbar_kwargs: Optional[dict[str, Any]] = None,
 ) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
@@ -347,13 +348,13 @@ def _process_pool_wrapper_kwargs_out_order(
 
 def multiprocess(
     fn: Callable[..., _T],
-    arg_list: Collection[Iterable[Any]] = None,
-    kwarg_list: Collection[Mapping[str, Any]] = None,
-    process_count: int = None,
+    arg_list: Optional[Collection[Iterable[Any]]] = None,
+    kwarg_list: Optional[Collection[Mapping[str, Any]]] = None,
+    process_count: Optional[int] = None,
     pool_maxtasksperchild: int = 4,
     in_order: bool = False,
     result_timeout: int = 86400,
-    pbar_kwargs: dict[str, Any] = None,
+    pbar_kwargs: Optional[dict[str, Any]] = None,
 ) -> list[_T]:
     """Run a function and arguments across multiple cores of a CPU.
 
