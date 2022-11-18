@@ -61,11 +61,11 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: Any,       # should be list[mp.pool.ApplyResult[_T]]
-    terminate_process_event: Any,       # mp.synchronize.Event
+    results: Any,  # should be list[mp.pool.ApplyResult[_T]]
+    terminate_process_event: Any,  # mp.synchronize.Event
     result_timeout: int,
     pbar_kwargs: dict[str, Any] = None,
-) -> list[Any]:         # should be list[_T]
+) -> list[Any]:  # should be list[_T]
     """Wait for and grab results from a multiprocessing Pool.
 
     Aims to return all results once processes have complete.
@@ -189,7 +189,9 @@ def wait_for_pool_results(
     return return_results
 
 
-def _call_order_wrapper(index: int, func: Callable[..., _T], *args, **kwargs) -> tuple[int, _T]:
+def _call_order_wrapper(
+    index: int, func: Callable[..., _T], *args, **kwargs
+) -> tuple[int, _T]:
     """Wrap a function return values with a calling index.
 
     Useful when placing a function into an asynchronous Pool. The index of the
@@ -345,8 +347,8 @@ def _process_pool_wrapper_kwargs_out_order(
 
 def multiprocess(
     fn: Callable[..., _T],
-    arg_list: Collection[Iterable[Any]],
-    kwarg_list: Collection[Mapping[str, Any]],
+    arg_list: Collection[Iterable[Any]] = None,
+    kwarg_list: Collection[Mapping[str, Any]] = None,
     process_count: int = None,
     pool_maxtasksperchild: int = 4,
     in_order: bool = False,
