@@ -35,12 +35,13 @@ max-statements = 100
 [tool.mypy]
 mypy_path = "src"
 ignore_missing_imports = true
+allow_redefinition = true
 
 [[tool.mypy.overrides]]
 module = [
   "caf.toolkit._version",
 ]
-ignore_errors  = true
+ignore_errors = true
 
 [tool.pydocstyle]
 convention = "numpy"

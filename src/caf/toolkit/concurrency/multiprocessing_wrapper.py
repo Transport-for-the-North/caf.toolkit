@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Library of multiprocessing functionality."""
+from __future__ import annotations
+
 # Built-ins
 import os
 import time
@@ -7,11 +9,13 @@ import warnings
 import traceback
 
 from typing import Any
+from typing import TypeVar
 from typing import Mapping
+from typing import Optional
 from typing import Iterable
 from typing import Callable
-from typing import Optional
 from typing import Collection
+from typing import TYPE_CHECKING
 
 import multiprocessing as mp
 
@@ -24,10 +28,20 @@ from caf.toolkit import tqdm_utils
 
 # pylint: enable=import-error,wrong-import-position
 
+# Need for type-hints
+if TYPE_CHECKING:
+    from multiprocessing.pool import Pool
+    from multiprocessing.pool import ApplyResult
+    from multiprocessing.synchronize import Event
 
+# # # CONSTANTS # # #
+_T = TypeVar("_T")
+
+
+# # # FUNCTIONS # # #
 def create_kill_pool_fn(
-    pool,
-    terminate_process_event,
+    pool: Pool,
+    terminate_process_event: Event,
 ):
     """
     Create a Callback function for each function in a Pool.
@@ -57,11 +71,11 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: list[Any],  # Should be mp.pool.AsyncResult
-    terminate_process_event: Any,  # Should be mp.synchronize.Event,
+    results: list[ApplyResult[_T]],
+    terminate_process_event: Event,
     result_timeout: int,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> list[Any]:
+) -> list[_T]:
     """Wait for and grab results from a multiprocessing Pool.
 
     Aims to return all results once processes have complete.
@@ -185,7 +199,12 @@ def wait_for_pool_results(
     return return_results
 
 
-def _call_order_wrapper(index, func, *args, **kwargs):
+def _call_order_wrapper(
+    index: int,
+    func: Callable[..., _T],
+    *args,
+    **kwargs,
+) -> tuple[int, _T]:
     """Wrap a function return values with a calling index.
 
     Useful when placing a function into an asynchronous Pool. The index of the
@@ -205,7 +224,7 @@ def _check_args_kwargs(
     args_default: Optional[Any] = None,
     kwargs_default: Optional[Any] = None,
     length: Optional[int] = None,
-):
+) -> tuple[Collection[Iterable[Any]], Collection[Mapping[str, Any]]]:
     """Format args and kwargs correctly if only one set.
 
     If args or kwargs are set to None they are filled with their default value
@@ -231,33 +250,38 @@ def _check_args_kwargs(
         )
     # If no branch taken, both args and kwargs must have been set
 
+    assert args is not None
+    assert kwargs is not None
+
     return args, kwargs
 
 
 def _process_pool_wrapper_kwargs_in_order(
-    fn: Callable,
-    arg_list: Iterable[Iterable[Any]],
-    kwarg_list: Iterable[Mapping[str, Any]],
+    fn: Callable[..., _T],
+    arg_list: Collection[Iterable[Any]],
+    kwarg_list: Collection[Mapping[str, Any]],
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> list[Any]:
+) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
     Sibling function with `_process_pool_wrapper_kwargs_out_order()`.
     Should only be called from `process_pool_wrapper()`.
     """
+    # pylint: disable=too-many-locals
     terminate_processes_event = mp.Event()
 
     with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
+
             # Add each function call to the pool with an index identifier
-            results: list[Any] = list()
+            apply_results: list[ApplyResult[tuple[int, _T]]] = list()
             for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):
-                results.append(
+                apply_results.append(
                     pool.apply_async(
                         func=_call_order_wrapper,
                         args=(i, fn, *args),
@@ -266,9 +290,9 @@ def _process_pool_wrapper_kwargs_in_order(
                     )
                 )
 
-            result_timeout *= max(len(results), 1)
+            result_timeout *= max(len(apply_results), 1)
             results = wait_for_pool_results(
-                results=results,
+                results=apply_results,
                 terminate_process_event=terminate_processes_event,
                 result_timeout=result_timeout,
                 pbar_kwargs=pbar_kwargs,
@@ -282,19 +306,19 @@ def _process_pool_wrapper_kwargs_in_order(
     del pool
 
     # Order the results, and separate from enumerator
-    _, results = zip(*sorted(results, key=lambda x: x[0]))
-    return list(results)
+    _, final_results = zip(*sorted(results, key=lambda x: x[0]))
+    return list(final_results)
 
 
 def _process_pool_wrapper_kwargs_out_order(
-    fn: Callable,
-    arg_list: Iterable[Iterable[Any]],
-    kwarg_list: Iterable[Mapping[str, Any]],
+    fn: Callable[..., _T],
+    arg_list: Collection[Iterable[Any]],
+    kwarg_list: Collection[Mapping[str, Any]],
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> list[Any]:
+) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
     Sibling function with `_process_pool_wrapper_kwargs_in_order()`.
@@ -306,11 +330,11 @@ def _process_pool_wrapper_kwargs_out_order(
         kill_pool = create_kill_pool_fn(pool, terminate_process_event)
 
         try:
-            results = list()
+            apply_results: list[ApplyResult[_T]] = list()
 
             # Add each function call to the pool
             for args, kwargs in zip(arg_list, kwarg_list):
-                results.append(
+                apply_results.append(
                     pool.apply_async(
                         fn,
                         args=args,
@@ -319,9 +343,9 @@ def _process_pool_wrapper_kwargs_out_order(
                     )
                 )
 
-            result_timeout *= max(len(results), 1)
+            result_timeout *= max(len(apply_results), 1)
             results = wait_for_pool_results(
-                results=results,
+                results=apply_results,
                 terminate_process_event=terminate_process_event,
                 result_timeout=result_timeout,
                 pbar_kwargs=pbar_kwargs,
@@ -338,7 +362,7 @@ def _process_pool_wrapper_kwargs_out_order(
 
 
 def multiprocess(
-    fn: Callable,
+    fn: Callable[..., _T],
     arg_list: Optional[Collection[Iterable[Any]]] = None,
     kwarg_list: Optional[Collection[Mapping[str, Any]]] = None,
     process_count: Optional[int] = None,
@@ -346,7 +370,7 @@ def multiprocess(
     in_order: bool = False,
     result_timeout: int = 86400,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> list[Any]:
+) -> list[_T]:
     """Run a function and arguments across multiple cores of a CPU.
 
     Runs the given function with the arguments given in a multiprocessing.Pool,
@@ -452,8 +476,6 @@ def multiprocess(
 
     # Format correctly where not given
     arg_list, kwarg_list = _check_args_kwargs(arg_list, kwarg_list)
-    assert arg_list is not None
-    assert kwarg_list is not None
 
     # Validate process_count
     cpu_count = os.cpu_count()
