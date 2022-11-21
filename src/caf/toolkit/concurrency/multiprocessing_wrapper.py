@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Library of multiprocessing functionality."""
+from __future__ import annotations
+
 # Built-ins
 import os
 import time
@@ -13,6 +15,7 @@ from typing import Optional
 from typing import Iterable
 from typing import Callable
 from typing import Collection
+from typing import TYPE_CHECKING
 
 import multiprocessing as mp
 
@@ -25,14 +28,20 @@ from caf.toolkit import tqdm_utils
 
 # pylint: enable=import-error,wrong-import-position
 
+# Need for type-hints
+if TYPE_CHECKING:
+    from multiprocessing.pool import Pool
+    from multiprocessing.pool import ApplyResult
+    from multiprocessing.synchronize import Event
+
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
 
 
 # # # FUNCTIONS # # #
 def create_kill_pool_fn(
-    pool,
-    terminate_process_event,
+    pool: Pool,
+    terminate_process_event: Event,
 ):
     """
     Create a Callback function for each function in a Pool.
@@ -62,11 +71,11 @@ def create_kill_pool_fn(
 
 
 def wait_for_pool_results(
-    results: Any,  # should be list[mp.pool.ApplyResult[_T]]
-    terminate_process_event: Any,  # mp.synchronize.Event
+    results: list[ApplyResult[_T]],
+    terminate_process_event: Event,
     result_timeout: int,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> list[Any]:  # should be list[_T]
+) -> list[_T]:
     """Wait for and grab results from a multiprocessing Pool.
 
     Aims to return all results once processes have complete.
@@ -191,7 +200,10 @@ def wait_for_pool_results(
 
 
 def _call_order_wrapper(
-    index: int, func: Callable[..., _T], *args, **kwargs
+    index: int,
+    func: Callable[..., _T],
+    *args,
+    **kwargs,
 ) -> tuple[int, _T]:
     """Wrap a function return values with a calling index.
 
@@ -212,7 +224,7 @@ def _check_args_kwargs(
     args_default: Optional[Any] = None,
     kwargs_default: Optional[Any] = None,
     length: Optional[int] = None,
-):
+) -> tuple[Collection[Iterable[Any]], Collection[Mapping[str, Any]]]:
     """Format args and kwargs correctly if only one set.
 
     If args or kwargs are set to None they are filled with their default value
@@ -237,6 +249,9 @@ def _check_args_kwargs(
             "been set. Don't know how to proceed!"
         )
     # If no branch taken, both args and kwargs must have been set
+
+    assert args is not None
+    assert kwargs is not None
 
     return args, kwargs
 
@@ -264,7 +279,7 @@ def _process_pool_wrapper_kwargs_in_order(
         try:
 
             # Add each function call to the pool with an index identifier
-            apply_results: list[mp.pool.ApplyResult[tuple[int, _T]]] = list()
+            apply_results: list[ApplyResult[tuple[int, _T]]] = list()
             for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):
                 apply_results.append(
                     pool.apply_async(
@@ -315,7 +330,7 @@ def _process_pool_wrapper_kwargs_out_order(
         kill_pool = create_kill_pool_fn(pool, terminate_process_event)
 
         try:
-            apply_results: list[mp.pool.ApplyResult[_T]] = list()
+            apply_results: list[ApplyResult[_T]] = list()
 
             # Add each function call to the pool
             for args, kwargs in zip(arg_list, kwarg_list):
@@ -459,8 +474,6 @@ def multiprocess(
 
     # Format correctly where not given
     arg_list, kwarg_list = _check_args_kwargs(arg_list, kwarg_list)
-    assert arg_list is not None
-    assert kwarg_list is not None
 
     # Validate process_count
     cpu_count = os.cpu_count()
