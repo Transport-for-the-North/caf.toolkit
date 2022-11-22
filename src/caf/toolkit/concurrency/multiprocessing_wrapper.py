@@ -453,6 +453,8 @@ def multiprocess(
     >>> args_list = [a_args, b_args, c_args]
     >>> kwargs_list = [a_kwargs, b_kwargs, c_kwargs]
     >>> a, b, c = multiprocess(sorted, args_list, kwargs_list)
+
+    # TODO(BT): Add example of how to convert a for-loop into one of these calls.
     """
     # TODO(BT): Maybe add functionality to allow calling a function without
     #  any arguments n times

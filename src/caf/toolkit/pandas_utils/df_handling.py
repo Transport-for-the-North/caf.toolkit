@@ -732,3 +732,32 @@ def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
     """
     df = long_to_wide_infill(*args, **kwargs)
     return df.values
+
+
+def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
+    """Create a pandas Index from a mapping of {col_name: col_values}.
+
+    Useful for N-dimensional conversions as MultiIndex can change types
+    when only one index column is needed.
+
+    Parameters
+    ----------
+    dimension_cols:
+        A dictionary mapping `{col_name: col_values}`, where `col_values`
+        is a list of the unique values in a column.
+
+    Returns
+    -------
+    index:
+        A pandas index of evey combination of values in `dimension_cols`
+    """
+    if len(dimension_cols) > 1:
+        return pd.MultiIndex.from_product(
+            iterables=dimension_cols.values(),
+            names=dimension_cols.keys(),
+        )
+
+    return pd.Index(
+        data=list(dimension_cols.values())[0],
+        name=list(dimension_cols.keys())[0],
+    )
