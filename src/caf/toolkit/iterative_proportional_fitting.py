@@ -9,11 +9,15 @@ import warnings
 import itertools
 
 from typing import Any
+from typing import Union
+from typing import overload
 from typing import Callable
 from typing import Optional
+from typing import Collection
 
 # Third Party
 import tqdm
+import sparse
 import numpy as np
 import pandas as pd
 
@@ -26,22 +30,27 @@ from caf.toolkit import pandas_utils as pd_utils
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
+IpfConvergenceFn = Callable[[Collection[np.ndarray], Collection[np.ndarray]], float]
 
 # # # CLASSES # # #
 
 
 # # # PRIVATE FUNCTIONS # # #
-def _validate_seed_mat(seed_mat: np.ndarray) -> None:
+def _validate_seed_mat(seed_mat: Union[np.ndarray, sparse.COO], use_sparse: bool) -> None:
     """Check whether the seed matrix is valid."""
-    if not isinstance(seed_mat, np.ndarray):
-        if isinstance(seed_mat, pd.DataFrame):
-            raise TypeError(
-                "Given `seed_mat` is a pandas.DataFrame. "
-                "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
-                "to call `ipf_dataframe()` instead."
-            )
+    if isinstance(seed_mat, pd.DataFrame):
+        raise TypeError(
+            "Given `seed_mat` is a pandas.DataFrame. "
+            "`ipf()` cannot handle pandas.DataFrame. Perhaps you want "
+            "to call `ipf_dataframe()` instead."
+        )
 
-        raise TypeError("Given `seed_mat` is not an np.ndarray. Cannot run.")
+    if use_sparse:
+        if not isinstance(seed_mat, sparse.COO):
+            raise TypeError("Given `seed_mat` is not a sparse.COO matrix when 'use_sparse=True`. Cannot run.")
+    else:
+        if not isinstance(seed_mat, np.ndarray):
+            raise TypeError("Given `seed_mat` is not an np.ndarray. Cannot run.")
 
     # Validate type
     if not np.issubdtype(seed_mat.dtype, np.number):
@@ -50,9 +59,31 @@ def _validate_seed_mat(seed_mat: np.ndarray) -> None:
         )
 
 
-def _validate_marginals(target_marginals: list[np.ndarray]) -> None:
+def _validate_marginals(target_marginals: list[Union[np.ndarray, sparse.COO]], use_sparse: bool) -> None:
     """Check whether the marginals are valid."""
     # Check valid types
+    if use_sparse:
+        type_name_msg = "sparse.COO or np.array matrix when 'use_sparse=True`"
+        valid_types: Union[type, tuple[type, type]] = (np.ndarray, sparse.COO)
+    else:
+        type_name_msg = "np.array"
+        valid_types: Union[type, tuple[type, type]] = np.ndarray
+
+    invalid_types = list()
+    for i, marginal in enumerate(target_marginals):
+        if not isinstance(marginal, valid_types):
+            invalid_types.append(
+                {"marginal_id": i, "type": type(marginal)}
+            )
+
+    if len(invalid_types) > 0:
+        raise TypeError(
+            f"Marginals are expected to be {type_name_msg}."
+            "Got the following invalid types:\n"
+            f"{pd.DataFrame(invalid_types)}"
+        )
+
+    # Check valid data types
     invalid_dtypes = list()
     for i, marginal in enumerate(target_marginals):
         if not np.issubdtype(marginal.dtype, np.number):
@@ -116,7 +147,7 @@ def _validate_dimensions(
 
 
 def _validate_marginal_shapes(
-    target_marginals: list[np.ndarray],
+    target_marginals: list[Union[np.ndarray, sparse.COO]],
     target_dimensions: list[list[int]],
     seed_mat: np.ndarray,
 ) -> None:
@@ -254,6 +285,51 @@ def _ipf_mat_result_to_df(
     return fit_df.reset_index()
 
 
+# # # FUNCTIONS # # #
+def default_convergence(
+    targets: Collection[np.ndarray],
+    achieved: Collection[np.ndarray],
+) -> float:
+    """Calculate the default convergence used by ipfn.
+
+    Two lists of corresponding values are zipped together, differences taken
+    (residuals) and the RMSE calculated.
+
+    Parameters
+    ----------
+    targets:
+        The targets that `achieved` should have reached. Must
+        be the same length as `achieved`.
+
+    achieved:
+        The achieved values. Must be the same length as `targets`
+
+    Returns
+    -------
+    ipfn_convergence:
+        A float value indicating the max convergence value achieved across
+        residuals
+
+    Raises
+    ------
+    ValueError:
+        If `targets` and `achieved` are not the same length
+    """
+    if len(targets) != len(achieved):
+        raise ValueError(
+            "targets and achieved must be the same length. "
+            f"targets length: {len(targets)}, achieved length: {len(achieved)}"
+        )
+
+    max_conv = 0
+    for target, ach in zip(targets, achieved):
+        conv = np.max(abs((ach / target) - 1))
+        if conv > max_conv:
+            max_conv = conv
+
+    return max_conv
+
+
 def pd_marginals_to_np(
     target_marginals: list[pd.Series],
     dimension_order: dict[str, list[Any]],
@@ -364,51 +440,6 @@ def pd_marginals_to_np(
         np_dimensions.append(axes)
 
     return np_marginals, np_dimensions
-
-
-# # # FUNCTIONS # # #
-def default_convergence(
-    targets: list[np.ndarray],
-    achieved: list[np.ndarray],
-) -> float:
-    """Calculate the default convergence used by ipfn.
-
-    Two lists of corresponding values are zipped together, differences taken
-    (residuals) and the RMSE calculated.
-
-    Parameters
-    ----------
-    targets:
-        A list of all the targets that `achieved` should have reached. Must
-        be the same length as `achieved`.
-
-    achieved:
-        A list of all the achieved values. Must be the same length as `targets`
-
-    Returns
-    -------
-    ipfn_convergence:
-        A float value indicating the max convergence value achieved across
-        residuals
-
-    Raises
-    ------
-    ValueError:
-        If `targets` and `achieved` are not the same length
-    """
-    if len(targets) != len(achieved):
-        raise ValueError(
-            "targets and achieved must be the same length. "
-            f"targets length: {len(targets)}, achieved length: {len(achieved)}"
-        )
-
-    max_conv = 0
-    for target, ach in zip(targets, achieved):
-        conv = np.max(abs((ach / target) - 1))
-        if conv > max_conv:
-            max_conv = conv
-
-    return max_conv
 
 
 def adjust_towards_aggregates(
@@ -566,7 +597,12 @@ def ipf_dataframe(
         df=seed_df,
         dimension_cols=dimension_order,
         fill_val=0,
+        sparse_ok=True,
     )
+
+    # TODO(BT): EDIT AFTER HERE
+    print(np_seed)
+    exit()
 
     np_marginals, np_dimensions = pd_marginals_to_np(
         target_marginals=target_marginals,
@@ -594,17 +630,52 @@ def ipf_dataframe(
     return fit_df, iter_num, conv
 
 
+@overload
 def ipf(
     seed_mat: np.ndarray,
     target_marginals: list[np.ndarray],
     target_dimensions: list[list[int]],
-    convergence_fn: Optional[Callable] = None,
+    convergence_fn: Optional[IpfConvergenceFn] = ...,
+    max_iterations: int = ...,
+    tol: float = ...,
+    min_tol_rate: float = ...,
+    use_sparse: bool = ...,
+    show_pbar: bool = ...,
+    pbar_kwargs: Optional[dict[str, Any]] = ...,
+) -> tuple[np.ndarray, int, float]:
+    ...
+
+
+@overload
+def ipf(
+    seed_mat: sparse.COO,
+    target_marginals: list[Union[np.ndarray, sparse.COO]],
+    target_dimensions: list[list[int]],
+    convergence_fn: Optional[IpfConvergenceFn] = ...,
+    max_iterations: int = ...,
+    tol: float = ...,
+    min_tol_rate: float = ...,
+    use_sparse: bool = ...,
+    show_pbar: bool = ...,
+    pbar_kwargs: Optional[dict[str, Any]] = ...,
+) -> tuple[sparse.COO, int, float]:
+    ...
+
+# TODO(BT): Handle type hints once written
+
+
+def ipf(
+    seed_mat: Union[np.ndarray, sparse.COO],
+    target_marginals: list[Union[np.ndarray, sparse.COO]],
+    target_dimensions: list[list[int]],
+    convergence_fn: Optional[IpfConvergenceFn] = None,
     max_iterations: int = 5000,
     tol: float = 1e-9,
     min_tol_rate: float = 1e-9,
+    use_sparse: bool = False,
     show_pbar: bool = False,
     pbar_kwargs: Optional[dict[str, Any]] = None,
-) -> tuple[np.ndarray, int, float]:
+) -> tuple[Union[np.ndarray, sparse.COO], int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
 
     https://en.wikipedia.org/wiki/Iterative_proportional_fitting
@@ -647,6 +718,11 @@ def ipf(
         condition which allows exiting before `max_iterations` is reached.
         The convergence is calculated via `convergence_fn`.
 
+    use_sparse:
+        Whether to use sparse matrices when doing the ipf calculations. This
+        is useful then the given numpy array is very sparse. If a sparse.COO
+        matrix is given, this argument is ignored.
+
     show_pbar:
         Whether to show a progress bar of the current ipf iterations or not.
         If `pbar_kwargs` is not None, then this argument is ignored.
@@ -680,9 +756,12 @@ def ipf(
     elif pbar_kwargs is None and show_pbar:
         pbar_kwargs = {"desc": "IPF Iterations"}
 
+    if isinstance(seed_mat, sparse.COO):
+        use_sparse = True
+
     # Validate inputs
-    _validate_seed_mat(seed_mat)
-    _validate_marginals(target_marginals)
+    _validate_seed_mat(seed_mat, use_sparse)
+    _validate_marginals(target_marginals, use_sparse)
     _validate_dimensions(target_dimensions, seed_mat)
     _validate_marginal_shapes(target_marginals, target_dimensions, seed_mat)
 
