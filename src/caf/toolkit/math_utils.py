@@ -6,6 +6,7 @@ Most will be used elsewhere in the codebase too
 # Built-Ins
 import math
 from typing import Union
+from typing import Collection
 
 # Third Party
 import numpy as np
@@ -107,8 +108,8 @@ def is_almost_equal(
 
 
 def root_mean_squared_error(
-    targets: list[np.ndarray],
-    achieved: list[np.ndarray],
+    targets: Collection[np.ndarray],
+    achieved: Collection[np.ndarray],
 ) -> float:
     """Calculate the root-mean-squared error between targets and achieved.
 
