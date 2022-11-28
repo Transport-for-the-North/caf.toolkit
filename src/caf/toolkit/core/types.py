@@ -13,7 +13,7 @@ from typing import Literal
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
-ErrorHandlingLiteral = Literal["ignore", "warn", "raise", "print"]
+SparseLiteral = Literal["disallow", "allow", "force", "feasible"]
 
 # # # CLASSES # # #
 
