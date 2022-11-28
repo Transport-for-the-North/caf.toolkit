@@ -3,13 +3,17 @@
 
 Most will be used elsewhere in the codebase too
 """
+import functools
 # Built-Ins
 import math
 from typing import Union
+from typing import Iterable
 from typing import Collection
 
 # Third Party
+import sparse
 import numpy as np
+import pandas as pd
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -108,8 +112,8 @@ def is_almost_equal(
 
 
 def root_mean_squared_error(
-    targets: Collection[np.ndarray],
-    achieved: Collection[np.ndarray],
+    targets: Collection[Union[np.ndarray, sparse.COO]],
+    achieved: Collection[Union[np.ndarray, sparse.COO]],
 ) -> float:
     """Calculate the root-mean-squared error between targets and achieved.
 
@@ -145,6 +149,53 @@ def root_mean_squared_error(
     squared_diffs = list()
     for target, ach in zip(targets, achieved):
         diffs = (target - ach) ** 2
+        if isinstance(diffs, sparse.COO):
+            if diffs.fill_value == 0:
+                diffs = diffs.data
+            else:
+                raise ValueError(
+                    "Cannot deal with sparse matrices with non-zero fill"
+                    "values"
+                )
         squared_diffs += diffs.flatten().tolist()
 
     return float(np.mean(squared_diffs) ** 0.5)
+
+
+def nan_report_with_input(array: np.ndarray, input_dict: dict[str, np.ndarray]) -> pd.DataFrame:
+    """Create a report of NaN values in relative matrix locations
+
+    Uses an input `array` (usually the result of a calculation) to find the
+    locations of all np.NaN values. Once found, the index of these values are
+    found in the `input_dict` arrays. These values are then used to generate
+    a report.
+
+    Parameters
+    ----------
+    array:
+        The array to find the NaN values in.
+
+    input_dict:
+        A dictionary of arrays of the same shape as `array`. The keys are the
+        names to define each input, and the values the array.
+
+    Returns
+    -------
+    report:
+        A pandas DataFrame reporting where the np.NaN values are.
+        Will have a column named "axis_{i}" for each axis in array.
+        Will also have additional columns named "output" (for `array` values)
+        and one named after each key in `input_dict` for the corresponding
+        array values.
+    """
+    # Create the columns
+    mat_idxs = np.isnan(array).nonzero()
+    idx_cols = {f"axis_{i}": x for i, x in enumerate(mat_idxs)}
+    output_col = {"output": array[mat_idxs]}
+    in_cols = {k: v[mat_idxs] for k, v in input_dict.items()}
+
+    # Combine and convert to DataFrame
+    final_dict = dict()
+    for d in [idx_cols, output_col, in_cols]:
+        final_dict.update(d)
+    return pd.DataFrame(final_dict)
