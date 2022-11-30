@@ -4,6 +4,7 @@
 See: https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 """
 # Built-Ins
+import time
 import logging
 import warnings
 import itertools
@@ -13,6 +14,7 @@ from typing import Union
 from typing import overload
 from typing import Callable
 from typing import Optional
+from typing import Iterable
 from typing import Collection
 
 # Third Party
@@ -24,6 +26,7 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
+from caf.toolkit import array_utils
 from caf.toolkit import pandas_utils as pd_utils
 
 # pylint: enable=import-error,wrong-import-position
@@ -34,8 +37,8 @@ IpfConvergenceFn = Callable[[Collection[np.ndarray], Collection[np.ndarray]], fl
 
 # # # CLASSES # # #
 
-
-# # # PRIVATE FUNCTIONS # # #
+# # # FUNCTIONS # # #
+# ## Private Functions ## #
 def _validate_seed_mat(seed_mat: Union[np.ndarray, sparse.COO], use_sparse: bool) -> None:
     """Check whether the seed matrix is valid."""
     if isinstance(seed_mat, pd.DataFrame):
@@ -67,7 +70,7 @@ def _validate_marginals(target_marginals: list[Union[np.ndarray, sparse.COO]], u
         valid_types: Union[type, tuple[type, type]] = (np.ndarray, sparse.COO)
     else:
         type_name_msg = "np.array"
-        valid_types: Union[type, tuple[type, type]] = np.ndarray
+        valid_types = np.ndarray
 
     invalid_types = list()
     for i, marginal in enumerate(target_marginals):
@@ -238,7 +241,7 @@ def _infill_invalid_combos(
     """Infill invalid combinations of dimension values of a marginal."""
     valid_zeros = valid_dimension_combos[dimension_order.keys()].drop_duplicates()
     valid_zeros["val"] = 0
-    invalid_ones = pd_utils.dataframe_to_n_dimensional_array(
+    invalid_ones, _ = pd_utils.dataframe_to_n_dimensional_array(
         df=valid_zeros,
         dimension_cols=dimension_order,
         fill_val=1,
@@ -246,7 +249,7 @@ def _infill_invalid_combos(
     return np.where(invalid_ones, fill_val, marginal)
 
 
-def _ipf_mat_result_to_df(
+def _ipf_dense_mat_result_to_df(
     results_array: np.ndarray,
     dimension_cols: dict[str, list[Any]],
     value_col: str,
@@ -285,7 +288,131 @@ def _ipf_mat_result_to_df(
     return fit_df.reset_index()
 
 
-# # # FUNCTIONS # # #
+def _ipf_sparse_mat_result_to_df(
+    results_array: sparse.COO,
+    value_maps: dict[str, dict[Any, int]],
+    value_col: str,
+    valid_dimension_combos: pd.DataFrame,
+    drop_zeros_return: bool,
+) -> pd.DataFrame:
+    # Init
+    dimension_col_names = valid_dimension_combos.columns.to_list()
+    input_index = pd.MultiIndex.from_arrays(
+        [valid_dimension_combos[x].values for x in dimension_col_names],
+        names=dimension_col_names,
+    )
+
+    # Convert the sparse array to a dataframe
+    df_ph = dict(zip(dimension_col_names, results_array.coords))
+    df_ph[value_col] = results_array.data
+    fit_df = pd.DataFrame(df_ph)
+    pre_convert_total = fit_df[value_col].values.sum()
+
+    # Map back to original values
+    rev_value_maps = dict()
+    for col, mapping in value_maps.items():
+        rev_value_maps[col] = {v: k for k, v in mapping.items()}
+
+    for col, value_map in rev_value_maps.items():
+        fit_df[col] = fit_df[col].map(value_map)
+    fit_df = fit_df.set_index(dimension_col_names)
+
+    # Sparse matrices would have optimised 0 values away - infill back
+    fit_df = fit_df.reindex(input_index).fillna(0)
+
+    # Make sure no demand was dropped when fitting back in dataframe
+    post_convert_total = fit_df.values.sum()
+    if not math_utils.is_almost_equal(pre_convert_total, post_convert_total):
+        raise RuntimeError(
+            "When converting the resulting ipf matrix back into the `seed_df` "
+            "format some values were dropped. This shouldn't happen and is an "
+            "internal error.\n"
+            f"{pre_convert_total = }\n"
+            f"{post_convert_total = }\n"
+        )
+
+    # Drop any zeros
+    if drop_zeros_return:
+        zero_mask = fit_df[value_col] == 0
+        fit_df = fit_df[~zero_mask].copy()
+
+    return fit_df.reset_index()
+
+
+def _broadcast_sparse_matrix(
+    array: sparse.COO,
+    target_array: sparse.COO,
+    expand_axis: Union[int, Iterable[int]],
+) -> sparse.COO:
+    """Expand an array to a target sparse matrix, matching target sparsity.
+
+    Parameters
+    ----------
+    array:
+        Input array.
+
+    target_array:
+        Target array to broadcast to. The return matrix will be as sparse
+        and the same shape as this matrix.
+
+    expand_axis:
+        Position in the expanded axes where the new axis (or axes) is placed.
+
+    Returns
+    -------
+    expanded_array:
+        Array expanded to be the same shape and sparsity as target_array
+    """
+    # Validate inputs
+    if isinstance(expand_axis, int):
+        expand_axis = [expand_axis]
+    assert isinstance(expand_axis, Iterable)
+
+    # Init
+    n_vals = len(array.data)
+
+    # Expand the dimension to match target shape
+    new_coords = list()
+    build_shape = list()
+    old_coords_idx = 0
+    for i in range(len(target_array.shape)):
+        if i in expand_axis:
+            new_coords.append(np.zeros(n_vals))
+            build_shape.append(1)
+        else:
+            new_coords.append(array.coords[old_coords_idx])
+            build_shape.append(array.shape[old_coords_idx])
+            old_coords_idx += 1
+
+    expanded = sparse.COO(
+        coords=np.array(new_coords, dtype=int),
+        data=array.data,
+        fill_value=array.fill_value,
+        shape=tuple(build_shape),
+    )
+
+    sparse_locations = target_array != 0
+    return expanded * sparse_locations
+
+
+def _remove_sparse_nan_values(
+    array: Union[np.ndarray, sparse.COO],
+    fill_value: Union[int, float] = 0,
+) -> Union[np.ndarray, sparse.COO]:
+    """Remove any NaN values from a dense or sparse array"""
+    if isinstance(array, np.ndarray):
+        return np.nan_to_num(array, nan=fill_value)
+
+    # Must be sparse and need special infill
+    return sparse.COO(
+        coords=array.coords,
+        data=np.nan_to_num(array.data, nan=fill_value),
+        fill_value=np.nan_to_num(array.fill_value, nan=fill_value),
+        shape=array.shape,
+    )
+
+
+# ## Public Functions ## #
 def default_convergence(
     targets: Collection[np.ndarray],
     achieved: Collection[np.ndarray],
@@ -334,7 +461,9 @@ def pd_marginals_to_np(
     target_marginals: list[pd.Series],
     dimension_order: dict[str, list[Any]],
     valid_dimension_combos: pd.DataFrame,
-) -> tuple[list[np.ndarray], list[list[int]]]:
+    allow_sparse: bool = False,
+    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
+) -> tuple[Union[list[np.ndarray], list[sparse.COO]], list[list[int]]]:
     """Convert pandas marginals to numpy format for `ipf()`.
 
     Parameters
@@ -361,6 +490,18 @@ def pd_marginals_to_np(
         dimension values. This should be taken from the seed matrix. Used
         internally to ensure the generated numpy marginals are valid with
         no unexpected missing combinations.
+
+    allow_sparse:
+        Whether to allow the resultant marginals to become sparse.COO matrices.
+        Usually used when the corresponding seed matrix is also sparse.
+        If set to False, then the resultant marginals will not be allowed
+        to be sparse and MUST be dense numpy matrices.
+
+    sparse_value_maps:
+        A nested dictionary of `{col_name: {col_val: coordinate_value}}` where
+        `col_name` is the name of the column in `df`, `col_val` is the
+        value in `col_name`, and `coordinate_value` is the coordinate value
+        to assign to that value in the sparse array.
 
     Returns
     -------
@@ -405,9 +546,12 @@ def pd_marginals_to_np(
         dimension_cols_i = {x: dimension_order[x] for x in pd_dimension}
 
         # Convert marginals
-        np_marginal_i = pd_utils.dataframe_to_n_dimensional_array(
+        sparse_ok = "force" if allow_sparse else "disallow"
+        np_marginal_i, _ = pd_utils.dataframe_to_n_dimensional_array(
             df=pd_marginal.reset_index(),
             dimension_cols=dimension_cols_i,
+            sparse_ok=sparse_ok,
+            sparse_value_maps=sparse_value_maps,
             fill_val=np.nan,
         )
 
@@ -446,7 +590,7 @@ def adjust_towards_aggregates(
     mat: np.ndarray,
     target_marginals: list[np.ndarray],
     target_dimensions: list[list[int]],
-    convergence_fn: Callable,
+    convergence_fn: IpfConvergenceFn,
 ) -> tuple[np.ndarray, float]:
     """Adjust a matrix towards aggregate targets.
 
@@ -522,11 +666,105 @@ def adjust_towards_aggregates(
     return out_mat, convergence_fn(target_marginals, achieved_aggregates)
 
 
+# Sparse doesn't handle DIV/0 very well
+# We could use an infill value, but it's quicker to just ignore the errors
+@np.errstate(divide="ignore", invalid="ignore")
+def sparse_adjust_towards_aggregates(
+    mat: sparse.COO,
+    target_marginals: list[sparse.COO],
+    target_dimensions: list[list[int]],
+    convergence_fn: IpfConvergenceFn,
+) -> tuple[np.ndarray, float]:
+    """Adjust a matrix towards aggregate targets.
+
+    Uses `target_aggregates` and `target_dimensions` to calculate adjustment
+    factors across each of the dimensions, brining mat closer to the targets.
+
+    Parameters
+    ----------
+    mat:
+        The starting matrix that should be adjusted
+
+    target_marginals:
+        A list of the aggregates to adjust `matrix` towards. Aggregates are
+        the target values to aim for when aggregating across one or several
+        other axis. Directly corresponds to `target_dimensions`.
+
+    target_dimensions:
+        A list of target dimensions for each aggregate.
+        Each target dimension lists the axes that should be preserved when
+        calculating the achieved aggregates for the corresponding
+        `target_marginals`.
+        Another way to look at this is a list of the numpy axis which should
+        NOT be summed from `mat` when calculating the achieved marginals.
+
+    convergence_fn:
+        The function that should be called to calculate the convergence of
+        `mat` after all `target_marginals` adjustments have been made. If
+        a callable is given it must take the form:
+        `fn(targets: list[np.ndarray], achieved: list[np.ndarray])`
+
+    Returns
+    -------
+    adjusted_mat:
+        The input mat, adjusted once for each aggregate towards the
+        `target_marginals`
+
+    convergence:
+        A float describing the convergence of `adjusted_mat` to
+        `target_marginals`. Usually lower is better, but that depends on the
+        exact `convergence_fn` in use.
+    """
+    # Init
+    n_dims = len(mat.shape)
+    out_mat = mat.copy().astype(float)
+
+    # Adjust the matrix once for each marginal
+    for target, dimensions in zip(target_marginals, target_dimensions):
+
+        # Figure out which axes to sum across
+        sum_axes = tuple(set(range(n_dims)) - set(dimensions))
+
+        # Figure out the adjustment factor
+        if isinstance(out_mat, sparse.COO):
+            start = time.perf_counter()
+            # achieved = array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
+            achieved = out_mat.sum(axis=sum_axes)
+            end = time.perf_counter()
+            print(f"sparse sum time = {end - start:.5f}s")
+        else:
+            achieved = out_mat.sum(axis=sum_axes)
+        adj_factor = target / achieved
+        adj_factor = _remove_sparse_nan_values(adj_factor)
+
+        # Apply factors
+        start = time.perf_counter()
+        adj_factor = _broadcast_sparse_matrix(
+            array=adj_factor,
+            target_array=out_mat,
+            expand_axis=sum_axes,
+        )
+        end = time.perf_counter()
+        print(f"sparse broadcast time = {end - start:.5f}s")
+        out_mat *= adj_factor
+
+    print()
+
+    # Calculate the achieved marginals
+    achieved_aggregates = list()
+    for dimensions in target_dimensions:
+        sum_axes = tuple(set(range(n_dims)) - set(dimensions))
+        achieved_aggregates.append(out_mat.sum(axis=sum_axes))
+
+    return out_mat, convergence_fn(target_marginals, achieved_aggregates)
+
+
 def ipf_dataframe(
     seed_df: pd.DataFrame,
     target_marginals: list[pd.Series],
     value_col: str,
     drop_zeros_return: bool = False,
+    force_sparse: bool = False,
     **kwargs,
 ) -> tuple[pd.DataFrame, int, float]:
     """Adjust a matrix iteratively towards targets until convergence met.
@@ -556,6 +794,10 @@ def ipf_dataframe(
         return or now. If False, the return dataframe will be in the same
         order as `seed_df`. That is, the return will be exactly the same as
         `seed_df` except in the `value_col` column.
+
+    force_sparse:
+        Whether to force the dataframe into a sparse array without first
+        checking if the dense array would fit into memory.
 
     **kwargs:
         Any other arguments to pass to `iterative_proportional_fitting.ipf()`
@@ -593,21 +835,19 @@ def ipf_dataframe(
     valid_dimension_combos = seed_df[seed_dimension_cols].copy()
 
     # Convert inputs to numpy
-    np_seed = pd_utils.dataframe_to_n_dimensional_array(
+    np_seed, value_maps = pd_utils.dataframe_to_n_dimensional_array(
         df=seed_df,
         dimension_cols=dimension_order,
         fill_val=0,
-        sparse_ok=True,
+        sparse_ok="force" if force_sparse else "allow",
     )
-
-    # TODO(BT): EDIT AFTER HERE
-    print(np_seed)
-    exit()
 
     np_marginals, np_dimensions = pd_marginals_to_np(
         target_marginals=target_marginals,
         dimension_order=dimension_order,
         valid_dimension_combos=valid_dimension_combos,
+        allow_sparse=isinstance(np_seed, sparse.COO),
+        sparse_value_maps=value_maps,
     )
 
     # Call numpy IPF
@@ -619,13 +859,22 @@ def ipf_dataframe(
     )
 
     # Fit results back into starting dataframe shape
-    fit_df = _ipf_mat_result_to_df(
-        results_array=fit_mat,
-        dimension_cols=dimension_order,
-        value_col=value_col,
-        valid_dimension_combos=valid_dimension_combos,
-        drop_zeros_return=drop_zeros_return,
-    )
+    if isinstance(fit_mat, sparse.COO):
+        fit_df = _ipf_sparse_mat_result_to_df(
+            results_array=fit_mat,
+            value_maps=value_maps,
+            value_col=value_col,
+            valid_dimension_combos=valid_dimension_combos,
+            drop_zeros_return=drop_zeros_return,
+        )
+    else:
+        fit_df = _ipf_dense_mat_result_to_df(
+            results_array=fit_mat,
+            dimension_cols=dimension_order,
+            value_col=value_col,
+            valid_dimension_combos=valid_dimension_combos,
+            drop_zeros_return=drop_zeros_return,
+        )
 
     return fit_df, iter_num, conv
 
@@ -660,8 +909,6 @@ def ipf(
     pbar_kwargs: Optional[dict[str, Any]] = ...,
 ) -> tuple[sparse.COO, int, float]:
     ...
-
-# TODO(BT): Handle type hints once written
 
 
 def ipf(
@@ -787,12 +1034,29 @@ def ipf(
         for iter_num in iterator:
             # Adjust matrix and log convergence changes
             prev_conv = convergence
-            fit_mat, convergence = adjust_towards_aggregates(
-                mat=fit_mat,
-                target_marginals=target_marginals,
-                target_dimensions=target_dimensions,
-                convergence_fn=convergence_fn,
-            )
+
+            if isinstance(seed_mat, np.ndarray):
+                fit_mat, convergence = adjust_towards_aggregates(
+                    mat=fit_mat,
+                    target_marginals=target_marginals,
+                    target_dimensions=target_dimensions,
+                    convergence_fn=convergence_fn,
+                )
+            elif isinstance(seed_mat, sparse.COO):
+                fit_mat, convergence = sparse_adjust_towards_aggregates(
+                    mat=fit_mat,
+                    target_marginals=target_marginals,
+                    target_dimensions=target_dimensions,
+                    convergence_fn=convergence_fn,
+                )
+            else:
+                raise RuntimeError(
+                    "Apparently `seed_mat` is a valid type, but I don't know "
+                    "how to adjust it! This is an internal error that needs "
+                    "fixing."
+                )
+
+            print(f"{convergence = }")
 
             # Check if we've hit targets
             if convergence < tol:

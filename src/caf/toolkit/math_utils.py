@@ -149,15 +149,19 @@ def root_mean_squared_error(
     squared_diffs = list()
     for target, ach in zip(targets, achieved):
         diffs = (target - ach) ** 2
-        if isinstance(diffs, sparse.COO):
-            if diffs.fill_value == 0:
-                diffs = diffs.data
-            else:
-                raise ValueError(
-                    "Cannot deal with sparse matrices with non-zero fill"
-                    "values"
-                )
-        squared_diffs += diffs.flatten().tolist()
+
+        # Nice and east with dense array
+        if isinstance(diffs, np.ndarray):
+            squared_diffs += diffs.flatten().tolist()
+
+        elif isinstance(diffs, sparse.COO):
+            # TODO(BT): Not ideal making this dense, but not sure on a smarter
+            #  way to do this right now.
+            squared_diffs += diffs.todense().flatten().tolist()
+        else:
+            raise ValueError(
+                f"Cannot handle arrays of type '{type(diffs)}'."
+            )
 
     return float(np.mean(squared_diffs) ** 0.5)
 

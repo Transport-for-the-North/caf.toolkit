@@ -189,7 +189,7 @@ def sparse_sum(
     sum:
         The sum of `sparse_matrix` elements over the given axiss
     """
-    keep_axis = tuple(set(range(len(sparse_array.shape))) - set(axis))
+    keep_axis = tuple(sorted(set(range(len(sparse_array.shape))) - set(axis)))
     final_shape = np.take(np.array(sparse_array.shape), keep_axis)
     coords, data = _sparse_sum(
         sparse_shape=sparse_array.shape,

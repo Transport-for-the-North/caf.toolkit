@@ -141,7 +141,7 @@ class TestDataframeToNDimensionalArray:
     def test_correct_conversion(self, conversion_data_str: ConversionData, request):
         """Test 1-3 dimension correct conversions"""
         conversion_data = request.getfixturevalue(conversion_data_str)
-        got_return = pd_utils.dataframe_to_n_dimensional_array(
+        got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
             df=conversion_data.pd_matrix,
             dimension_cols=conversion_data.dimension_cols,
         )
@@ -154,7 +154,7 @@ class TestDataframeToNDimensionalArray:
     def test_list_cols(self, conversion_data_str: ConversionData, request):
         """Test dimension_cols given as a list"""
         conversion_data = request.getfixturevalue(conversion_data_str)
-        got_return = pd_utils.dataframe_to_n_dimensional_array(
+        got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
             df=conversion_data.pd_matrix,
             dimension_cols=conversion_data.dimension_cols.keys(),
         )
