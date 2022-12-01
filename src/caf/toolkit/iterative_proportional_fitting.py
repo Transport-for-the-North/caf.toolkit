@@ -339,79 +339,6 @@ def _ipf_sparse_mat_result_to_df(
     return fit_df.reset_index()
 
 
-def _broadcast_sparse_matrix(
-    array: sparse.COO,
-    target_array: sparse.COO,
-    expand_axis: Union[int, Iterable[int]],
-) -> sparse.COO:
-    """Expand an array to a target sparse matrix, matching target sparsity.
-
-    Parameters
-    ----------
-    array:
-        Input array.
-
-    target_array:
-        Target array to broadcast to. The return matrix will be as sparse
-        and the same shape as this matrix.
-
-    expand_axis:
-        Position in the expanded axes where the new axis (or axes) is placed.
-
-    Returns
-    -------
-    expanded_array:
-        Array expanded to be the same shape and sparsity as target_array
-    """
-    # Validate inputs
-    if isinstance(expand_axis, int):
-        expand_axis = [expand_axis]
-    assert isinstance(expand_axis, Iterable)
-
-    # Init
-    n_vals = len(array.data)
-
-    # Expand the dimension to match target shape
-    new_coords = list()
-    build_shape = list()
-    old_coords_idx = 0
-    for i in range(len(target_array.shape)):
-        if i in expand_axis:
-            new_coords.append(np.zeros(n_vals))
-            build_shape.append(1)
-        else:
-            new_coords.append(array.coords[old_coords_idx])
-            build_shape.append(array.shape[old_coords_idx])
-            old_coords_idx += 1
-
-    expanded = sparse.COO(
-        coords=np.array(new_coords, dtype=int),
-        data=array.data,
-        fill_value=array.fill_value,
-        shape=tuple(build_shape),
-    )
-
-    sparse_locations = target_array != 0
-    return expanded * sparse_locations
-
-
-def _remove_sparse_nan_values(
-    array: Union[np.ndarray, sparse.COO],
-    fill_value: Union[int, float] = 0,
-) -> Union[np.ndarray, sparse.COO]:
-    """Remove any NaN values from a dense or sparse array"""
-    if isinstance(array, np.ndarray):
-        return np.nan_to_num(array, nan=fill_value)
-
-    # Must be sparse and need special infill
-    return sparse.COO(
-        coords=array.coords,
-        data=np.nan_to_num(array.data, nan=fill_value),
-        fill_value=np.nan_to_num(array.fill_value, nan=fill_value),
-        shape=array.shape,
-    )
-
-
 # ## Public Functions ## #
 def default_convergence(
     targets: Collection[np.ndarray],
@@ -727,27 +654,19 @@ def sparse_adjust_towards_aggregates(
 
         # Figure out the adjustment factor
         if isinstance(out_mat, sparse.COO):
-            start = time.perf_counter()
             achieved = array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
-            end = time.perf_counter()
-            print(f"sparse sum time = {end - start:.5f}s")
         else:
             achieved = out_mat.sum(axis=sum_axes)
         adj_factor = target / achieved
-        adj_factor = _remove_sparse_nan_values(adj_factor)
+        adj_factor = array_utils.remove_sparse_nan_values(adj_factor)
 
         # Apply factors
-        start = time.perf_counter()
-        adj_factor = _broadcast_sparse_matrix(
+        adj_factor = array_utils.broadcast_sparse_matrix(
             array=adj_factor,
             target_array=out_mat,
-            expand_axis=sum_axes,
+            array_dims=dimensions,
         )
-        end = time.perf_counter()
-        print(f"sparse broadcast time = {end - start:.5f}s")
         out_mat *= adj_factor
-
-    print()
 
     # Calculate the achieved marginals
     achieved_aggregates = list()
