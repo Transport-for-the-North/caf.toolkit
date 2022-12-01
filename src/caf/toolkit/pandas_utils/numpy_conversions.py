@@ -118,6 +118,7 @@ def dataframe_to_n_dimensional_sparse_array(
     # Tidy and validate given DF
     mask = df[value_col] == fill_value
     df = df[~mask].copy()
+    df = df.reindex(columns=list(dimension_cols.keys()) + [value_col])
 
     # Reduce inputs to just the needed columns
     dim_col_names = df.columns.tolist()

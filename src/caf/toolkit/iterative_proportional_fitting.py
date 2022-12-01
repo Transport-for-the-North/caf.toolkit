@@ -728,8 +728,7 @@ def sparse_adjust_towards_aggregates(
         # Figure out the adjustment factor
         if isinstance(out_mat, sparse.COO):
             start = time.perf_counter()
-            # achieved = array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
-            achieved = out_mat.sum(axis=sum_axes)
+            achieved = array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
             end = time.perf_counter()
             print(f"sparse sum time = {end - start:.5f}s")
         else:

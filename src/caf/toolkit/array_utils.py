@@ -48,7 +48,7 @@ def _get_axis_lengths(shape: np.ndarray) -> np.ndarray:
     # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
     for i in nb.prange(len(shape)):  # pylint: disable=not-an-iterable
         length = 1
-        for item in shape[i+1:]:
+        for item in shape[i + 1 :]:
             length *= item
         axis_lengths[i] = length
     return axis_lengths
@@ -102,7 +102,10 @@ def _sparse_sum_data(
     # Sum the data where the axis are the same
     res: dict[int, int] = dict()
     for val, coords_idx in zip(sparse_data, sparse_coords):
-        idx = _flat_array_idx_from_lengths(index=coords_idx, axis_lengths=axis_lengths,)
+        idx = _flat_array_idx_from_lengths(
+            index=coords_idx,
+            axis_lengths=axis_lengths,
+        )
         if idx in res:
             res[idx] += val
         else:
@@ -113,7 +116,7 @@ def _sparse_sum_data(
     key_len = len(keys)
     res_coords = np.zeros((sparse_coords.shape[1], key_len), dtype=sparse_coords.dtype)
     # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
-    for i in nb.prange(key_len):   # pylint: disable=not-an-iterable
+    for i in nb.prange(key_len):  # pylint: disable=not-an-iterable
         res_coords[:, i] = idx_map[keys[i]]
 
     return res_coords, np.array(list(res.values()))
@@ -139,6 +142,58 @@ def _sparse_sum(
         sparse_coords=res_coords,
         sparse_shape=np.take(np.array(sparse_shape), keep_axis),
     )
+
+
+@nb.njit(fastmath=True, nogil=True, cache=True)
+def _get_unique_idxs(groups: np.ndarray) -> np.ndarray:
+    """Get the index positions of the start of each group
+
+    Parameters
+    ----------
+    groups:
+        The groups that each element in an array of the same shape belongs to.
+        This should be a 1d array.
+
+    Returns
+    -------
+    unique_idxs:
+        The index of the first element where each group is found.
+    """
+    inv_idx = [0]
+    last_group = groups[0]
+    for i in range(1, len(groups)):
+        if groups[i] != last_group:
+            inv_idx.append(i)
+            last_group = groups[i]
+
+    return np.array(inv_idx, dtype=groups.dtype)
+
+
+def _2d_sparse_sum_axis_1(
+    sparse_shape: tuple[int, ...],
+    sparse_coords: np.ndarray,
+    sparse_data: np.ndarray,
+) -> np.ndarray:
+    """Internal function of sparse_sum(). Used with numba for speed"""
+    unique_idxs = _get_unique_idxs(sparse_coords[0])
+    result = np.add.reduceat(sparse_data, unique_idxs)
+
+    return sparse.COO(
+        data=result,
+        coords=sparse_coords[:1, unique_idxs],
+        shape=(sparse_shape[0],),
+        has_duplicates=False,
+        sorted=True,
+        prune=True,
+        fill_value=0,
+    )
+
+    # OPTIMISE???
+    # res = np.zeros(sparse_shape[0])
+    # for i in nb.prange(len(sparse_data)):
+    #     idx = sparse_coords[0, i]
+    #     res[idx] += sparse_data[i]
+    # return res
 
 
 # ## Public functions ## #
@@ -170,10 +225,7 @@ def flat_array_idx(
     )
 
 
-def sparse_sum(
-    sparse_array: sparse.COO,
-    axis: Iterable[int]
-) -> sparse.COO:
+def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     """Faster sum for a sparse.COO matrix
 
     Parameters
@@ -189,17 +241,40 @@ def sparse_sum(
     sum:
         The sum of `sparse_matrix` elements over the given axiss
     """
+    # Init
+    axis = list(axis)
     keep_axis = tuple(sorted(set(range(len(sparse_array.shape))) - set(axis)))
     final_shape = np.take(np.array(sparse_array.shape), keep_axis)
-    coords, data = _sparse_sum(
-        sparse_shape=sparse_array.shape,
-        sparse_coords=sparse_array.coords,
-        sparse_data=sparse_array.data,
-        keep_axis=np.array(keep_axis),
+    remove_shape = np.take(np.array(sparse_array.shape), axis)
+
+    # ## # Swap array into 2D where axis 1 needs reducing ## #
+    # Basically a transpose, but quicker if we do it ourselves
+    new_axes = list(keep_axis) + axis
+    array = sparse_array.copy()
+    array.coords = array.coords[new_axes, :]
+    array.shape = tuple(array.shape[ax] for ax in new_axes)
+
+    # Reshape into the 2d array
+    array = array.reshape(
+        (
+            np.prod(final_shape, dtype=np.intp),
+            np.prod(remove_shape, dtype=np.intp),
+        )
     )
-    return sparse.COO(
-        data=data,
-        coords=coords,
-        shape=tuple(final_shape),
-        fill_value=0,
+
+    # Sort the coords and data
+    # This would have been done already if we used sparse_array.transpose().
+    # It does actually work out faster in the long run!
+    stacked = np.vstack((array.coords, array.data))
+    idx = stacked[0, :].argsort()
+    stacked = np.take(stacked, idx, axis=1)
+    array.coords = stacked[:2].astype(sparse_array.coords.dtype)
+    array.data = stacked[2].astype(sparse_array.data.dtype)
+
+    # Do the sum which has been optimised for 2d arrays
+    final_array = _2d_sparse_sum_axis_1(
+        sparse_shape=array.shape,
+        sparse_coords=array.coords,
+        sparse_data=array.data,
     )
+    return final_array.reshape(final_shape)
