@@ -69,6 +69,32 @@ def _get_unique_idxs_and_counts(groups: np.ndarray) -> tuple[np.ndarray, np.ndar
     return np.array(inv_idx, dtype=groups.dtype), np.array(counts, dtype=groups.dtype)
 
 
+@nb.njit
+def _is_sorted(array: np.ndarray) -> bool:
+    """Check is a numpy array is sorted."""
+    # TODO(BT): Write a public available function which checks types etc...
+    for i in range(array.size-1):
+        if array[i+1] < array[i]:
+            return False
+    return True
+
+
+@nb.njit(parallel=True)
+def _1d_is_ones(array: np.ndarray) -> bool:
+    """Check is a numpy array is only 1s."""
+    for i in nb.prange(array.size):
+        if array[i] != 1:
+            return False
+    return True
+
+
+def _is_in_order_sequential(array: np.ndarray) -> bool:
+    """Check if a numpy array is both sequential an in order."""
+    if not _is_sorted(array):
+        return False
+    return _1d_is_ones(np.diff(array))
+
+
 def _2d_sparse_sum_axis_1(
     sparse_shape: tuple[int, ...],
     sparse_coords: np.ndarray,
@@ -275,6 +301,7 @@ def broadcast_sparse_matrix(
     flat_array_coord.sort()
 
     # TODO(): Don't need to mess about with transpose if array dims is sequential!
+    # _is_in_order_sequential(dims)
     # TODO(): Faster if convert to 2D??
 
     # Get just the dimensions from target that are in array and flatten them
