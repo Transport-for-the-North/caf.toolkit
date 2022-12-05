@@ -4,7 +4,6 @@
 See: https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 """
 # Built-Ins
-import time
 import logging
 import warnings
 import itertools
@@ -14,7 +13,6 @@ from typing import Union
 from typing import overload
 from typing import Callable
 from typing import Optional
-from typing import Iterable
 from typing import Collection
 
 # Third Party
@@ -36,6 +34,7 @@ LOG = logging.getLogger(__name__)
 IpfConvergenceFn = Callable[[Collection[np.ndarray], Collection[np.ndarray]], float]
 
 # # # CLASSES # # #
+
 
 # # # FUNCTIONS # # #
 # ## Private Functions ## #
