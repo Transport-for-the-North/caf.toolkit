@@ -3,12 +3,9 @@
 
 Most will be used elsewhere in the codebase too
 """
-import functools
-
 # Built-Ins
 import math
 from typing import Union
-from typing import Iterable
 from typing import Collection
 
 # Third Party
@@ -201,6 +198,6 @@ def nan_report_with_input(
 
     # Combine and convert to DataFrame
     final_dict = dict()
-    for d in [idx_cols, output_col, in_cols]:
-        final_dict.update(d)
+    for ddict in [idx_cols, output_col, in_cols]:
+        final_dict.update(ddict)
     return pd.DataFrame(final_dict)
