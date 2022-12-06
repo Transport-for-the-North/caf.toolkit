@@ -165,7 +165,7 @@ def root_mean_squared_error(
 def nan_report_with_input(
     array: np.ndarray, input_dict: dict[str, np.ndarray]
 ) -> pd.DataFrame:
-    """Create a report of NaN values in relative matrix locations
+    """Create a report of NaN values in relative matrix locations.
 
     Uses an input `array` (usually the result of a calculation) to find the
     locations of all np.NaN values. Once found, the index of these values are

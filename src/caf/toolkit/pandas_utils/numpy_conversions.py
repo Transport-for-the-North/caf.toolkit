@@ -36,7 +36,7 @@ LOG = logging.getLogger(__name__)
 # # # FUNCTIONS # # #
 # ## Private Functions ## #
 def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
-    """Create a map of column values to numpy dimensions"""
+    """Create a map of column values to numpy dimensions."""
     value_maps = dict()
     for col, vals in dimension_cols.items():
         if np.min(vals) == 0 and np.max(vals) == len(vals) - 1:
@@ -51,7 +51,7 @@ def is_sparse_feasible(
     dimension_cols: Collection[Any],
     warning_action: str = "default",
 ) -> bool:
-    """Check whether a sparse array is more efficient than a dense one
+    """Check whether a sparse array is more efficient than a dense one.
 
     Parameters
     ----------
@@ -111,7 +111,7 @@ def dataframe_to_n_dimensional_sparse_array(
     warning_action: str = "default",
     fill_value: np.number | int | float = 0,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
-    """Convert a pandas.DataFrame to a sparse.COO matrix"""
+    """Convert a pandas.DataFrame to a sparse.COO matrix."""
     # Init
     final_shape = [len(x) for x in dimension_cols.values()]
 

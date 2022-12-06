@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Collection of utility functions for numpy and sparse arrays """
+"""Collection of utility functions for numpy and sparse arrays."""
 from __future__ import annotations
 
 # Built-Ins
@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 # ## Private functions ## #
 @nb.njit(fastmath=True, nogil=True, cache=True)
 def _get_unique_idxs_and_counts(groups: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Get the index positions of the start of each group and their counts
+    """Get the index positions of the start of each group and their counts.
 
     NOTE: Only works on sorted groups!
 
@@ -98,26 +98,6 @@ def _is_in_order_sequential(array: Sequence[int] | np.ndarray) -> bool:
     return _1d_is_ones(np.diff(array))
 
 
-def _2d_sparse_sum_axis_1(
-    sparse_shape: tuple[int, ...],
-    sparse_coords: np.ndarray,
-    sparse_data: np.ndarray,
-) -> np.ndarray:
-    """Internal function of sparse_sum(). Used with numba for speed"""
-    unique_idxs, _ = _get_unique_idxs_and_counts(sparse_coords[0])
-    result = np.add.reduceat(sparse_data, unique_idxs)
-
-    return sparse.COO(
-        data=result,
-        coords=sparse_coords[:1, unique_idxs],
-        shape=(sparse_shape[0],),
-        has_duplicates=False,
-        sorted=True,
-        prune=True,
-        fill_value=0,
-    )
-
-
 def _sparse_unsorted_axis_swap(
     sparse_array: sparse.COO,
     new_axis_order: Iterable[int],
@@ -164,7 +144,7 @@ def _sparse_unsorted_axis_swap(
 
 
 def _sort_2d_sparse_coords_and_data(sparse_array: sparse.COO) -> sparse.COO:
-    """Quickly sort the coordinates and data of a 2D sparse array
+    """Quickly sort the coordinates and data of a 2D sparse array.
 
     Parameters
     ----------
@@ -297,7 +277,7 @@ def remove_sparse_nan_values(
     array: np.ndarray | sparse.COO,
     fill_value: int | float = 0,
 ) -> np.ndarray | sparse.COO:
-    """Remove any NaN values from a dense or sparse array"""
+    """Remove any NaN values from a dense or sparse array."""
     if isinstance(array, np.ndarray):
         return np.nan_to_num(array, nan=fill_value)
 
@@ -486,10 +466,19 @@ def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     # Sort the coords and data - sparse sum requires this to be in order
     array = _sort_2d_sparse_coords_and_data(array)
 
-    # Do the sum which has been optimised for 2d arrays
-    final_array = _2d_sparse_sum_axis_1(
-        sparse_shape=array.shape,
-        sparse_coords=array.coords,
-        sparse_data=array.data,
+    # Optimised sum across 2 dimensions
+    unique_idxs, _ = _get_unique_idxs_and_counts(array.coords[0])
+    result = np.add.reduceat(array.data, unique_idxs)
+
+    final_array = sparse.COO(
+        data=result,
+        coords=array.coords[:1, unique_idxs],
+        shape=(array.shape[0],),
+        has_duplicates=False,
+        sorted=True,
+        prune=True,
+        fill_value=0,
     )
+
+    # Reshape back to original final shape
     return final_array.reshape(final_shape)
