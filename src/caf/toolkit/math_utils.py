@@ -146,11 +146,11 @@ def root_mean_squared_error(
             f"targets length: {len(targets)}, achieved length: {len(achieved)}"
         )
 
-    squared_diffs = list()
+    squared_diffs: list[float] = list()
     for target, ach in zip(targets, achieved):
         diffs = (target - ach) ** 2
 
-        # Nice and east with dense array
+        # Nice and easy with dense array
         if isinstance(diffs, np.ndarray):
             squared_diffs += diffs.flatten().tolist()
 

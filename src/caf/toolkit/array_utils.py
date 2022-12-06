@@ -79,17 +79,20 @@ def _is_sorted(array: np.ndarray) -> bool:
     return True
 
 
-@nb.njit(parallel=True)
+@nb.njit
 def _1d_is_ones(array: np.ndarray) -> bool:
     """Check is a numpy array is only 1s."""
-    for i in nb.prange(array.size):
+    # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
+    for i in nb.prange(array.size):     # pylint: disable=not-an-iterable
         if array[i] != 1:
             return False
     return True
 
 
-def _is_in_order_sequential(array: np.ndarray) -> bool:
+def _is_in_order_sequential(array: Sequence[int] | np.ndarray) -> bool:
     """Check if a numpy array is both sequential an in order."""
+    if not isinstance(array, np.ndarray):
+        array = np.array(list(array))
     if not _is_sorted(array):
         return False
     return _1d_is_ones(np.diff(array))
@@ -249,6 +252,46 @@ def _2d_sparse_sorted_axis_swap(
     return _sort_2d_sparse_coords_and_data(array)
 
 
+def _flatten_some_sparse_axis_with_transpose(
+    array: sparse.COO,
+    flatten_axis: Sequence[int],
+):
+    """Flatten some axis in a sparse array.
+
+    Will always work, no matter which axis are chosen
+    """
+    # Figure out how to transpose, and reverse
+    other_dims = list(set(range(array.ndim)) - set(flatten_axis))
+    axis_swap = list(flatten_axis) + other_dims
+    axis_swap_reverse = [axis_swap.index(x) for x in range(len(axis_swap))]
+
+    # Transpose and get the flat coordinates out
+    array = array.transpose(axis_swap)
+    get_vals = list(range(len(flatten_axis)))
+    flat_coord = np.ravel_multi_index(
+        np.take(array.coords, get_vals, axis=0),
+        np.take(array.shape, get_vals),
+    )
+    flat_coord.sort()
+    return flat_coord, array, axis_swap_reverse
+
+
+def _flatten_some_sparse_axis_without_transpose(
+    array: sparse.COO,
+    flatten_axis: Sequence[int],
+):
+    """Flatten some axis in a sparse array.
+
+    Will only work when flat axis are sequential and in order
+    """
+    flat_coord = np.ravel_multi_index(
+        np.take(array.coords, flatten_axis, axis=0),
+        np.take(array.shape, flatten_axis),
+    )
+    flat_coord.sort()
+    return flat_coord
+
+
 # ## Public functions ## #
 def remove_sparse_nan_values(
     array: np.ndarray | sparse.COO,
@@ -300,23 +343,17 @@ def broadcast_sparse_matrix(
     flat_array_coord = np.ravel_multi_index(array.coords, array.shape)
     flat_array_coord.sort()
 
-    # TODO(): Don't need to mess about with transpose if array dims is sequential!
-    # _is_in_order_sequential(dims)
-    # TODO(): Faster if convert to 2D??
-
-    # Get just the dimensions from target that are in array and flatten them
-    other_dims = list(set(range(target_array.ndim)) - set(array_dims))
-
-    axis_swap = list(array_dims) + other_dims
-    axis_swap_reverse = [axis_swap.index(x) for x in range(len(axis_swap))]
-
-    target_array = target_array.transpose(axis_swap)
-    get_vals = list(range(len(array_dims)))
-    flat_target_coord = np.ravel_multi_index(
-        target_array.coords[get_vals, :],
-        np.take(target_array.shape, get_vals),
-    )
-    flat_target_coord.sort()
+    # Only need to transpose (slow!) if array dims are not sequential
+    if _is_in_order_sequential(array_dims) and array_dims[0] == 0:
+        axis_swap_reverse = None
+        flat_target_coord = _flatten_some_sparse_axis_without_transpose(
+            array=target_array, flatten_axis=array_dims
+        )
+    else:
+        return_vals = _flatten_some_sparse_axis_with_transpose(
+            array=target_array, flatten_axis=array_dims
+        )
+        flat_target_coord, target_array, axis_swap_reverse = return_vals
 
     # Find the index of any values in array but not in target
     array_unique = np.unique(flat_array_coord)
@@ -338,13 +375,17 @@ def broadcast_sparse_matrix(
     broadcast_data = np.repeat(broadcast_data, counts)
 
     # Build the return array and transpose back to original order
-    return sparse.COO(
+    final_array = sparse.COO(
         data=broadcast_data,
         coords=target_array.coords,
         shape=target_array.shape,
         fill_value=target_array.fill_value,
         sorted=True,
-    ).transpose(axis_swap_reverse)
+    )
+
+    if axis_swap_reverse is not None:
+        return final_array.transpose(axis_swap_reverse)
+    return final_array
 
 
 def broadcast_sparse_matrix_old(
@@ -420,7 +461,7 @@ def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     Returns
     -------
     sum:
-        The sum of `sparse_matrix` elements over the given axiss
+        The sum of `sparse_matrix` elements over the given axis
     """
     # Init
     axis = list(axis)

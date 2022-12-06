@@ -294,6 +294,7 @@ def _ipf_sparse_mat_result_to_df(
     valid_dimension_combos: pd.DataFrame,
     drop_zeros_return: bool,
 ) -> pd.DataFrame:
+    # pylint: disable=too-many-locals
     # Init
     dimension_col_names = valid_dimension_combos.columns.to_list()
     input_index = pd.MultiIndex.from_arrays(
@@ -454,6 +455,7 @@ def pd_marginals_to_np(
         If the passed in marginals do not contain all the valid combinations
         of `dimension_cols`, as defined in `valid_dimension_combos`
     """
+    # pylint: disable=too-many-locals
     # Init
     dimension_col_order = list(dimension_order.keys())
     target_dimensions = [list(x.index.names) for x in target_marginals]
@@ -469,11 +471,13 @@ def pd_marginals_to_np(
     np_dimensions = list()
     for pd_marginal, pd_dimension in zip(target_marginals, target_dimensions):
         # Init
-        dimension_cols_i = {x: dimension_order[x] for x in pd_dimension}
+        pd_dimension_ordered = [x for x in dimension_order if x in pd_dimension]
+        dimension_cols_i = {x: dimension_order[x] for x in pd_dimension_ordered}
 
         # Convert marginals
         sparse_ok = "force" if allow_sparse else "disallow"
-        np_marginal_i, _ = pd_utils.dataframe_to_n_dimensional_array(
+        # TODO(BT): Not sure what the overload error is here.
+        np_marginal_i, _ = pd_utils.dataframe_to_n_dimensional_array(  # type: ignore
             df=pd_marginal.reset_index(),
             dimension_cols=dimension_cols_i,
             sparse_ok=sparse_ok,
@@ -506,7 +510,7 @@ def pd_marginals_to_np(
         np_marginals.append(np_marginal_i)
 
         # Convert the dimensions
-        axes = [dimension_col_order.index(x) for x in pd_dimension]
+        axes = [dimension_col_order.index(x) for x in pd_dimension_ordered]
         np_dimensions.append(axes)
 
     return np_marginals, np_dimensions
@@ -671,7 +675,9 @@ def sparse_adjust_towards_aggregates(
     achieved_aggregates = list()
     for dimensions in target_dimensions:
         sum_axes = tuple(set(range(n_dims)) - set(dimensions))
-        achieved_aggregates.append(out_mat.sum(axis=sum_axes))
+        achieved_aggregates.append(
+            array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
+        )
 
     return out_mat, convergence_fn(target_marginals, achieved_aggregates)
 
@@ -739,6 +745,7 @@ def ipf_dataframe(
     --------
     `iterative_proportional_fitting.ipf()`
     """
+    # pylint: disable=too-many-locals
     # Validate inputs
     _validate_seed_df(seed_df, value_col)
     _validate_pd_marginals(target_marginals)
@@ -914,6 +921,8 @@ def ipf(
     ValueError:
         If any of the marginals or dimensions are not valid when passed in.
     """
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     # Init
     if pbar_kwargs is None and not show_pbar:
         pbar_kwargs = {"disable": True}
@@ -972,8 +981,6 @@ def ipf(
                     "how to adjust it! This is an internal error that needs "
                     "fixing."
                 )
-
-            print(f"{convergence = }")
 
             # Check if we've hit targets
             if convergence < tol:
