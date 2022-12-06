@@ -13,6 +13,7 @@ from typing import Literal
 
 # # # CONSTANTS # # #
 SparseLiteral = Literal["disallow", "allow", "force", "feasible"]
+WarningActionKind = Literal["default", "error", "ignore", "always", "module", "once"]
 
 # # # CLASSES # # #
 

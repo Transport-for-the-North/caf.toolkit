@@ -24,6 +24,7 @@ import pandas as pd
 from caf.toolkit.pandas_utils import df_handling
 
 from caf.toolkit.core import SparseLiteral
+from caf.toolkit.core import WarningActionKind
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -49,7 +50,7 @@ def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
 def is_sparse_feasible(
     df: pd.DataFrame,
     dimension_cols: Collection[Any],
-    warning_action: str = "default",
+    warning_action: WarningActionKind = "default",
 ) -> bool:
     """Check whether a sparse array is more efficient than a dense one.
 
@@ -108,7 +109,7 @@ def dataframe_to_n_dimensional_sparse_array(
     dimension_cols: dict[Any, list[Any]],
     value_col: Any,
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
-    warning_action: str = "default",
+    warning_action: WarningActionKind = "default",
     fill_value: np.number | int | float = 0,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
     """Convert a pandas.DataFrame to a sparse.COO matrix."""
