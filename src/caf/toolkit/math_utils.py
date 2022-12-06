@@ -4,6 +4,7 @@
 Most will be used elsewhere in the codebase too
 """
 import functools
+
 # Built-Ins
 import math
 from typing import Union
@@ -159,14 +160,14 @@ def root_mean_squared_error(
             #  way to do this right now.
             squared_diffs += diffs.todense().flatten().tolist()
         else:
-            raise ValueError(
-                f"Cannot handle arrays of type '{type(diffs)}'."
-            )
+            raise ValueError(f"Cannot handle arrays of type '{type(diffs)}'.")
 
     return float(np.mean(squared_diffs) ** 0.5)
 
 
-def nan_report_with_input(array: np.ndarray, input_dict: dict[str, np.ndarray]) -> pd.DataFrame:
+def nan_report_with_input(
+    array: np.ndarray, input_dict: dict[str, np.ndarray]
+) -> pd.DataFrame:
     """Create a report of NaN values in relative matrix locations
 
     Uses an input `array` (usually the result of a calculation) to find the

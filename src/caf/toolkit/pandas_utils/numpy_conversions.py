@@ -268,8 +268,7 @@ def dataframe_to_n_dimensional_array(
     valid_vals = SparseLiteral.__args__  # type: ignore
     if sparse_ok not in valid_vals:
         raise ValueError(
-            f"Invalid value given to for 'sparse_ok' expected one of: "
-            f"{valid_vals}"
+            f"Invalid value given to for 'sparse_ok' expected one of: " f"{valid_vals}"
         )
 
     # Validate that only one value column exists

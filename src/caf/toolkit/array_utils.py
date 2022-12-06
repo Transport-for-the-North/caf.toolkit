@@ -73,8 +73,8 @@ def _get_unique_idxs_and_counts(groups: np.ndarray) -> tuple[np.ndarray, np.ndar
 def _is_sorted(array: np.ndarray) -> bool:
     """Check is a numpy array is sorted."""
     # TODO(BT): Write a public available function which checks types etc...
-    for i in range(array.size-1):
-        if array[i+1] < array[i]:
+    for i in range(array.size - 1):
+        if array[i + 1] < array[i]:
             return False
     return True
 
@@ -83,7 +83,7 @@ def _is_sorted(array: np.ndarray) -> bool:
 def _1d_is_ones(array: np.ndarray) -> bool:
     """Check is a numpy array is only 1s."""
     # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
-    for i in nb.prange(array.size):     # pylint: disable=not-an-iterable
+    for i in nb.prange(array.size):  # pylint: disable=not-an-iterable
         if array[i] != 1:
             return False
     return True

@@ -49,7 +49,9 @@ def _validate_seed_mat(seed_mat: Union[np.ndarray, sparse.COO], use_sparse: bool
 
     if use_sparse:
         if not isinstance(seed_mat, sparse.COO):
-            raise TypeError("Given `seed_mat` is not a sparse.COO matrix when 'use_sparse=True`. Cannot run.")
+            raise TypeError(
+                "Given `seed_mat` is not a sparse.COO matrix when 'use_sparse=True`. Cannot run."
+            )
     else:
         if not isinstance(seed_mat, np.ndarray):
             raise TypeError("Given `seed_mat` is not an np.ndarray. Cannot run.")
@@ -61,7 +63,9 @@ def _validate_seed_mat(seed_mat: Union[np.ndarray, sparse.COO], use_sparse: bool
         )
 
 
-def _validate_marginals(target_marginals: list[Union[np.ndarray, sparse.COO]], use_sparse: bool) -> None:
+def _validate_marginals(
+    target_marginals: list[Union[np.ndarray, sparse.COO]], use_sparse: bool
+) -> None:
     """Check whether the marginals are valid."""
     # Check valid types
     if use_sparse:
@@ -74,9 +78,7 @@ def _validate_marginals(target_marginals: list[Union[np.ndarray, sparse.COO]], u
     invalid_types = list()
     for i, marginal in enumerate(target_marginals):
         if not isinstance(marginal, valid_types):
-            invalid_types.append(
-                {"marginal_id": i, "type": type(marginal)}
-            )
+            invalid_types.append({"marginal_id": i, "type": type(marginal)})
 
     if len(invalid_types) > 0:
         raise TypeError(
@@ -675,9 +677,7 @@ def sparse_adjust_towards_aggregates(
     achieved_aggregates = list()
     for dimensions in target_dimensions:
         sum_axes = tuple(set(range(n_dims)) - set(dimensions))
-        achieved_aggregates.append(
-            array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes)
-        )
+        achieved_aggregates.append(array_utils.sparse_sum(sparse_array=out_mat, axis=sum_axes))
 
     return out_mat, convergence_fn(target_marginals, achieved_aggregates)
 
