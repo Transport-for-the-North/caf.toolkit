@@ -5,6 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import logging
 
+from typing import Optional
 from typing import Iterable
 from typing import Sequence
 
@@ -368,7 +369,7 @@ def broadcast_sparse_matrix(
     return final_array
 
 
-def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
+def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int]] = None) -> sparse.COO:
     """Faster sum for a sparse.COO matrix.
 
     Converts the sum to a 2D operation and then optimises functionality for
@@ -387,8 +388,13 @@ def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     sum:
         The sum of `sparse_matrix` elements over the given axis
     """
+    # Validate given axis
+    if axis is None:
+        axis = list(range(sparse_array.ndim))
+    else:
+        axis = list(axis)
+
     # Init
-    axis = list(axis)
     keep_axis = tuple(sorted(set(range(len(sparse_array.shape))) - set(axis)))
     final_shape = np.take(np.array(sparse_array.shape), keep_axis)
     remove_shape = np.take(np.array(sparse_array.shape), axis)
@@ -413,6 +419,9 @@ def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     # Optimised sum across 2 dimensions
     unique_idxs, _ = _get_unique_idxs_and_counts(array.coords[0])
     result = np.add.reduceat(array.data, unique_idxs)
+
+    if len(result) == 1:
+        return result[0]
 
     final_array = sparse.COO(
         data=result,
