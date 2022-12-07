@@ -10,13 +10,12 @@ from typing import Any
 from typing import Optional
 from typing import Callable
 
-import numpy.testing
-import pandas as pd
 
 # Third Party
 import pytest
-
 import numpy as np
+import pandas as pd
+
 from numpy import testing as np_testing
 
 

@@ -40,8 +40,11 @@ def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
     """Create a map of column values to numpy dimensions."""
     value_maps = dict()
     for col, vals in dimension_cols.items():
-        if np.min(vals) == 0 and np.max(vals) == len(vals) - 1:
-            continue
+        try:
+            if np.min(vals) == 0 and np.max(vals) == len(vals) - 1:
+                continue
+        except TypeError:
+            pass
         value_maps[col] = dict(zip(vals, range(len(vals))))
     return value_maps
 
