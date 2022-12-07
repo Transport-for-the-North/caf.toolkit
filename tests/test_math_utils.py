@@ -58,6 +58,7 @@ class TestRootMeanSquaredError:
     @dataclasses.dataclass
     class RmseExample:
         """Collection of data to pass to an RMSE call"""
+
         targets: Collection[np.ndarray]
         achieved: Collection[np.ndarray]
         result: float
@@ -80,19 +81,23 @@ class TestRootMeanSquaredError:
         """Generate an example rmse call with result"""
         # Build the target and achieved
         targets = np.array(
-            [[0, 0, 0, 1],
-             [1, 1, 1, 1],
-             [0, 1, 0, 1],
-             [1, 1, 1, 1],
-             [0, 0, 1, 0]]
+            [
+                [0, 0, 0, 1],
+                [1, 1, 1, 1],
+                [0, 1, 0, 1],
+                [1, 1, 1, 1],
+                [0, 0, 1, 0],
+            ]
         )
 
         achieved = np.array(
-            [[0.1, 0, 0, 1],
-             [0.9, 1, 1, 1],
-             [0.7, 1, 0, 1],
-             [1.2, 1, 1, 1],
-             [1.3, 0, 1, 0]]
+            [
+                [0.1, 0, 0, 1],
+                [0.9, 1, 1, 1],
+                [0.7, 1, 0, 1],
+                [1.2, 1, 1, 1],
+                [1.3, 0, 1, 0],
+            ]
         )
 
         return self.RmseExample(
