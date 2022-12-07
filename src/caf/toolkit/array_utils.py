@@ -368,62 +368,6 @@ def broadcast_sparse_matrix(
     return final_array
 
 
-def broadcast_sparse_matrix_old(
-    array: sparse.COO,
-    target_array: sparse.COO,
-    expand_axis: int | Iterable[int],
-) -> sparse.COO:
-    """Expand an array to a target sparse matrix, matching target sparsity.
-
-    Parameters
-    ----------
-    array:
-        Input array.
-
-    target_array:
-        Target array to broadcast to. The return matrix will be as sparse
-        and the same shape as this matrix.
-
-    expand_axis:
-        Position in the expanded axes where the new axis (or axes) is placed.
-
-    Returns
-    -------
-    expanded_array:
-        Array expanded to be the same shape and sparsity as target_array
-    """
-    # Validate inputs
-    if isinstance(expand_axis, int):
-        expand_axis = [expand_axis]
-    assert isinstance(expand_axis, Iterable)
-
-    # Init
-    n_vals = len(array.data)
-
-    # Expand the dimension to match target shape
-    new_coords = list()
-    build_shape = list()
-    old_coords_idx = 0
-    for i in range(len(target_array.shape)):
-        if i in expand_axis:
-            new_coords.append(np.zeros(n_vals))
-            build_shape.append(1)
-        else:
-            new_coords.append(array.coords[old_coords_idx])
-            build_shape.append(array.shape[old_coords_idx])
-            old_coords_idx += 1
-
-    expanded = sparse.COO(
-        coords=np.array(new_coords, dtype=int),
-        data=array.data,
-        fill_value=array.fill_value,
-        shape=tuple(build_shape),
-    )
-
-    sparse_locations = target_array != 0
-    return expanded * sparse_locations
-
-
 def sparse_sum(sparse_array: sparse.COO, axis: Iterable[int]) -> sparse.COO:
     """Faster sum for a sparse.COO matrix.
 
