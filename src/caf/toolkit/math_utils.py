@@ -138,15 +138,28 @@ def root_mean_squared_error(
     ValueError:
         If `targets` and `achieved` are not the same length
     """
-    if len(targets) != len(achieved):
-        raise ValueError(
-            "targets and achieved must be the same length. "
-            f"targets length: {len(targets)}, achieved length: {len(achieved)}"
-        )
+    try:
+        if len(targets) != len(achieved):
+            raise ValueError(
+                "targets and achieved must be the same length. "
+                f"targets length: {len(targets)}, achieved length: {len(achieved)}"
+            )
+    except TypeError as error:
+        raise TypeError(
+            "Expected a collection, got the following instead:\n"
+            f"targets: {type(targets)}\n"
+            f"achieved: {type(achieved)}"
+        ) from error
 
     squared_diffs: list[float] = list()
-    for target, ach in zip(targets, achieved):
-        diffs = (target - ach) ** 2
+    for i, (target, ach) in enumerate(zip(targets, achieved)):
+        try:
+            diffs = (target - ach) ** 2
+        except ValueError as error:
+            raise ValueError(
+                "Could not broadcast target and achieved to the same shape at "
+                f"index {i}. See above exception for mis-matching shapes."
+            ) from error
 
         # Nice and easy with dense array
         if isinstance(diffs, np.ndarray):
@@ -157,7 +170,7 @@ def root_mean_squared_error(
             #  way to do this right now.
             squared_diffs += diffs.todense().flatten().tolist()
         else:
-            raise ValueError(f"Cannot handle arrays of type '{type(diffs)}'.")
+            raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
 
     return float(np.mean(squared_diffs) ** 0.5)
 
