@@ -69,10 +69,10 @@ def _validate_marginals(
     """Check whether the marginals are valid."""
     # Check valid types
     if use_sparse:
-        type_name_msg = "sparse.COO or np.array matrix when 'use_sparse=True`"
+        type_name_msg = "sparse.COO or np.array matrix when seed matrix is sparse"
         valid_types: Union[type, tuple[type, type]] = (np.ndarray, sparse.COO)
     else:
-        type_name_msg = "np.array"
+        type_name_msg = "np.ndarray"
         valid_types = np.ndarray
 
     invalid_types = list()

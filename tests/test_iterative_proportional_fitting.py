@@ -13,6 +13,7 @@ from typing import Callable
 
 # Third Party
 import pytest
+import sparse
 import numpy as np
 import pandas as pd
 
@@ -724,3 +725,51 @@ class TestIpfDataFrame:
 
 
 # TODO(BT): Test that ipf pandas conversions make numpy matrices
+
+
+@pytest.mark.usefixtures(
+    "ipf_example",
+    "ipf_pandas_rmse_example_results",
+    "ipf_pandas_ipfn_example_results",
+)
+class TestIpfSparse:
+    """Tests for sparse caf.toolkit.iterative_proportional_fitting.ipf_dataframe"""
+
+    def test_rmse_convergence(self, ipf_pandas_rmse_example_results: IpfDataAndResultsPandas):
+        """Test that correct result calculated with ipfn convergence"""
+        # Run
+        input_kwargs = ipf_pandas_rmse_example_results.inputs.to_kwargs()
+        mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
+            **(input_kwargs | {"force_sparse": True})
+        )
+
+        # Check the results
+        pd.testing.assert_frame_equal(
+            mat, ipf_pandas_rmse_example_results.final_matrix, rtol=1e-4
+        )
+        assert iters == ipf_pandas_rmse_example_results.completed_iters
+        np.testing.assert_almost_equal(conv, ipf_pandas_rmse_example_results.final_convergence)
+
+    def test_ipfn_convergence(self, ipf_pandas_ipfn_example_results: IpfDataAndResultsPandas):
+        """Test that correct result calculated with ipfn convergence"""
+        # Run
+        input_kwargs = ipf_pandas_ipfn_example_results.inputs.to_kwargs()
+        mat, iters, conv = iterative_proportional_fitting.ipf_dataframe(
+            **(input_kwargs | {"force_sparse": True})
+        )
+
+        # Check the results
+        pd.testing.assert_frame_equal(
+            mat, ipf_pandas_ipfn_example_results.final_matrix, rtol=1e-4
+        )
+        assert iters == ipf_pandas_ipfn_example_results.completed_iters
+        np.testing.assert_almost_equal(conv, ipf_pandas_ipfn_example_results.final_convergence)
+
+    def test_sparse_marginals_only(self, ipf_example: IpfData):
+        """Test that dense seed and sparse marginals raises an error"""
+        marginals = ipf_example.marginals.copy()
+        marginals[0] = sparse.COO(marginals[0])
+        with pytest.raises(TypeError, match="Marginals are expected to be np.ndarray"):
+            iterative_proportional_fitting.ipf(
+                **(ipf_example.to_kwargs() | {"target_marginals": marginals})
+            )
