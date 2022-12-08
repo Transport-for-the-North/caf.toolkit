@@ -29,7 +29,9 @@ LOG = logging.getLogger(__name__)
 # # # FUNCTIONS # # #
 # ## Private functions ## #
 @nb.njit(fastmath=True, nogil=True, cache=True)
-def _get_unique_idxs_and_counts(groups: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _get_unique_idxs_and_counts(
+    groups: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:  # pragma: no cover
     """Get the index positions of the start of each group and their counts.
 
     NOTE: Only works on sorted groups!
@@ -72,7 +74,7 @@ def _get_unique_idxs_and_counts(groups: np.ndarray) -> tuple[np.ndarray, np.ndar
 
 
 @nb.njit
-def _is_sorted(array: np.ndarray) -> bool:
+def _is_sorted(array: np.ndarray) -> bool:  # pragma: no cover
     """Check is a numpy array is sorted."""
     # TODO(BT): Write a public available function which checks types etc...
     for i in range(array.size - 1):
@@ -82,7 +84,7 @@ def _is_sorted(array: np.ndarray) -> bool:
 
 
 @nb.njit
-def _1d_is_ones(array: np.ndarray) -> bool:
+def _1d_is_ones(array: np.ndarray) -> bool: # pragma: no cover
     """Check is a numpy array is only 1s."""
     # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
     for i in nb.prange(array.size):  # pylint: disable=not-an-iterable
