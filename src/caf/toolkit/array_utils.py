@@ -84,7 +84,7 @@ def _is_sorted(array: np.ndarray) -> bool:  # pragma: no cover
 
 
 @nb.njit
-def _1d_is_ones(array: np.ndarray) -> bool: # pragma: no cover
+def _1d_is_ones(array: np.ndarray) -> bool:  # pragma: no cover
     """Check is a numpy array is only 1s."""
     # Disabling pylint warning, see https://github.com/PyCQA/pylint/issues/2910
     for i in nb.prange(array.size):  # pylint: disable=not-an-iterable
@@ -281,7 +281,7 @@ def _broadcast_array_to_array(
     target_array: sparse.COO,
     array_dims: int | Sequence[int],
 ) -> sparse.COO:
-    """Broadcast a sparse array into a larger sparse array"""
+    """Broadcast a sparse array into a larger sparse array."""
     # Validate inputs
     if isinstance(array_dims, int):
         array_dims = [array_dims]
@@ -349,7 +349,7 @@ def _broadcast_scalar_to_array(
     fill_value: int | float,
     target_array: sparse.COO,
 ) -> sparse.COO:
-    """Broadcast a scalar value into a sparse array"""
+    """Broadcast a scalar value into a sparse array."""
     return sparse.COO(
         data=np.full_like(target_array.data, fill_value),
         coords=target_array.coords,
@@ -365,7 +365,7 @@ def validate_axis(
     n_dims: int,
     name: str = "axis",
 ) -> None:
-    """Validate axis values against a number of dimensions
+    """Validate axis values against a number of dimensions.
 
     Parameters
     ----------
