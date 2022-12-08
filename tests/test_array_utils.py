@@ -78,7 +78,9 @@ class TestSparseSum:
         np.testing.assert_almost_equal(achieved, target)
 
     @pytest.mark.parametrize("sum_axis", axis_permutations(3))
-    def test_sum_axis_subset(self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]):
+    def test_sum_axis_subset(
+        self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]
+    ):
         """Test that all axis can be summed together"""
         target = random_3d_sparse_matrix.sum(axis=sum_axis)
         achieved = array_utils.sparse_sum(random_3d_sparse_matrix, axis=sum_axis)
@@ -139,7 +141,9 @@ class TestSparseBroadcast:
         np.testing.assert_almost_equal(got.todense(), expected_output.todense())
 
     @pytest.mark.parametrize("sum_axis", axis_permutations(3))
-    def test_ndim_broadcast(self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]):
+    def test_ndim_broadcast(
+        self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]
+    ):
         """Test that broadcast works across different axis"""
         # Generate the input and expected output
         input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
@@ -240,6 +244,3 @@ class TestValidateAxis:
                 n_dims=3,
                 name="axis",
             )
-
-
-

@@ -392,7 +392,9 @@ def validate_axis(
         raise ValueError(f"{name} values are not unique. {axis} are not valid axes.")
 
     if max(axis) >= n_dims:
-        raise ValueError(f"{name} values too high. {axis} are not valid axes for an array with {n_dims} dimensions.")
+        raise ValueError(
+            f"{name} values too high. {axis} are not valid axes for an array with {n_dims} dimensions."
+        )
 
 
 def remove_sparse_nan_values(
@@ -453,7 +455,9 @@ def broadcast_sparse_matrix(
     )
 
 
-def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int] | int] = None) -> sparse.COO:
+def sparse_sum(
+    sparse_array: sparse.COO, axis: Optional[Iterable[int] | int] = None
+) -> sparse.COO:
     """Faster sum for a sparse.COO matrix.
 
     Converts the sum to a 2D operation and then optimises functionality for
