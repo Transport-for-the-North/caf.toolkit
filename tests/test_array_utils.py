@@ -188,25 +188,25 @@ class TestSparseBroadcast:
                 array_dims=None,
             )
 
-    def test_non_sparse_array(self, random_3d_sparse_matrix: sparse.COO):
-        """Test non-sparse input matrix"""
-        # init
-        sum_axis = 0
-
-        # Generate the input and expected output
-        input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
-        input_mat.data = np.ones_like(input_mat.data)
-
-        expected_output = random_3d_sparse_matrix.copy()
-        expected_output.data = np.ones_like(expected_output.data)
-
-        # Run and validate
-        got = array_utils.broadcast_sparse_matrix(
-            array=input_mat.todense(),
-            target_array=random_3d_sparse_matrix,
-            array_dims=tuple(set(range(random_3d_sparse_matrix.ndim)) - {sum_axis}),
-        )
-        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+    # def test_non_sparse_array(self, random_3d_sparse_matrix: sparse.COO):
+    #     """Test non-sparse input matrix"""
+    #     # init
+    #     sum_axis = 0
+    #
+    #     # Generate the input and expected output
+    #     input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
+    #     input_mat.data = np.ones_like(input_mat.data)
+    #
+    #     expected_output = random_3d_sparse_matrix.copy()
+    #     expected_output.data = np.ones_like(expected_output.data)
+    #
+    #     # Run and validate
+    #     got = array_utils.broadcast_sparse_matrix(
+    #         array=input_mat.todense(),
+    #         target_array=random_3d_sparse_matrix,
+    #         array_dims=tuple(set(range(random_3d_sparse_matrix.ndim)) - {sum_axis}),
+    #     )
+    #     np.testing.assert_almost_equal(got.todense(), expected_output.todense())
 
     # TODO: Test non sparse input - allow?
     # TODO: Test non sparse target - call numpy?
