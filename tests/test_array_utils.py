@@ -28,10 +28,14 @@ def make_sparse_flag_matrix(shape: tuple[int, ...], sparsity: float) -> np.ndarr
 
 
 def random_sparse_nd_matrix(n_dims: int) -> np.ndarray:
-    """Generate a random sparse matrix of N dimensions"""
-    dim_len = 10
+    """Generate a random sparse matrix of N dimensions
+
+    Made with prime numbers as dimensions to ensure broadcasting isn't happening
+    behind the scenes to help tests pass
+    """
+    dim_lengths = [13, 11, 7, 5, 3]
     sparsity = 0.99
-    shape = tuple(dim_len for _ in range(n_dims))
+    shape = tuple(dim_lengths[:n_dims])
 
     # Create the sparse array
     array = np.random.random(shape)
@@ -62,7 +66,7 @@ def axis_permutations(n_dims: int) -> list[tuple[int, ...]]:
 
 # # # TESTS # # #
 class TestSparseSum:
-    """Tests for the spare_sum function"""
+    """Tests for the sparse_sum function"""
 
     @pytest.mark.parametrize("random_sparse_matrix", (1, 2, 3, 4), indirect=True)
     @pytest.mark.parametrize("repeat", range(3))
@@ -92,4 +96,150 @@ class TestSparseSum:
             array_utils.sparse_sum(random_3d_sparse_matrix.todense())
 
 
-# TODO: Tests for sparse broadcast
+class TestSparseBroadcast:
+    """Tests for the sparse_broadcast function"""
+
+    @pytest.mark.parametrize("random_sparse_matrix", (2, 3, 4), indirect=True)
+    @pytest.mark.parametrize("repeat", range(3))
+    def test_1dim_broadcast(self, random_sparse_matrix: sparse.COO, repeat: int):
+        """Test different random matrices of different dimensions"""
+        # init
+        del repeat
+        sum_axis = 0
+
+        # Generate the input and expected output
+        input_mat = random_sparse_matrix.sum(axis=sum_axis)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        expected_output = random_sparse_matrix.copy()
+        expected_output.data = np.ones_like(expected_output.data)
+
+        # Run and validate
+        got = array_utils.broadcast_sparse_matrix(
+            array=input_mat,
+            target_array=random_sparse_matrix,
+            array_dims=tuple(set(range(random_sparse_matrix.ndim)) - {sum_axis}),
+        )
+        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+
+    @pytest.mark.parametrize("random_sparse_matrix", (1, 2, 3), indirect=True)
+    @pytest.mark.parametrize("repeat", range(3))
+    def test_scalar_broadcast(self, random_sparse_matrix: sparse.COO, repeat: int):
+        """Test broadcast of scalar values to different dimensions"""
+        # init
+        del repeat
+        expected_output = random_sparse_matrix.copy()
+        expected_output.data = np.ones_like(expected_output.data)
+
+        # Run and validate
+        got = array_utils.broadcast_sparse_matrix(
+            array=1,
+            target_array=random_sparse_matrix,
+        )
+        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+
+    @pytest.mark.parametrize("sum_axis", axis_permutations(3))
+    def test_ndim_broadcast(self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]):
+        """Test that broadcast works across different axis"""
+        # Generate the input and expected output
+        input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        expected_output = random_3d_sparse_matrix.copy()
+        expected_output.data = np.ones_like(expected_output.data)
+
+        # Run and validate
+        got = array_utils.broadcast_sparse_matrix(
+            array=input_mat,
+            target_array=random_3d_sparse_matrix,
+            array_dims=tuple(set(range(random_3d_sparse_matrix.ndim)) - set(list(sum_axis))),
+        )
+        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+
+    def test_wrong_array_dims_count(self, random_3d_sparse_matrix: sparse.COO):
+        """Test that an error is raised when array dims aren't expected shape"""
+        # Generate the input
+        input_mat = random_3d_sparse_matrix.sum(axis=0)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        # Run test
+        with pytest.raises(ValueError, match="array_dims must have the same number of values"):
+            array_utils.broadcast_sparse_matrix(
+                array=input_mat,
+                target_array=random_3d_sparse_matrix,
+                array_dims=(3, 4, 5, 6),
+            )
+
+    def test_no_array_dims(self, random_3d_sparse_matrix: sparse.COO):
+        """Test that an error is raised when array dims aren't given when needed"""
+        # Generate the input
+        input_mat = random_3d_sparse_matrix.sum(axis=0)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        # Run test
+        with pytest.raises(ValueError, match="array_dims must be given"):
+            array_utils.broadcast_sparse_matrix(
+                array=input_mat,
+                target_array=random_3d_sparse_matrix,
+                array_dims=None,
+            )
+
+    def test_non_sparse_array(self, random_3d_sparse_matrix: sparse.COO):
+        """Test non-sparse input matrix"""
+        # init
+        sum_axis = 0
+
+        # Generate the input and expected output
+        input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        expected_output = random_3d_sparse_matrix.copy()
+        expected_output.data = np.ones_like(expected_output.data)
+
+        # Run and validate
+        got = array_utils.broadcast_sparse_matrix(
+            array=input_mat.todense(),
+            target_array=random_3d_sparse_matrix,
+            array_dims=tuple(set(range(random_3d_sparse_matrix.ndim)) - {sum_axis}),
+        )
+        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+
+    # TODO: Test non sparse input - allow?
+    # TODO: Test non sparse target - call numpy?
+
+
+class TestValidateAxis:
+    """Tests for the validate_axis function"""
+
+    def test_duplicated_axis_vals(self):
+        """Test that an error is raised when axis values are duplicated"""
+        # Run test
+        with pytest.raises(ValueError, match="axis values are not unique"):
+            array_utils.validate_axis(
+                axis=(1, 1),
+                n_dims=2,
+                name="axis",
+            )
+
+    def test_invalid_axis_vals(self):
+        """Test that an error is raised when invalid axis values are given"""
+        # Run test
+        with pytest.raises(ValueError, match="axis values too high"):
+            array_utils.validate_axis(
+                axis=(3, 1),
+                n_dims=3,
+                name="axis",
+            )
+
+    def test_negative_axis_vals(self):
+        """Test that an error is raised when negative axis values are given"""
+        # Run test
+        with pytest.raises(ValueError, match="axis values cannot be negative"):
+            array_utils.validate_axis(
+                axis=(-3, 1),
+                n_dims=3,
+                name="axis",
+            )
+
+
+

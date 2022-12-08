@@ -8,6 +8,7 @@ import logging
 from typing import Optional
 from typing import Iterable
 from typing import Sequence
+from typing import Collection
 
 # Third Party
 import sparse
@@ -273,56 +274,29 @@ def _flatten_some_sparse_axis_without_transpose(
     return flat_coord
 
 
-# ## Public functions ## #
-def remove_sparse_nan_values(
-    array: np.ndarray | sparse.COO,
-    fill_value: int | float = 0,
-) -> np.ndarray | sparse.COO:
-    """Remove any NaN values from a dense or sparse array."""
-    if isinstance(array, np.ndarray):
-        return np.nan_to_num(array, nan=fill_value)
-
-    # Must be sparse and need special infill
-    return sparse.COO(
-        coords=array.coords,
-        data=np.nan_to_num(array.data, nan=fill_value),
-        fill_value=np.nan_to_num(array.fill_value, nan=fill_value),
-        shape=array.shape,
-    )
-
-
-def broadcast_sparse_matrix(
+def _broadcast_array_to_array(
     array: sparse.COO,
     target_array: sparse.COO,
     array_dims: int | Sequence[int],
 ) -> sparse.COO:
-    """Expand an array to a target sparse matrix, matching target sparsity.
-
-    Parameters
-    ----------
-    array:
-        Input array.
-
-    target_array:
-        Target array to broadcast to. The return matrix will be as sparse
-        and the same shape as this matrix.
-
-    array_dims:
-        The dimensions of `target_array` which correspond to array.
-
-    Returns
-    -------
-    expanded_array:
-        Array expanded to be the same shape and sparsity as target_array
-    """
+    """Broadcast a sparse array into a larger sparse array"""
     # Validate inputs
     if isinstance(array_dims, int):
         array_dims = [array_dims]
     assert isinstance(array_dims, Sequence)
 
+    if len(array_dims) != array.ndim:
+        raise ValueError(
+            "array_dims must have the same number of values as array has "
+            "dimensions.\n"
+            f"Expected {array.ndim} values, got {len(array_dims)} values "
+            f"instead: {array_dims}"
+        )
+
+    validate_axis(array_dims, target_array.ndim)
+
     # Flatten the given array as a baseline
     flat_array_coord = np.ravel_multi_index(array.coords, array.shape)
-    flat_array_coord.sort()
 
     # Only need to transpose (slow!) if array dims are not sequential
     if _is_in_order_sequential(array_dims) and array_dims[0] == 0:
@@ -367,6 +341,116 @@ def broadcast_sparse_matrix(
     if axis_swap_reverse is not None:
         return final_array.transpose(axis_swap_reverse)
     return final_array
+
+
+def _broadcast_scalar_to_array(
+    fill_value: int | float,
+    target_array: sparse.COO,
+) -> sparse.COO:
+    """Broadcast a scalar value into a sparse array"""
+    return sparse.COO(
+        data=np.full_like(target_array.data, fill_value),
+        coords=target_array.coords,
+        shape=target_array.shape,
+        fill_value=target_array.fill_value,
+        sorted=True,
+    )
+
+
+# ## Public functions ## #
+def validate_axis(
+    axis: Collection[int],
+    n_dims: int,
+    name: str = "axis",
+) -> None:
+    """Validate axis values against a number of dimensions
+
+    Parameters
+    ----------
+    axis:
+        The axis values to validate
+
+    n_dims:
+        The number of dimensions in the matrix that axis should be validated against
+
+    name:
+        The name to write out in the error message, if generated
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError:
+        If any axis values are negative, duplicated, or too high.
+    """
+    if min(axis) < 0:
+        raise ValueError(f"{name} values cannot be negative. {axis} are not valid axes.")
+
+    if len(axis) > len(set(axis)):
+        raise ValueError(f"{name} values are not unique. {axis} are not valid axes.")
+
+    if max(axis) >= n_dims:
+        raise ValueError(f"{name} values too high. {axis} are not valid axes for an array with {n_dims} dimensions.")
+
+
+def remove_sparse_nan_values(
+    array: np.ndarray | sparse.COO,
+    fill_value: int | float = 0,
+) -> np.ndarray | sparse.COO:
+    """Remove any NaN values from a dense or sparse array."""
+    if isinstance(array, np.ndarray):
+        return np.nan_to_num(array, nan=fill_value)
+
+    # Must be sparse and need special infill
+    return sparse.COO(
+        coords=array.coords,
+        data=np.nan_to_num(array.data, nan=fill_value),
+        fill_value=np.nan_to_num(array.fill_value, nan=fill_value),
+        shape=array.shape,
+    )
+
+
+def broadcast_sparse_matrix(
+    array: sparse.COO | int | float,
+    target_array: sparse.COO,
+    array_dims: Optional[int | Sequence[int]] = None,
+) -> sparse.COO:
+    """Expand an array to a target sparse matrix, matching target sparsity.
+
+    Parameters
+    ----------
+    array:
+        Input array.
+
+    target_array:
+        Target array to broadcast to. The return matrix will be as sparse
+        and the same shape as this matrix.
+
+    array_dims:
+        The dimensions of `target_array` which correspond to array.
+
+    Returns
+    -------
+    expanded_array:
+        Array expanded to be the same shape and sparsity as target_array
+    """
+    if isinstance(array, sparse.COO):
+        if array_dims is None:
+            raise ValueError("array_dims must be given if array is not a scalar value.")
+
+        return _broadcast_array_to_array(
+            array=array,
+            target_array=target_array,
+            array_dims=array_dims,
+        )
+
+    # Assume scalar
+    return _broadcast_scalar_to_array(
+        fill_value=array,
+        target_array=target_array,
+    )
 
 
 def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int] | int] = None) -> sparse.COO:
