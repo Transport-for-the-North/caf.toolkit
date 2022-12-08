@@ -369,7 +369,7 @@ def broadcast_sparse_matrix(
     return final_array
 
 
-def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int]] = None) -> sparse.COO:
+def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int] | int] = None) -> sparse.COO:
     """Faster sum for a sparse.COO matrix.
 
     Converts the sum to a 2D operation and then optimises functionality for
@@ -391,6 +391,8 @@ def sparse_sum(sparse_array: sparse.COO, axis: Optional[Iterable[int]] = None) -
     # Validate given axis
     if axis is None:
         axis = list(range(sparse_array.ndim))
+    elif isinstance(axis, int):
+        axis = [axis]
     else:
         axis = list(axis)
 
