@@ -160,6 +160,25 @@ class TestSparseBroadcast:
         )
         np.testing.assert_almost_equal(got.todense(), expected_output.todense())
 
+    def test_scalar_array_dims(self, random_3d_sparse_matrix: sparse.COO):
+        """Test that a scalar value can be given for aray_dims"""
+        sum_axis = (1, 2)
+
+        # Generate the input
+        input_mat = random_3d_sparse_matrix.sum(axis=sum_axis)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        expected_output = random_3d_sparse_matrix.copy()
+        expected_output.data = np.ones_like(expected_output.data)
+
+        # Run test
+        got = array_utils.broadcast_sparse_matrix(
+            array=input_mat,
+            target_array=random_3d_sparse_matrix,
+            array_dims=0,
+        )
+        np.testing.assert_almost_equal(got.todense(), expected_output.todense())
+
     def test_wrong_array_dims_count(self, random_3d_sparse_matrix: sparse.COO):
         """Test that an error is raised when array dims aren't expected shape"""
         # Generate the input
@@ -186,6 +205,20 @@ class TestSparseBroadcast:
                 array=input_mat,
                 target_array=random_3d_sparse_matrix,
                 array_dims=None,
+            )
+
+    def test_dimension_mismatch(self, random_3d_sparse_matrix: sparse.COO):
+        """Test that an error is raised when axes don't line up"""
+        # Generate the input
+        input_mat = random_3d_sparse_matrix.sum(axis=0)
+        input_mat.data = np.ones_like(input_mat.data)
+
+        # Run test
+        with pytest.raises(ValueError, match="Unable to broadcast"):
+            array_utils.broadcast_sparse_matrix(
+                array=input_mat,
+                target_array=random_3d_sparse_matrix.T,
+                array_dims=(1, 2),
             )
 
 
