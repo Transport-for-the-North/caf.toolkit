@@ -168,7 +168,7 @@ def dataframe_to_n_dimensional_array(
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]:
-    ...
+    ...  # pragma: no cover
 
 
 @overload
@@ -179,7 +179,7 @@ def dataframe_to_n_dimensional_array(
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...
+    ...  # pragma: no cover
 
 
 @overload
@@ -190,7 +190,7 @@ def dataframe_to_n_dimensional_array(
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
-    ...
+    ...  # pragma: no cover
 
 
 @overload
@@ -201,7 +201,7 @@ def dataframe_to_n_dimensional_array(
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...
+    ...  # pragma: no cover
 
 
 def dataframe_to_n_dimensional_array(
@@ -272,7 +272,7 @@ def dataframe_to_n_dimensional_array(
     valid_vals = SparseLiteral.__args__  # type: ignore
     if sparse_ok not in valid_vals:
         raise ValueError(
-            f"Invalid value given to for 'sparse_ok' expected one of: " f"{valid_vals}"
+            f"Invalid value given for 'sparse_ok' expected one of: " f"{valid_vals}"
         )
 
     # Validate that only one value column exists
