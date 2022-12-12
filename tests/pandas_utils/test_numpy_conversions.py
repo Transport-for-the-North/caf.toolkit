@@ -141,11 +141,11 @@ def fixture_conversion_data_massive() -> SparseConversionData:
     # This should create an array that's approx double what can be handled
     max_ram = psutil.virtual_memory().total
     axis_0_1_2_size = 1024
-    axis_3_size = math.ceil(max_ram / 8 / (1024 ** 3)) * 2
+    axis_3_size = math.ceil(max_ram / 8 / (1024**3)) * 2
 
     # Scale axis sizes so all values appear, and they divide nicely
     axis_0_1_2_size += axis_3_size - (axis_0_1_2_size % axis_3_size)
-    axis_2_repeats = axis_0_1_2_size / axis_3_size
+    axis_2_repeats = axis_0_1_2_size // axis_3_size
 
     # Create the df
     df = pd.DataFrame(
