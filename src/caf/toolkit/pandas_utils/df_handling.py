@@ -400,7 +400,7 @@ def chunk_df(
 
     See Also
     --------
-    `caf.toolkit.pandas_utils.ChunkDf`
+    ChunkDf: Class based iterator which can throw errors when initialised
     """
     try:
         iterator = ChunkDf(df, chunk_size)
