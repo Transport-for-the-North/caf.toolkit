@@ -4,7 +4,6 @@
 # # # IMPORTS # # #
 import json
 from pathlib import Path
-from typing import TypeVar
 
 # pylint: disable=import-error
 import pydantic
@@ -12,20 +11,22 @@ import strictyaml
 
 # pylint: enable=import-error
 # # # CONSTANTS # # #
-TConfig = TypeVar("TConfig", bound="BaseConfig")
 
 
 # # # CLASSES # # #
 class BaseConfig(pydantic.BaseModel):
     r"""Base class for storing model parameters.
+
     Contains functionality for reading / writing parameters to
     config files in the YAML format.
+
     See Also
     --------
     [pydantic docs](https://pydantic-docs.helpmanual.io/):
         for more information about using pydantic's model classes.
     `pydantic.BaseModel`: which handles converting data to Python types.
     `pydantic.validator`: which allows additional custom validation methods.
+
     Examples
     --------
     >>> import pathlib
@@ -62,6 +63,7 @@ class BaseConfig(pydantic.BaseModel):
         text: str
             YAML formatted string, with parameters for
             the class attributes.
+
         Returns
         -------
         Instance of self
@@ -79,6 +81,7 @@ class BaseConfig(pydantic.BaseModel):
         ----------
         path: Path
             Path to YAML file containing parameters.
+
         Returns
         -------
         Instance of self
