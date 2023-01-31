@@ -8,6 +8,7 @@ black>=22.6.0
 mypy>=0.910
 mypy_extensions>=0.4.3
 pydocstyle>=6.1.1
+pydocstyle[toml]
 tomli>=2.0.1
 pylint>=2.14.5
 
@@ -15,6 +16,7 @@ pylint>=2.14.5
 pytest~=7.1.2
 pytest-cov~=2.12.1
 pytest-xdist~=2.5.0
+tox~=3.24.3
 
 # Testing libs
 psutil>=5.9.0
