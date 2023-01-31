@@ -29,29 +29,28 @@ class BaseConfig(pydantic.BaseModel):
 
     Examples
     --------
-    >>> import pathlib
-    >>> import normits_demand as nd
-    >>> from normits_demand.utils import config_base
-    >>> class ExampleParameters(config_base.BaseConfig):
+    >>> from pathlib import Path
+    >>> from caf.toolkit import BaseConfig
+    >>> class ExampleParameters(BaseConfig):
     ...    import_folder: Path
-    ...    notem_iteration: str
-    ...    scenario: nd.Scenario
+    ...    name: str
+    ...    some_option: bool = True
     >>> parameters = ExampleParameters(
     ...    import_folder="Test Folder",
-    ...    notem_iteration="1.0",
-    ...    scenario=nd.Scenario.NTEM,
+    ...    name="Test",
+    ...    some_option=False,
     ... )
     >>> parameters
-    ExampleParameters(import_folder=WindowsPath('Test Folder'), notem_iteration='1.0', scenario=<Scenario.NTEM: 'NTEM'>)
+    ExampleParameters(import_folder=WindowsPath('Test Folder'), name='Test', some_option=False)
     >>> parameters.to_yaml()
-    'import_folder: Test Folder\nnotem_iteration: 1.0\nscenario: NTEM\n'
+    'import_folder: Test Folder\nname: Test\nsome_option: False\n'
     >>> yaml_text = '''
     ... import_folder: Test YAML Folder
-    ... notem_iteration: 1.0
-    ... scenario: NTEM
+    ... name: YAML test
+    ... some_option: True
     ... '''
     >>> ExampleParameters.from_yaml(yaml_text)
-    ExampleParameters(import_folder=WindowsPath('Test YAML Folder'), notem_iteration='1.0', scenario=<Scenario.NTEM: 'NTEM'>)
+    ExampleParameters(import_folder=WindowsPath('Test YAML Folder'), name='YAML test', some_option=True)
     """
 
     @classmethod
