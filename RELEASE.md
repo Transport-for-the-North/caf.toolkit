@@ -26,3 +26,4 @@ Below, a brief summary of patches made since the previous version can be found.
   - Added sparse matrix functionality
 - Multiprocessing
   - Added generic type hints to `multiprocess`
+- Added a config class which build on `Pydantic` and adds a YAML interface.
