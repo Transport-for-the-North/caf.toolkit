@@ -11,6 +11,8 @@ import pytest
 from pydantic import ValidationError
 # Local Imports
 from caf.toolkit import BaseConfig
+
+
 # pylint: enable=import-error
 # # # Fixture # # #
 
@@ -78,6 +80,8 @@ class ConfigTestClass(BaseConfig):
     sub: TestSubClass = None
     default: bool = True
     option: int = None
+
+
 # pylint: enable=too-few-public-methods
 
 
@@ -85,14 +89,15 @@ class TestCreateConfig:
     """
     Class for testing basic creation of configs using the BaseConfig
     """
+
     @pytest.mark.parametrize("param, type_iter",
-                        [("dictionary", dict),
-                         ("path", WindowsPath),
-                         ("list", list),
-                         ("set", set),
-                         ("tuple", tuple),
-                         ("default", bool),
-                         ("option", int)])
+                             [("dictionary", dict),
+                              ("path", WindowsPath),
+                              ("list", list),
+                              ("set", set),
+                              ("tuple", tuple),
+                              ("default", bool),
+                              ("option", int)])
     def test_type(self, basic, param, type_iter):
         """
         Tests that all parameters are of the expected type.
@@ -123,7 +128,8 @@ class TestCreateConfig:
         -------
         None
         """
-        config = ConfigTestClass(dictionary=basic.dictionary, path=basic.path, list=basic.list, set=basic.set, tuple=basic.tuple)
+        config = ConfigTestClass(dictionary=basic.dictionary, path=basic.path, list=basic.list,
+                                 set=basic.set, tuple=basic.tuple)
         val = config.dict()[param]
         assert val == type_iter
 
@@ -140,13 +146,15 @@ class TestCreateConfig:
         None
         """
         with pytest.raises(ValidationError, match="validation error for ConfigTestClass"):
-            ConfigTestClass(dictionary=['a', 'list'], path=basic.path, list=basic.list, set=basic.set, tuple=basic.tuple)
+            ConfigTestClass(dictionary=['a', 'list'], path=basic.path, list=basic.list,
+                            set=basic.set, tuple=basic.tuple)
 
 
 class TestYaml:
     """
     Class for testing configs being converted to and from yaml, as well as saved and loaded.
     """
+
     def test_to_from_yaml(self, basic):
         """
         Test that when a config is converted to yaml and back it remains identical
@@ -178,7 +186,6 @@ class TestYaml:
         conf.sub = TestSubClass(whole=3, decimal=5.7)
         yam = conf.to_yaml()
         assert isinstance(ConfigTestClass.from_yaml(yam).sub, TestSubClass)
-
 
     def test_save_load(self, basic, path):
         """
