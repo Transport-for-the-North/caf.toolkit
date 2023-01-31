@@ -5,9 +5,11 @@
 import json
 from pathlib import Path
 from typing import TypeVar
+
 # pylint: disable=import-error
 import pydantic
 import strictyaml
+
 # pylint: enable=import-error
 # # # CONSTANTS # # #
 TConfig = TypeVar("TConfig", bound="BaseConfig")

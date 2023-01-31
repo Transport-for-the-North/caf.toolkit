@@ -5,10 +5,13 @@ Tests for the config_base module in caf.toolkit
 # Built-Ins
 from pathlib import Path, WindowsPath
 import dataclasses
+
 # Third Party
 import pytest
+
 # pylint: disable=import-error
 from pydantic import ValidationError
+
 # Local Imports
 from caf.toolkit import BaseConfig
 
@@ -45,24 +48,32 @@ def fixture_basic(path):
     -------
     conf (ConfigTestClass): A testing config
     """
-    conf_dict = {'foo': 1.3, 'bar': 3.6}
+    conf_dict = {"foo": 1.3, "bar": 3.6}
     conf_path = path / "basic"
-    conf_list = ['far', 'baz']
-    conf_set = ([1, 2, 3])
+    conf_list = ["far", "baz"]
+    conf_set = [1, 2, 3]
     conf_tuple = tuple([(path / "tuple_1"), (path / "tuple_2")])
     conf_opt = 4
-    conf = ConfigTestClass(dictionary=conf_dict, path=conf_path, list=conf_list, set=conf_set,
-                           tuple=conf_tuple, option=conf_opt)
+    conf = ConfigTestClass(
+        dictionary=conf_dict,
+        path=conf_path,
+        list=conf_list,
+        set=conf_set,
+        tuple=conf_tuple,
+        option=conf_opt,
+    )
     return conf
 
 
 # # # CLASSES # # #
+
 
 @dataclasses.dataclass
 class TestSubClass:
     """
     Subclass to be included as a parameter in ConfigTestClass
     """
+
     whole: int
     decimal: float
 
@@ -72,6 +83,7 @@ class ConfigTestClass(BaseConfig):
     """
     Class created to test BaseConfig
     """
+
     dictionary: dict[str, float]
     path: Path
     list: list[str]
@@ -90,14 +102,18 @@ class TestCreateConfig:
     Class for testing basic creation of configs using the BaseConfig
     """
 
-    @pytest.mark.parametrize("param, type_iter",
-                             [("dictionary", dict),
-                              ("path", WindowsPath),
-                              ("list", list),
-                              ("set", set),
-                              ("tuple", tuple),
-                              ("default", bool),
-                              ("option", int)])
+    @pytest.mark.parametrize(
+        "param, type_iter",
+        [
+            ("dictionary", dict),
+            ("path", WindowsPath),
+            ("list", list),
+            ("set", set),
+            ("tuple", tuple),
+            ("default", bool),
+            ("option", int),
+        ],
+    )
     def test_type(self, basic, param, type_iter):
         """
         Tests that all parameters are of the expected type.
@@ -128,8 +144,13 @@ class TestCreateConfig:
         -------
         None
         """
-        config = ConfigTestClass(dictionary=basic.dictionary, path=basic.path, list=basic.list,
-                                 set=basic.set, tuple=basic.tuple)
+        config = ConfigTestClass(
+            dictionary=basic.dictionary,
+            path=basic.path,
+            list=basic.list,
+            set=basic.set,
+            tuple=basic.tuple,
+        )
         val = config.dict()[param]
         assert val == type_iter
 
@@ -146,8 +167,13 @@ class TestCreateConfig:
         None
         """
         with pytest.raises(ValidationError, match="validation error for ConfigTestClass"):
-            ConfigTestClass(dictionary=['a', 'list'], path=basic.path, list=basic.list,
-                            set=basic.set, tuple=basic.tuple)
+            ConfigTestClass(
+                dictionary=["a", "list"],
+                path=basic.path,
+                list=basic.list,
+                set=basic.set,
+                tuple=basic.tuple,
+            )
 
 
 class TestYaml:
@@ -203,5 +229,6 @@ class TestYaml:
         file_path = path / "save_test.yml"
         basic.save_yaml(file_path)
         assert ConfigTestClass.load_yaml(file_path) == basic
+
 
 # # # FUNCTIONS # # #
