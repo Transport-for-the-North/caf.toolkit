@@ -4,28 +4,45 @@ Tests for the config_base module in caf.toolkit
 """
 # Built-Ins
 from pathlib import Path, WindowsPath
+import dataclasses
 # Third Party
 import pytest
+# pylint: disable=import-error
 from pydantic import ValidationError
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
-# Local imports here
 from caf.toolkit import BaseConfig
-
-
-# pylint: enable=import-error,wrong-import-position
-
-# # # CONSTANTS # # #
-
+# pylint: enable=import-error
 # # # Fixture # # #
+
+
 @pytest.fixture(name="path", scope="session")
 def fixture_dir(tmp_path_factory):
+    """
+    Temp path for test i/o
+    Parameters
+    ----------
+    tmp_path_factory
+
+    Returns
+    -------
+    None
+    """
     path = tmp_path_factory.mktemp("dir")
     return path
 
 
 @pytest.fixture(name="basic", scope="session")
 def fixture_basic(path):
+    """
+    Basic config for testing
+    Parameters
+    ----------
+    path: Above fixture
+
+    Returns
+    -------
+    conf (ConfigTestClass): A testing config
+    """
     conf_dict = {'foo': 1.3, 'bar': 3.6}
     conf_path = path / "basic"
     conf_list = ['far', 'baz']
@@ -39,7 +56,16 @@ def fixture_basic(path):
 
 # # # CLASSES # # #
 
+@dataclasses.dataclass
+class TestSubClass:
+    """
+    Subclass to be included as a parameter in ConfigTestClass
+    """
+    whole: int
+    decimal: float
 
+
+# pylint: disable=too-few-public-methods
 class ConfigTestClass(BaseConfig):
     """
     Class created to test BaseConfig
@@ -49,8 +75,10 @@ class ConfigTestClass(BaseConfig):
     list: list[str]
     set: set[int]
     tuple: tuple[Path, Path]
+    sub: TestSubClass = None
     default: bool = True
     option: int = None
+# pylint: enable=too-few-public-methods
 
 
 class TestCreateConfig:
@@ -133,6 +161,24 @@ class TestYaml:
         yaml = basic.to_yaml()
         conf = ConfigTestClass.from_yaml(yaml)
         assert conf == basic
+
+    def test_custom_sub(self, basic):
+        """
+        Test that custom subclasses are recognised and read correctly when
+        converted to and from yaml
+        Parameters
+        ----------
+        basic: test config
+
+        Returns
+        -------
+        None
+        """
+        conf = basic
+        conf.sub = TestSubClass(whole=3, decimal=5.7)
+        yam = conf.to_yaml()
+        assert isinstance(ConfigTestClass.from_yaml(yam).sub, TestSubClass)
+
 
     def test_save_load(self, basic, path):
         """
