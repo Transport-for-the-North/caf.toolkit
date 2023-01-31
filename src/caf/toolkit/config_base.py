@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
 
-##### IMPORTS #####
+# # # IMPORTS # # #
 import json
 from pathlib import Path
 from typing import TypeVar
-
+# pylint: disable=import-error
 import pydantic
 import strictyaml
-
-
-##### CONSTANTS #####
+# pylint: enable=import-error
+# # # CONSTANTS # # #
 TConfig = TypeVar("TConfig", bound="BaseConfig")
 
-##### CLASSES #####
+
+# # # CLASSES # # #
 class BaseConfig(pydantic.BaseModel):
     r"""Base class for storing model parameters.
     Contains functionality for reading / writing parameters to
@@ -83,13 +83,15 @@ class BaseConfig(pydantic.BaseModel):
             Instance of class with attributes filled in from
             the YAML data.
         """
+        # pylint: disable = unspecified-encoding
         with open(path, "rt") as file:
             text = file.read()
         return cls.from_yaml(text)
+        # pylint: enable = unspecified-encoding
 
     def to_yaml(self) -> str:
         """Convert attributes from self to YAML string.
-        
+
         Returns
         -------
         str
@@ -113,11 +115,13 @@ class BaseConfig(pydantic.BaseModel):
         path: Path
             Path to YAML file to output.
         """
+        # pylint: disable = unspecified-encoding
         with open(path, "wt") as file:
             file.write(self.to_yaml())
+        # pylint: enable = unspecified-encoding
 
 
-##### FUNCTIONS #####
+# # # FUNCTIONS # # #
 def _remove_none_dict(data: dict) -> dict:
     """Remove items recursively from dictionary which are None."""
     filtered = {}
