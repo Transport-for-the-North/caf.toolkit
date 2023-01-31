@@ -3,7 +3,7 @@
 Tests for the config_base module in caf.toolkit
 """
 # Built-Ins
-from pathlib import Path, WindowsPath
+from pathlib import Path
 import dataclasses
 
 # Third Party
@@ -106,7 +106,7 @@ class TestCreateConfig:
         "param, type_iter",
         [
             ("dictionary", dict),
-            ("path", WindowsPath),
+            ("path", Path),
             ("list", list),
             ("set", set),
             ("tuple", tuple),
