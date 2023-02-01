@@ -277,7 +277,6 @@ def _process_pool_wrapper_kwargs_in_order(
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
-
             # Add each function call to the pool with an index identifier
             apply_results: list[ApplyResult[tuple[int, _T]]] = list()
             for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):

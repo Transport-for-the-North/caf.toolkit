@@ -653,7 +653,6 @@ def sparse_adjust_towards_aggregates(
 
     # Adjust the matrix once for each marginal
     for target, dimensions in zip(target_marginals, target_dimensions):
-
         # Figure out which axes to sum across
         sum_axes = tuple(set(range(n_dims)) - set(dimensions))
 
@@ -954,7 +953,6 @@ def ipf(
 
     # Set up numpy overflow errors
     with np.errstate(over="raise"):
-
         # Iteratively fit
         iterator = tqdm.tqdm(range(max_iterations), **pbar_kwargs)
         for iter_num in iterator:
