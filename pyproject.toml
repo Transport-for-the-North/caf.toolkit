@@ -47,9 +47,9 @@ ignore_errors = true
 [tool.pydocstyle]
 convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__).*\.py'
-
-# '((?!_test).)*\.py'
-# ((?!test_).)*\.py
+add-ignore = [
+    "D202",    # Temporary compatibility with black
+]
 
 [tool.pytest.ini_options]
 addopts = "--cov=caf.toolkit --cov-report=xml"
