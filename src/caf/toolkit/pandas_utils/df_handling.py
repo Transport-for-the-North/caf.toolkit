@@ -356,6 +356,7 @@ def str_join_cols(
     joined_column:
         a Pandas.Series containing all columns joined together using separator
     """
+
     # Define the accumulator function
     def reducer(accumulator, item):
         return accumulator + separator + item
