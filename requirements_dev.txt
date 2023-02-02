@@ -8,8 +8,11 @@ black>=22.6.0
 mypy>=0.910
 mypy_extensions>=0.4.3
 pydocstyle>=6.1.1
-pydata-sphinx-theme>=0.10.1
+pydocstyle[toml]
 pylint>=2.14.5
+
+# Docs build
+pydata-sphinx-theme>=0.10.1
 
 # Testing
 pytest~=7.1.2

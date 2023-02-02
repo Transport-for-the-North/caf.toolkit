@@ -16,6 +16,7 @@ from tqdm import contrib as tqdm_contrib
 
 # # # CLASSES # # #
 
+
 # # # FUNCTIONS # # #
 @contextlib.contextmanager
 def std_out_err_redirect_tqdm():
