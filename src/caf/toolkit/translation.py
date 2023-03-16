@@ -423,7 +423,7 @@ def numpy_vector_zone_translation(
     if check_shapes:
         # Check that vector is 1D
         if len(vector.shape) > 1:
-            if vector.shape[1] == 1:
+            if len(vector.shape) == 2 and vector.shape[1] == 1:
                 vector = vector.flatten()
             else:
                 raise ValueError(
@@ -445,7 +445,7 @@ def numpy_vector_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        translation_dtype = vector.dtype
+        translation_dtype = np.find_common_type([vector.dtype, translation.dtype], [])
     vector = _convert_dtypes(
         arr=vector,
         to_type=translation_dtype,
@@ -458,9 +458,18 @@ def numpy_vector_zone_translation(
     )
 
     # ## TRANSLATE ## #
-    out_vector = np.broadcast_to(np.expand_dims(vector, axis=1), translation.shape)
-    out_vector = out_vector * translation
-    out_vector = out_vector.sum(axis=0)
+    try:
+        out_vector = np.broadcast_to(np.expand_dims(vector, axis=1), translation.shape)
+        out_vector = out_vector * translation
+        out_vector = out_vector.sum(axis=0)
+    except ValueError as err:
+        if not check_shapes:
+            raise ValueError(
+                "'check_shapes' was set to False, was there a shape mismatch? "
+                "Set 'check_shapes' to True, or see above error for more "
+                "information."
+            ) from err
+        raise err
 
     if not check_totals:
         return out_vector
