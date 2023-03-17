@@ -171,8 +171,15 @@ def _convert_dtypes(
     # Make sure we're not going to introduce infs...
     mat_max = np.max(arr)
     mat_min = np.min(arr)
-    dtype_max = np.finfo(to_type).max
-    dtype_min = np.finfo(to_type).min
+
+    if np.issubdtype(to_type, np.floating):
+        dtype_max = np.finfo(to_type).max
+        dtype_min = np.finfo(to_type).min
+    elif np.issubdtype(to_type, np.integer):
+        dtype_max = np.iinfo(to_type).max
+        dtype_min = np.iinfo(to_type).min
+    else:
+        raise ValueError(f"Don't know how to get min/max info for datatype: {to_type}")
 
     if mat_max > dtype_max:
         raise ValueError(
