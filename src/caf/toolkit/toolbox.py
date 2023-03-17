@@ -136,7 +136,7 @@ def get_missing_items(list_a: list[_T], list_b: list[_T]) -> tuple[list[_T], lis
     set_b = set(list_b)
     a_not_b = set_a - set_b
     b_not_a = set_b - set_a
-    return a_not_b, b_not_a
+    return list(a_not_b), list(b_not_a)
 
 
 # TODO(BT): Can this take a Collection instead?
@@ -154,4 +154,4 @@ def is_unique_list(unique_vals: list[Any]) -> bool:
         True if the list does not contain any duplicates. Otherwise False.
 
     """
-    return len(unique_vals) < len(set(unique_vals))
+    return len(unique_vals) == len(set(unique_vals))
