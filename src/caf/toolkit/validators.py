@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+"""Tools to validate items. These function return either True or False.
+
+These are mostly commonly used validations across the codebase.
 """
 # Built-Ins
 import logging
@@ -43,4 +45,7 @@ def unique_list(unique_vals: list[Any], name: str = "unique_zones") -> None:
         If `unique_vals` is not a unique list
     """
     if not toolbox.is_unique_list(unique_vals):
-        raise ValueError(f"Duplicate values found in {name}, making it invalid.")
+        raise ValueError(
+            f"Duplicate values found in {name}, making it invalid."
+            f"\n{unique_vals}\n{type(unique_vals[0])}"
+        )

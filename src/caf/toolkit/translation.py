@@ -4,6 +4,8 @@
 In transport, these tools are very useful for translating data between different
 zoning systems.
 """
+from __future__ import annotations
+
 # Built-Ins
 import logging
 import warnings
@@ -688,7 +690,7 @@ def pandas_matrix_zone_translation(
 
 
 def pandas_vector_zone_translation(
-    vector: pd.Series,
+    vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
@@ -762,6 +764,15 @@ def pandas_vector_zone_translation(
     --------
     .numpy_vector_zone_translation()
     """
+    # If dataframe given, try coerce
+    if isinstance(vector, pd.DataFrame):
+        if vector.shape[1] != 1:
+            raise ValueError(
+                "`vector` must be a pandas.Series, or a pandas.DataFrame with "
+                f"one column. Got a DataFrame of shape {vector.shape} instead"
+            )
+        vector = vector[vector.columns[0]]
+
     # Check the matrix and translation dtypes match
     if vector.index.dtype != translation[translation_from_col].dtype:
         raise ValueError(
