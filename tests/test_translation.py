@@ -35,11 +35,42 @@ class NumpyVectorResults:
     expected_result: np.ndarray
     translation_dtype: Optional[type] = None
 
-    def input_kwargs(self, check_shapes: bool, check_totals: bool) -> dict[str, Any]:
+    def input_kwargs(
+        self,
+        check_shapes: bool = True,
+        check_totals: bool = True,
+    ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
             "vector": self.vector,
             "translation": self.translation,
+            "translation_dtype": self.translation_dtype,
+            "check_shapes": check_shapes,
+            "check_totals": check_totals,
+        }
+
+
+@dataclasses.dataclass
+class NumpyMatrixResults:
+    """Collection of I/O data for a numpy matrix translation"""
+
+    mat: np.ndarray
+    translation: np.ndarray
+    expected_result: np.ndarray
+
+    translation_dtype: Optional[type] = None
+    col_translation: Optional[np.ndarray] = None
+
+    def input_kwargs(
+        self,
+        check_shapes: bool = True,
+        check_totals: bool = True,
+    ) -> dict[str, Any]:
+        """Return a dictionary of key-word arguments"""
+        return {
+            "matrix": self.mat,
+            "translation": self.translation,
+            "col_translation": self.col_translation,
             "translation_dtype": self.translation_dtype,
             "check_shapes": check_shapes,
             "check_totals": check_totals,
@@ -112,6 +143,7 @@ class PandasTranslation:
         }
 
     def copy(self) -> PandasTranslation:
+        """Make a copy of this class"""
         return copy.deepcopy(self)
 
 
@@ -174,6 +206,20 @@ def fixture_simple_np_int_translation() -> np.ndarray:
     )
 
 
+@pytest.fixture(name="simple_np_int_translation2", scope="class")
+def fixture_simple_np_int_translation2() -> np.ndarray:
+    """Generate a simple 5 to 3 complete translation array"""
+    return np.array(
+        [
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 1, 0],
+            [1, 0, 0],
+            [1, 0, 0],
+        ]
+    )
+
+
 @pytest.fixture(name="incomplete_np_int_translation", scope="class")
 def fixture_incomplete_np_int_translation() -> np.ndarray:
     """Generate a simple 5 to 3 complete translation array"""
@@ -226,7 +272,6 @@ def fixture_simple_pd_float_translation(
     return PandasTranslation(simple_np_float_translation)
 
 
-# TODO(BT): Pandas vector will build on this
 @pytest.fixture(name="np_vector_aggregation", scope="class")
 def fixture_np_vector_aggregation(simple_np_int_translation: np.ndarray) -> NumpyVectorResults:
     """Generate an aggregation vector, translation, and results"""
@@ -273,7 +318,7 @@ def fixture_np_translation_dtype(simple_np_int_translation: np.ndarray) -> Numpy
         expected_result=np.array([10, 8, 11]),
     )
 
-
+# ## PANDAS VECTOR FIXTURES ## #
 @pytest.fixture(name="pd_vector_aggregation", scope="class")
 def fixture_pd_vector_aggregation(
     np_vector_aggregation: NumpyVectorResults,
@@ -313,6 +358,60 @@ def fixture_pd_incomplete(
     )
 
 
+# ## NUMPY MATRIX FIXTURES ## #
+@pytest.fixture(name="np_matrix_aggregation", scope="class")
+def fixture_np_matrix_aggregation(simple_np_int_translation: np.ndarray) -> NumpyMatrixResults:
+    """Generate a matrix, translation, and results"""
+    mat = np.array([
+        [4, 2, 3, 1, 1],
+        [2, 8, 3, 6, 6],
+        [5, 5, 6, 5, 9],
+        [4, 3, 3, 6, 8],
+        [8, 4, 8, 8, 1],
+    ])
+    expected_result = np.array([
+        [16,  6, 14],
+        [10,  6, 14],
+        [19, 11, 23],
+    ])
+    return NumpyMatrixResults(
+        mat=mat,
+        translation=simple_np_int_translation,
+        expected_result=expected_result,
+    )
+
+
+@pytest.fixture(name="np_matrix_aggregation2", scope="class")
+def fixture_np_matrix_aggregation2(np_matrix_aggregation: NumpyMatrixResults, simple_np_int_translation2: np.ndarray,) -> NumpyMatrixResults:
+    """Generate a matrix, translation, and results"""
+    expected_result = np.array([
+        [14,  6, 16],
+        [14,  6, 10],
+        [23, 11, 19],
+    ])
+    return NumpyMatrixResults(
+        mat=np_matrix_aggregation.mat,
+        translation=np_matrix_aggregation.translation,
+        col_translation=simple_np_int_translation2,
+        expected_result=expected_result,
+    )
+
+
+@pytest.fixture(name="np_matrix_split", scope="class")
+def fixture_np_matrix_split(np_matrix_aggregation: NumpyMatrixResults, simple_np_float_translation: np.ndarray,) -> NumpyMatrixResults:
+    """Generate a matrix, translation, and results"""
+    expected_result = np.array([
+        [9.6875, 11.625,  9.6875],
+        [16.875, 23.25, 16.875],
+        [9.6875, 11.625,  9.6875],
+    ])
+    return NumpyMatrixResults(
+        mat=np_matrix_aggregation.mat,
+        translation=simple_np_float_translation,
+        expected_result=expected_result,
+    )
+
+
 # # # TESTS # # #
 @pytest.mark.usefixtures(
     "np_vector_aggregation",
@@ -326,7 +425,7 @@ class TestNumpyVector:
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(self, np_incomplete: NumpyVectorResults, check_totals: bool):
         """Test for total checking with dropped demand"""
-        kwargs = np_incomplete.input_kwargs(check_shapes=True, check_totals=check_totals)
+        kwargs = np_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.numpy_vector_zone_translation(**kwargs)
             np.testing.assert_allclose(result, np_incomplete.expected_result)
@@ -348,7 +447,7 @@ class TestNumpyVector:
             msg = "was there a shape mismatch?"
 
         # Call with expected error
-        kwargs = np_vector_split.input_kwargs(check_shapes=check_shapes, check_totals=True)
+        kwargs = np_vector_split.input_kwargs(check_shapes=check_shapes)
         with pytest.raises(ValueError, match=msg):
             translation.numpy_vector_zone_translation(**(kwargs | {"vector": new_vector}))
 
@@ -370,7 +469,7 @@ class TestNumpyVector:
             msg = "was there a shape mismatch?"
 
         # Call with expected error
-        kwargs = np_vector_split.input_kwargs(check_shapes=check_shapes, check_totals=True)
+        kwargs = np_vector_split.input_kwargs(check_shapes=check_shapes)
         with pytest.raises(ValueError, match=msg):
             translation.numpy_vector_zone_translation(**(kwargs | {"translation": new_trans}))
 
@@ -382,7 +481,7 @@ class TestNumpyVector:
         """Test vector-like arrays (empty in 2nd dim)"""
         np_vector = request.getfixturevalue(np_vector_str)
         new_vector = np.expand_dims(np_vector.vector, 1)
-        kwargs = np_vector.input_kwargs(check_shapes=True, check_totals=True)
+        kwargs = np_vector.input_kwargs()
         result = translation.numpy_vector_zone_translation(**(kwargs | {"vector": new_vector}))
         np.testing.assert_allclose(result, np_vector.expected_result)
 
@@ -402,7 +501,7 @@ class TestNumpyVector:
         Also checks that totals are correctly checked.
         """
         np_vector = request.getfixturevalue(np_vector_str)
-        kwargs = np_vector.input_kwargs(check_shapes=True, check_totals=check_totals)
+        kwargs = np_vector.input_kwargs(check_totals=check_totals)
         result = translation.numpy_vector_zone_translation(**kwargs)
         np.testing.assert_allclose(result, np_vector.expected_result)
 
@@ -421,7 +520,9 @@ class TestPandasVector:
         kwargs = pd_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.pandas_vector_zone_translation(**kwargs)
-            pd.testing.assert_series_equal(result, pd_incomplete.expected_result, check_dtype=False)
+            pd.testing.assert_series_equal(
+                result, pd_incomplete.expected_result, check_dtype=False
+            )
         else:
             with pytest.raises(ValueError, match="Some values seem to have been dropped"):
                 translation.pandas_vector_zone_translation(**kwargs)
@@ -438,9 +539,7 @@ class TestPandasVector:
         kwargs = pd_vector_split.input_kwargs(check_totals=False)
         msg = "Some zones in `vector.index` are missing in `translation`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_vector_zone_translation(
-                **(kwargs | {"translation": new_trans})
-            )
+            translation.pandas_vector_zone_translation(**(kwargs | {"translation": new_trans}))
 
     def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised if from_unique_zones and the vector disagree"""
@@ -558,3 +657,30 @@ class TestPandasVector:
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
+
+
+@pytest.mark.usefixtures(
+    "np_matrix_aggregation",
+    "np_matrix_aggregation2",
+    "np_matrix_split",
+)
+class TestNumpyMatrix:
+    """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
+
+
+    @pytest.mark.parametrize(
+        "np_matrix_str",
+        ["np_matrix_aggregation", "np_matrix_aggregation2", "np_matrix_split"],
+    )
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_translation_correct(self, np_matrix_str: str, check_totals: bool, request,):
+        """Test translation works as expected
+
+        Tests the matrix aggregation, using 2 different translations, and
+        translation splitting.
+        """
+        np_mat = request.getfixturevalue(np_matrix_str)
+        result = translation.numpy_matrix_zone_translation(
+            **np_mat.input_kwargs(check_totals=check_totals)
+        )
+        np.testing.assert_allclose(result, np_mat.expected_result)

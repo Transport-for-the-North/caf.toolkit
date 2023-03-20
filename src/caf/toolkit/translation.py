@@ -209,7 +209,7 @@ def numpy_matrix_zone_translation(
     col_translation: np.ndarray = None,
     translation_dtype: np.dtype = None,
     check_shapes: bool = True,
-    check_totals: bool = False,
+    check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
 ) -> np.ndarray:
@@ -297,7 +297,7 @@ def numpy_matrix_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        translation_dtype = matrix.dtype
+        translation_dtype = np.find_common_type([matrix.dtype, translation.dtype], [])
     matrix = _convert_dtypes(
         arr=matrix,
         to_type=translation_dtype,
@@ -379,7 +379,7 @@ def numpy_vector_zone_translation(
     translation: np.ndarray,
     translation_dtype: np.dtype = None,
     check_shapes: bool = True,
-    check_totals: bool = False,
+    check_totals: bool = True,
 ) -> np.ndarray:
     """Efficiently translates a vector between index systems
 
@@ -508,7 +508,7 @@ def pandas_matrix_zone_translation(
     translation_dtype: np.dtype = None,
     matrix_infill: float = 0.0,
     translate_infill: float = 0.0,
-    check_totals: bool = False,
+    check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
 ) -> pd.DataFrame:
@@ -700,7 +700,7 @@ def pandas_vector_zone_translation(
     translation_dtype: np.dtype = None,
     vector_infill: float = 0.0,
     translate_infill: float = 0.0,
-    check_totals: bool = False,
+    check_totals: bool = True,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
     """Efficiently translates a pandas vector between index systems
