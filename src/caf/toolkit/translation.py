@@ -776,9 +776,8 @@ def pandas_vector_zone_translation(
     # Check the matrix and translation dtypes match
     if vector.index.dtype != translation[translation_from_col].dtype:
         raise ValueError(
-            f"The datatype of the vector index must be the same as the "
-            f"translation datatype in from_zone_col for the zone "
-            f"translation to work.\n"
+            "dtypes of `vector.index` and `translation` in `from_zone_col` "
+            "must match.\n"
             f"vector index data type: {vector.index.dtype}\n"
             f"translation[from_zone_col] data type: {translation[translation_from_col].dtype}"
         )
@@ -790,19 +789,19 @@ def pandas_vector_zone_translation(
     missing_rows = set(vector.index.to_list()) - set(from_unique_index)
     if len(missing_rows) > 0:
         warnings.warn(
-            f"Some zones in vector.index have not been defined in "
-            f"from_unique_zones. These zones will be dropped before "
+            f"Some zones in `vector.index` have not been defined in "
+            f"`from_unique_zones`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_rows)}"
         )
 
-    # Check all needed values are in from_zone_col zone col
+    # Check all needed values are in from_zone_col
     trans_from_zones = set(translation[translation_from_col].unique())
     missing_zones = set(from_unique_index) - trans_from_zones
     if len(missing_zones) != 0:
         warnings.warn(
-            f"Some zones in vector.index are missing in the translation. "
-            f"Infilling missing zones with translation infill.\n"
+            f"Some zones in `vector.index` are missing in `translation`. "
+            f"Infilling missing zones with `translation_infill`.\n"
             f"Missing zones count: {len(missing_zones)}"
         )
 

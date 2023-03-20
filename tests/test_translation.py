@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.translation module"""
+from __future__ import annotations
+
 # Built-Ins
+import copy
 import dataclasses
 
 from typing import Any
 from typing import Optional
 
-import pandas as pd
 
 # Third Party
 import pytest
 import numpy as np
+import pandas as pd
 
 
 # Local Imports
@@ -30,7 +33,7 @@ class NumpyVectorResults:
     vector: np.ndarray
     translation: np.ndarray
     expected_result: np.ndarray
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: Optional[type] = None
 
     def input_kwargs(self, check_shapes: bool, check_totals: bool) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
@@ -54,7 +57,7 @@ class PandasTranslation:
     translation_from_col: str = "from_zone_id"
     translation_to_col: str = "to_zone_id"
     translation_factors_col: str = "factors"
-    translation: pd.DataFrame = dataclasses.field(init=False)
+    df: pd.DataFrame = dataclasses.field(init=False)
     unique_from: list[Any] = dataclasses.field(init=False)
     unique_to: list[Any] = dataclasses.field(init=False)
 
@@ -67,23 +70,49 @@ class PandasTranslation:
         df.columns += 1
         df.index += 1
         df = df.reset_index()
-        self.translation = df.melt(
+        df = df.melt(
             id_vars=self.translation_from_col,
             value_name=self.translation_factors_col,
         )
+        df[self.translation_from_col] = df[self.translation_from_col].astype(np.int64)
+        df[self.translation_to_col] = df[self.translation_to_col].astype(np.int64)
+        self.df = df
 
         # Get the unique from / to lists
-        self.unique_from = self.translation[self.translation_from_col].unique().tolist()
-        self.unique_to = self.translation[self.translation_to_col].unique().tolist()
+        self.unique_from = self.df[self.translation_from_col].unique().tolist()
+        self.unique_to = self.df[self.translation_to_col].unique().tolist()
+
+    @property
+    def from_col(self) -> pd.Series:
+        """The data from the "from zone col" of the translation"""
+        return self.df[self.translation_from_col]
+
+    @from_col.setter
+    def from_col(self, value: pd.Series):
+        """Set the "factor zone col" data"""
+        self.df[self.translation_from_col] = value
+
+    @property
+    def factor_col(self) -> pd.Series:
+        """The data from the "to zone col" of the translation"""
+        return self.df[self.translation_factors_col]
+
+    @factor_col.setter
+    def factor_col(self, value: pd.Series):
+        """Set the "factor col" data"""
+        self.df[self.translation_factors_col] = value
 
     def to_kwargs(self) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
-            "translation": self.translation,
+            "translation": self.df,
             "translation_from_col": self.translation_from_col,
             "translation_to_col": self.translation_to_col,
             "translation_factors_col": self.translation_factors_col,
         }
+
+    def copy(self) -> PandasTranslation:
+        return copy.deepcopy(self)
 
 
 @dataclasses.dataclass
@@ -114,9 +143,9 @@ class PandasVectorResults:
 
     def input_kwargs(
         self,
-        check_totals: bool,
-        vector_infill: float,
-        translate_infill: float,
+        check_totals: bool = True,
+        vector_infill: float = 0,
+        translate_infill: float = 0,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
@@ -271,6 +300,19 @@ def fixture_pd_vector_split(
     )
 
 
+@pytest.fixture(name="pd_incomplete", scope="class")
+def fixture_pd_incomplete(
+    np_incomplete: NumpyVectorResults,
+    incomplete_pd_int_translation: PandasTranslation,
+) -> PandasVectorResults:
+    """Generate a splitting vector, translation, and results"""
+    return PandasVectorResults(
+        np_vector=np_incomplete.vector,
+        np_expected_result=np_incomplete.expected_result,
+        translation=incomplete_pd_int_translation,
+    )
+
+
 # # # TESTS # # #
 @pytest.mark.usefixtures(
     "np_vector_aggregation",
@@ -368,9 +410,120 @@ class TestNumpyVector:
 @pytest.mark.usefixtures(
     "pd_vector_aggregation",
     "pd_vector_split",
+    "pd_incomplete",
 )
 class TestPandasVector:
     """Tests for caf.toolkit.translation.pandas_vector_zone_translation"""
+
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_dropped_totals(self, pd_incomplete: PandasVectorResults, check_totals: bool):
+        """Test for total checking with dropped demand"""
+        kwargs = pd_incomplete.input_kwargs(check_totals=check_totals)
+        if not check_totals:
+            result = translation.pandas_vector_zone_translation(**kwargs)
+            pd.testing.assert_series_equal(result, pd_incomplete.expected_result, check_dtype=False)
+        else:
+            with pytest.raises(ValueError, match="Some values seem to have been dropped"):
+                translation.pandas_vector_zone_translation(**kwargs)
+
+    def test_missing_translation_zones(self, pd_vector_split: PandasVectorResults):
+        """Check a warning is raised with missing translation from values"""
+        # make the bad translation
+        new_trans = pd_vector_split.translation.df.copy()
+        from_col_name = pd_vector_split.translation.translation_from_col
+        from_3_mask = new_trans[from_col_name] == 3
+        new_trans = new_trans[~from_3_mask].copy()
+
+        # need to turn off to avoid error
+        kwargs = pd_vector_split.input_kwargs(check_totals=False)
+        msg = "Some zones in `vector.index` are missing in `translation`"
+        with pytest.warns(UserWarning, match=msg):
+            translation.pandas_vector_zone_translation(
+                **(kwargs | {"translation": new_trans})
+            )
+
+    def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
+        """Check a warning is raised if from_unique_zones and the vector disagree"""
+        new_from_unq = pd_vector_split.from_unique_index[:-1]
+        msg = "zones in `vector.index` have not been defined in `from_unique_zones`"
+        with pytest.warns(UserWarning, match=msg):
+            translation.pandas_vector_zone_translation(
+                **(pd_vector_split.input_kwargs() | {"from_unique_index": new_from_unq})
+            )
+
+    @pytest.mark.parametrize("which", ["from", "to", "both"])
+    def test_non_unique_index(self, pd_vector_split: PandasVectorResults, which: str):
+        """Check that an error is thrown when bad unique index args given"""
+        # Build bad arguments
+        new_from_unq = pd_vector_split.from_unique_index * 2
+        new_to_unq = pd_vector_split.to_unique_index * 2
+
+        if which == "from":
+            new_kwargs = {"from_unique_index": new_from_unq}
+            msg = "Duplicate values found in from_unique_index"
+        elif which == "to":
+            new_kwargs = {"to_unique_index": new_to_unq}
+            msg = "Duplicate values found in to_unique_index"
+        elif which == "both":
+            new_kwargs = {
+                "from_unique_index": new_from_unq,
+                "to_unique_index": new_to_unq,
+            }
+            msg = "Duplicate values found in from_unique_index"
+        else:
+            raise ValueError("This shouldn't happen! Debug code.")
+
+        # Run with errors
+        with pytest.raises(ValueError, match=msg):
+            translation.pandas_vector_zone_translation(
+                **(pd_vector_split.input_kwargs() | new_kwargs)
+            )
+
+    @pytest.mark.parametrize("dtype1", [np.float64, np.int64, str])
+    @pytest.mark.parametrize("dtype2", [np.float64, np.int64, str])
+    def test_col_dtypes(
+        self,
+        pd_vector_split: PandasVectorResults,
+        dtype1: type,
+        dtype2: type,
+    ):
+        """Check that correct errors are thrown when types don't match"""
+        # Cast types
+        new_vector = pd_vector_split.vector.copy()
+        new_vector.index = new_vector.index.astype(dtype1)
+        new_trans = pd_vector_split.translation.copy()
+        new_trans.from_col = new_trans.from_col.astype(dtype2)
+        new_kwargs = {"vector": new_vector, "translation": new_trans.df}
+
+        if dtype1 == str and dtype2 == str:
+            # Pandas handles strings weirdly (as objects), making this hard to test
+            pass
+        elif dtype1 == dtype2:
+            # Should run normally with matchin dtypes
+            result = translation.pandas_vector_zone_translation(
+                **(pd_vector_split.input_kwargs() | new_kwargs)
+            )
+            pd.testing.assert_series_equal(
+                result,
+                pd_vector_split.expected_result,
+                check_names=False,
+            )
+        else:
+            # Only throw error when not matching types
+            msg = "dtypes of `vector.index` and `translation` in `from_zone_col` must match."
+            with pytest.raises(ValueError, match=msg):
+                translation.pandas_vector_zone_translation(
+                    **(pd_vector_split.input_kwargs() | new_kwargs)
+                )
+
+    def test_non_vector(self, pd_vector_split: PandasVectorResults):
+        """Test that an error is thrown when a non-vector is passed in"""
+        new_vector = pd.DataFrame(pd_vector_split.vector)
+        new_vector[1] = new_vector[0].copy()
+        with pytest.raises(ValueError, match="must be a pandas.Series"):
+            translation.pandas_vector_zone_translation(
+                **(pd_vector_split.input_kwargs() | {"vector": new_vector})
+            )
 
     @pytest.mark.parametrize(
         "pd_vector_str",
@@ -380,9 +533,8 @@ class TestPandasVector:
         """Test vector-like arrays (empty in 2nd dim)"""
         pd_vector = request.getfixturevalue(pd_vector_str)
         new_vector = pd.DataFrame(pd_vector.vector)
-        kwargs = pd_vector.input_kwargs(check_totals=True, vector_infill=0, translate_infill=0)
         result = translation.pandas_vector_zone_translation(
-            **(kwargs | {"vector": new_vector})
+            **(pd_vector.input_kwargs() | {"vector": new_vector})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result, check_names=False)
 
@@ -402,8 +554,7 @@ class TestPandasVector:
         Also checks that totals are correctly checked.
         """
         pd_vector = request.getfixturevalue(pd_vector_str)
-        kwargs = pd_vector.input_kwargs(
-            check_totals=check_totals, vector_infill=0, translate_infill=0
+        result = translation.pandas_vector_zone_translation(
+            **pd_vector.input_kwargs(check_totals=check_totals)
         )
-        result = translation.pandas_vector_zone_translation(**kwargs)
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
