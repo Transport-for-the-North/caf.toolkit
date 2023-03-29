@@ -150,8 +150,7 @@ def _check_matrix_translation_shapes(
     n_zones_in, _ = row_translation.shape
     if n_zones_in != mat_rows:
         raise ValueError(
-            f"The given translation does not have the correct number of "
-            f"rows. Translation rows needs to match matrix rows for the "
+            f"Translation rows needs to match matrix rows for the "
             f"numpy zone translations to work.\n"
             f"Given matrix shape: {matrix.shape}\n"
             f"Given translation shape: {row_translation.shape}"
@@ -297,7 +296,8 @@ def numpy_matrix_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        translation_dtype = np.find_common_type([matrix.dtype, translation.dtype], [])
+        dtypes = [matrix.dtype, row_translation.dtype, col_translation.dtype]
+        translation_dtype = np.find_common_type(dtypes, [])
     matrix = _convert_dtypes(
         arr=matrix,
         to_type=translation_dtype,

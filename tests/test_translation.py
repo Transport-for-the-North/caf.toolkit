@@ -315,8 +315,9 @@ def fixture_np_translation_dtype(simple_np_int_translation: np.ndarray) -> Numpy
         vector=np.array([8.1, 2.2, 8.3, 8.4, 5.5]),
         translation=simple_np_int_translation,
         translation_dtype=np.int32,
-        expected_result=np.array([10, 8, 11]),
+        expected_result=np.array([10, 8, 13]),
     )
+
 
 # ## PANDAS VECTOR FIXTURES ## #
 @pytest.fixture(name="pd_vector_aggregation", scope="class")
@@ -412,6 +413,50 @@ def fixture_np_matrix_split(np_matrix_aggregation: NumpyMatrixResults, simple_np
     )
 
 
+@pytest.fixture(name="np_matrix_dtype", scope="class")
+def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatrixResults:
+    """Generate an incomplete vector, translation, and results
+
+    Incomplete meaning some demand will be dropped during the translation
+    """
+    mat = np.array([
+        [4.2, 2.4, 3.6, 1.8, 1.1],
+        [2.2, 8.4, 3.6, 6.8, 6.1],
+        [5.2, 5.4, 6.6, 5.8, 9.1],
+        [4.2, 3.4, 3.6, 6.8, 8.1],
+        [8.2, 4.4, 8.6, 8.8, 1.1],
+    ])
+    expected_result = np.array([
+        [16,  6, 14],
+        [10,  6, 14],
+        [19, 11, 23],
+    ])
+    return NumpyMatrixResults(
+        mat=mat,
+        translation=simple_np_int_translation,
+        translation_dtype=np.int32,
+        expected_result=expected_result,
+    )
+
+
+@pytest.fixture(name="np_matrix_incomplete", scope="class")
+def fixture_np_matrix_incomplete(incomplete_np_int_translation: np.ndarray, np_matrix_aggregation: NumpyMatrixResults) -> NumpyMatrixResults:
+    """Generate an incomplete vector, translation, and results
+
+    Incomplete meaning some demand will be dropped during the translation
+    """
+    expected_result = np.array([
+        [16,  6, 11.2],
+        [10,  6, 10.4],
+        [14.2, 7.8, 15.96],
+    ])
+    return NumpyMatrixResults(
+        mat=np_matrix_aggregation.mat,
+        translation=incomplete_np_int_translation,
+        expected_result=expected_result,
+    )
+
+
 # # # TESTS # # #
 @pytest.mark.usefixtures(
     "np_vector_aggregation",
@@ -475,7 +520,7 @@ class TestNumpyVector:
 
     @pytest.mark.parametrize(
         "np_vector_str",
-        ["np_vector_aggregation", "np_vector_split"],
+        ["np_vector_aggregation", "np_vector_split", "np_translation_dtype"],
     )
     def test_vector_like(self, np_vector_str: str, request):
         """Test vector-like arrays (empty in 2nd dim)"""
@@ -663,14 +708,63 @@ class TestPandasVector:
     "np_matrix_aggregation",
     "np_matrix_aggregation2",
     "np_matrix_split",
+    "np_matrix_dtype",
+    "np_matrix_incomplete",
 )
 class TestNumpyMatrix:
     """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
 
+    def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults):
+        """Check an error is raised with a non-square matrix given"""
+        col_trans = np_matrix_aggregation2.col_translation
+        col_trans = np.delete(col_trans, 0, axis=0)
+        msg = "Row and column translations are not the same shape"
+
+        with pytest.raises(ValueError, match=msg):
+            translation.numpy_matrix_zone_translation(
+                **(np_matrix_aggregation2.input_kwargs() | {"col_translation": col_trans})
+            )
+
+    def test_bad_translation(self, np_matrix_aggregation2: NumpyMatrixResults):
+        """Check an error is raised with a non-square matrix given"""
+        new_trans = np_matrix_aggregation2.translation
+        col_trans = np_matrix_aggregation2.col_translation
+        new_kwargs = {
+            "translation": np.delete(new_trans, 0, axis=0),
+            "col_translation": np.delete(col_trans, 0, axis=0)
+        }
+        msg = "Translation rows needs to match matrix rows"
+
+        with pytest.raises(ValueError, match=msg):
+            translation.numpy_matrix_zone_translation(
+                **(np_matrix_aggregation2.input_kwargs() | new_kwargs)
+            )
+
+    def test_bad_matrix(self, np_matrix_split: NumpyMatrixResults):
+        """Check an error is raised with a non-square matrix given"""
+        new_mat = np_matrix_split.mat
+        new_mat = np.delete(new_mat, 0, axis=0)
+        msg = "given matrix is not square"
+
+        with pytest.raises(ValueError, match=msg):
+            translation.numpy_matrix_zone_translation(
+                **(np_matrix_split.input_kwargs() | {"matrix": new_mat})
+            )
+
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_dropped_totals(self, np_matrix_incomplete: NumpyMatrixResults, check_totals: bool):
+        """Test for total checking with dropped demand"""
+        kwargs = np_matrix_incomplete.input_kwargs(check_totals=check_totals)
+        if not check_totals:
+            result = translation.numpy_matrix_zone_translation(**kwargs)
+            np.testing.assert_allclose(result, np_matrix_incomplete.expected_result)
+        else:
+            with pytest.raises(ValueError, match="Some values seem to have been dropped"):
+                translation.numpy_matrix_zone_translation(**kwargs)
 
     @pytest.mark.parametrize(
         "np_matrix_str",
-        ["np_matrix_aggregation", "np_matrix_aggregation2", "np_matrix_split"],
+        ["np_matrix_aggregation", "np_matrix_aggregation2", "np_matrix_split", "np_matrix_dtype"],
     )
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(self, np_matrix_str: str, check_totals: bool, request,):
