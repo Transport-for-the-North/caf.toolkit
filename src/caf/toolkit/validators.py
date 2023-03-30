@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 # # # FUNCTIONS # # #
 # TODO(BT): Can this take a Collection instead?
 def unique_list(unique_vals: list[Any], name: str = "unique_zones") -> None:
-    """Validate that a list of unique values is unique
+    """Validate that a list of unique values is unique.
 
     Parameters
     ----------

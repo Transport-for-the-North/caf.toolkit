@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tools to convert numpy/pandas vectors/matrices between different index systems
+"""Tools to convert numpy/pandas vectors/matrices between different index systems.
 
 In transport, these tools are very useful for translating data between different
 zoning systems.
@@ -12,6 +12,7 @@ import warnings
 
 from typing import Any
 from typing import TypeVar
+from typing import Optional
 
 # Third Party
 import numpy as np
@@ -40,7 +41,7 @@ def _lower_memory_row_translation(
     vector_chunk: np.ndarray,
     row_translation: np.ndarray,
 ) -> np.ndarray:
-    """Internal MP functionality of _lower_memory_matrix_zone_translation()"""
+    """Run internal functionality of _lower_memory_matrix_zone_translation()."""
     # Translate the rows
     row_translated = list()
     for vector in np.hsplit(vector_chunk, vector_chunk.shape[1]):
@@ -57,7 +58,7 @@ def _lower_memory_col_translation(
     vector_chunk: np.ndarray,
     col_translation: np.ndarray,
 ) -> np.ndarray:
-    """Internal MP functionality of _lower_memory_matrix_zone_translation()"""
+    """Run internal functionality of _lower_memory_matrix_zone_translation()."""
     # Translate the columns
     col_translated = list()
     for vector in np.vsplit(vector_chunk, vector_chunk.shape[0]):
@@ -83,7 +84,7 @@ def _lower_memory_matrix_zone_translation(
     kwargs = list()
     n_splits = matrix.shape[1] / chunk_size
     n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(matrix, n_splits, axis=1):
+    for vector_chunk in np.array_split(matrix, n_splits, axis=1):   # type: ignore
         kwargs.append(
             {
                 "vector_chunk": vector_chunk,
@@ -104,7 +105,7 @@ def _lower_memory_matrix_zone_translation(
     kwargs = list()
     n_splits = row_translated.shape[0] / chunk_size
     n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(row_translated, n_splits, axis=0):
+    for vector_chunk in np.array_split(row_translated, n_splits, axis=0):   # type: ignore
         kwargs.append(
             {
                 "vector_chunk": vector_chunk,
@@ -164,7 +165,7 @@ def _convert_dtypes(
     to_type: np.dtype,
     arr_name: str = "arr",
 ) -> np.ndarray:
-    """Convert a numpy array to a different datatype"""
+    """Convert a numpy array to a different datatype."""
     # Shortcut if already matching
     if to_type == arr.dtype:
         return arr
@@ -173,6 +174,8 @@ def _convert_dtypes(
     mat_max = np.max(arr)
     mat_min = np.min(arr)
 
+    dtype_max: np.floating | int
+    dtype_min: np.floating | int
     if np.issubdtype(to_type, np.floating):
         dtype_max = np.finfo(to_type).max
         dtype_min = np.finfo(to_type).min
@@ -205,14 +208,14 @@ def _convert_dtypes(
 def numpy_matrix_zone_translation(
     matrix: np.ndarray,
     translation: np.ndarray,
-    col_translation: np.ndarray = None,
-    translation_dtype: np.dtype = None,
+    col_translation: Optional[np.ndarray] = None,
+    translation_dtype: Optional[np.dtype] = None,
     check_shapes: bool = True,
     check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
 ) -> np.ndarray:
-    """Efficiently translates a matrix between index systems
+    """Efficiently translates a matrix between index systems.
 
     Uses the given translation matrices to translate a matrix of values
     from one index system to another. This has been written in pure numpy
@@ -377,11 +380,11 @@ def numpy_matrix_zone_translation(
 def numpy_vector_zone_translation(
     vector: np.ndarray,
     translation: np.ndarray,
-    translation_dtype: np.dtype = None,
+    translation_dtype: Optional[np.dtype] = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
-    """Efficiently translates a vector between index systems
+    """Efficiently translates a vector between index systems.
 
     Uses the given translation matrix to translate a vector of values from one
     index system to another. This has been written in pure numpy operations.
@@ -505,14 +508,14 @@ def pandas_matrix_zone_translation(
     to_unique_index: list[Any],
     translation: pd.DataFrame,
     col_translation: pd.DataFrame = None,
-    translation_dtype: np.dtype = None,
+    translation_dtype: Optional[np.dtype] = None,
     matrix_infill: float = 0.0,
     translate_infill: float = 0.0,
     check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
 ) -> pd.DataFrame:
-    """Efficiently translates a pandas matrix between index systems
+    """Efficiently translates a pandas matrix between index systems.
 
     Parameters
     ----------
@@ -697,13 +700,13 @@ def pandas_vector_zone_translation(
     translation_factors_col: str,
     from_unique_index: list[Any],
     to_unique_index: list[Any],
-    translation_dtype: np.dtype = None,
+    translation_dtype: Optional[np.dtype] = None,
     vector_infill: float = 0.0,
     translate_infill: float = 0.0,
     check_totals: bool = True,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
-    """Efficiently translates a pandas vector between index systems
+    """Efficiently translates a pandas vector between index systems.
 
     Internally, checks and converts the pandas inputs into numpy arrays
     and calls `numpy_vector_zone_translation()`. The final output is then

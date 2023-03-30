@@ -141,7 +141,7 @@ def get_missing_items(list_a: list[_T], list_b: list[_T]) -> tuple[list[_T], lis
 
 # TODO(BT): Can this take a Collection instead?
 def is_unique_list(unique_vals: list[Any]) -> bool:
-    """Check whether a list contains unique values only
+    """Check whether a list contains unique values only.
 
     Parameters
     ----------
