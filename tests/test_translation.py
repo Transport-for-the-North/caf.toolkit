@@ -363,18 +363,22 @@ def fixture_pd_incomplete(
 @pytest.fixture(name="np_matrix_aggregation", scope="class")
 def fixture_np_matrix_aggregation(simple_np_int_translation: np.ndarray) -> NumpyMatrixResults:
     """Generate a matrix, translation, and results"""
-    mat = np.array([
-        [4, 2, 3, 1, 1],
-        [2, 8, 3, 6, 6],
-        [5, 5, 6, 5, 9],
-        [4, 3, 3, 6, 8],
-        [8, 4, 8, 8, 1],
-    ])
-    expected_result = np.array([
-        [16,  6, 14],
-        [10,  6, 14],
-        [19, 11, 23],
-    ])
+    mat = np.array(
+        [
+            [4, 2, 3, 1, 1],
+            [2, 8, 3, 6, 6],
+            [5, 5, 6, 5, 9],
+            [4, 3, 3, 6, 8],
+            [8, 4, 8, 8, 1],
+        ]
+    )
+    expected_result = np.array(
+        [
+            [16, 6, 14],
+            [10, 6, 14],
+            [19, 11, 23],
+        ]
+    )
     return NumpyMatrixResults(
         mat=mat,
         translation=simple_np_int_translation,
@@ -383,13 +387,18 @@ def fixture_np_matrix_aggregation(simple_np_int_translation: np.ndarray) -> Nump
 
 
 @pytest.fixture(name="np_matrix_aggregation2", scope="class")
-def fixture_np_matrix_aggregation2(np_matrix_aggregation: NumpyMatrixResults, simple_np_int_translation2: np.ndarray,) -> NumpyMatrixResults:
+def fixture_np_matrix_aggregation2(
+    np_matrix_aggregation: NumpyMatrixResults,
+    simple_np_int_translation2: np.ndarray,
+) -> NumpyMatrixResults:
     """Generate a matrix, translation, and results"""
-    expected_result = np.array([
-        [14,  6, 16],
-        [14,  6, 10],
-        [23, 11, 19],
-    ])
+    expected_result = np.array(
+        [
+            [14, 6, 16],
+            [14, 6, 10],
+            [23, 11, 19],
+        ]
+    )
     return NumpyMatrixResults(
         mat=np_matrix_aggregation.mat,
         translation=np_matrix_aggregation.translation,
@@ -399,13 +408,18 @@ def fixture_np_matrix_aggregation2(np_matrix_aggregation: NumpyMatrixResults, si
 
 
 @pytest.fixture(name="np_matrix_split", scope="class")
-def fixture_np_matrix_split(np_matrix_aggregation: NumpyMatrixResults, simple_np_float_translation: np.ndarray,) -> NumpyMatrixResults:
+def fixture_np_matrix_split(
+    np_matrix_aggregation: NumpyMatrixResults,
+    simple_np_float_translation: np.ndarray,
+) -> NumpyMatrixResults:
     """Generate a matrix, translation, and results"""
-    expected_result = np.array([
-        [9.6875, 11.625,  9.6875],
-        [16.875, 23.25, 16.875],
-        [9.6875, 11.625,  9.6875],
-    ])
+    expected_result = np.array(
+        [
+            [9.6875, 11.625, 9.6875],
+            [16.875, 23.25, 16.875],
+            [9.6875, 11.625, 9.6875],
+        ]
+    )
     return NumpyMatrixResults(
         mat=np_matrix_aggregation.mat,
         translation=simple_np_float_translation,
@@ -419,18 +433,22 @@ def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatri
 
     Incomplete meaning some demand will be dropped during the translation
     """
-    mat = np.array([
-        [4.2, 2.4, 3.6, 1.8, 1.1],
-        [2.2, 8.4, 3.6, 6.8, 6.1],
-        [5.2, 5.4, 6.6, 5.8, 9.1],
-        [4.2, 3.4, 3.6, 6.8, 8.1],
-        [8.2, 4.4, 8.6, 8.8, 1.1],
-    ])
-    expected_result = np.array([
-        [16,  6, 14],
-        [10,  6, 14],
-        [19, 11, 23],
-    ])
+    mat = np.array(
+        [
+            [4.2, 2.4, 3.6, 1.8, 1.1],
+            [2.2, 8.4, 3.6, 6.8, 6.1],
+            [5.2, 5.4, 6.6, 5.8, 9.1],
+            [4.2, 3.4, 3.6, 6.8, 8.1],
+            [8.2, 4.4, 8.6, 8.8, 1.1],
+        ]
+    )
+    expected_result = np.array(
+        [
+            [16, 6, 14],
+            [10, 6, 14],
+            [19, 11, 23],
+        ]
+    )
     return NumpyMatrixResults(
         mat=mat,
         translation=simple_np_int_translation,
@@ -440,16 +458,20 @@ def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatri
 
 
 @pytest.fixture(name="np_matrix_incomplete", scope="class")
-def fixture_np_matrix_incomplete(incomplete_np_int_translation: np.ndarray, np_matrix_aggregation: NumpyMatrixResults) -> NumpyMatrixResults:
+def fixture_np_matrix_incomplete(
+    incomplete_np_int_translation: np.ndarray, np_matrix_aggregation: NumpyMatrixResults
+) -> NumpyMatrixResults:
     """Generate an incomplete vector, translation, and results
 
     Incomplete meaning some demand will be dropped during the translation
     """
-    expected_result = np.array([
-        [16,  6, 11.2],
-        [10,  6, 10.4],
-        [14.2, 7.8, 15.96],
-    ])
+    expected_result = np.array(
+        [
+            [16, 6, 11.2],
+            [10, 6, 10.4],
+            [14.2, 7.8, 15.96],
+        ]
+    )
     return NumpyMatrixResults(
         mat=np_matrix_aggregation.mat,
         translation=incomplete_np_int_translation,
@@ -714,6 +736,9 @@ class TestPandasVector:
 class TestNumpyMatrix:
     """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
 
+    # TODO(BT): Test forcing slower method!
+    # Can't test running out of memory on GitHub - might write test though
+
     def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults):
         """Check an error is raised with a non-square matrix given"""
         col_trans = np_matrix_aggregation2.col_translation
@@ -731,7 +756,7 @@ class TestNumpyMatrix:
         col_trans = np_matrix_aggregation2.col_translation
         new_kwargs = {
             "translation": np.delete(new_trans, 0, axis=0),
-            "col_translation": np.delete(col_trans, 0, axis=0)
+            "col_translation": np.delete(col_trans, 0, axis=0),
         }
         msg = "Translation rows needs to match matrix rows"
 
@@ -752,7 +777,9 @@ class TestNumpyMatrix:
             )
 
     @pytest.mark.parametrize("check_totals", [True, False])
-    def test_dropped_totals(self, np_matrix_incomplete: NumpyMatrixResults, check_totals: bool):
+    def test_dropped_totals(
+        self, np_matrix_incomplete: NumpyMatrixResults, check_totals: bool
+    ):
         """Test for total checking with dropped demand"""
         kwargs = np_matrix_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
@@ -764,10 +791,20 @@ class TestNumpyMatrix:
 
     @pytest.mark.parametrize(
         "np_matrix_str",
-        ["np_matrix_aggregation", "np_matrix_aggregation2", "np_matrix_split", "np_matrix_dtype"],
+        [
+            "np_matrix_aggregation",
+            "np_matrix_aggregation2",
+            "np_matrix_split",
+            "np_matrix_dtype",
+        ],
     )
     @pytest.mark.parametrize("check_totals", [True, False])
-    def test_translation_correct(self, np_matrix_str: str, check_totals: bool, request,):
+    def test_translation_correct(
+        self,
+        np_matrix_str: str,
+        check_totals: bool,
+        request,
+    ):
         """Test translation works as expected
 
         Tests the matrix aggregation, using 2 different translations, and
