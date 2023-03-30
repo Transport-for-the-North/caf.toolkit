@@ -84,7 +84,7 @@ def _lower_memory_matrix_zone_translation(
     kwargs = list()
     n_splits = matrix.shape[1] / chunk_size
     n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(matrix, n_splits, axis=1):   # type: ignore
+    for vector_chunk in np.array_split(matrix, n_splits, axis=1):  # type: ignore
         kwargs.append(
             {
                 "vector_chunk": vector_chunk,
@@ -105,7 +105,7 @@ def _lower_memory_matrix_zone_translation(
     kwargs = list()
     n_splits = row_translated.shape[0] / chunk_size
     n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(row_translated, n_splits, axis=0):   # type: ignore
+    for vector_chunk in np.array_split(row_translated, n_splits, axis=0):  # type: ignore
         kwargs.append(
             {
                 "vector_chunk": vector_chunk,
