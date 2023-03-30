@@ -214,6 +214,7 @@ def numpy_matrix_zone_translation(
     check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
+    _force_slow: bool = False,
 ) -> np.ndarray:
     """Efficiently translates a matrix between index systems.
 
