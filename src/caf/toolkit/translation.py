@@ -356,7 +356,8 @@ def numpy_matrix_zone_translation(
     if not_enough_memory:
         warnings.warn(
             "Ran out of memory during translation. Falling back to a slower, "
-            "more memory efficient method."
+            "more memory efficient method.",
+            category=RuntimeWarning,
         )
         translated_matrix = _lower_memory_matrix_zone_translation(
             matrix=matrix,
@@ -521,6 +522,7 @@ def pandas_matrix_zone_translation(
     check_totals: bool = True,
     slow_fallback: bool = True,
     chunk_size: int = 100,
+    _force_slow: bool = False,
 ) -> pd.DataFrame:
     """Efficiently translates a pandas matrix between index systems.
 
@@ -609,18 +611,16 @@ def pandas_matrix_zone_translation(
     # Check the matrix and translation dtypes match
     if matrix.index.dtype != row_translation[translation_from_col].dtype:
         raise ValueError(
-            f"The datatype of the matrix index must be the same as the "
-            f"datatype of the row translation in translation_from_col for "
-            f"the zone translation to work.\n"
+            "dtypes of `matrix.index` and `translation` in `from_zone_col` "
+            "must match.\n"
             f"Matrix index data type: {matrix.index.dtype}\n"
             f"Row Translation data type: {row_translation[translation_from_col].dtype}"
         )
 
     if matrix.columns.dtype != col_translation[translation_from_col].dtype:
         raise ValueError(
-            f"The datatype of the matrix columns must be the same as the "
-            f"datatype of the column translation in translation_from_col for "
-            f"the zone translation to work.\n"
+            "dtypes of `matrix.columns` and `col_translation` in `from_zone_col` "
+            "must match.\n"
             f"Matrix column Dtype: {matrix.columns.dtype}\n"
             f"Col Translation data type: {col_translation[translation_from_col].dtype}"
         )
@@ -632,8 +632,8 @@ def pandas_matrix_zone_translation(
     missing_rows = set(matrix.index.to_list()) - set(from_unique_index)
     if len(missing_rows) > 0:
         warnings.warn(
-            f"There are some zones in matrix.index that have not been "
-            f"defined in from_unique_zones. These zones will be dropped "
+            f"Some zones in `matrix.index` have not been defined in "
+            f"`from_unique_zones`. These zones will be dropped "
             f"before the translation!\n"
             f"Additional rows count: {len(missing_rows)}"
         )
@@ -641,8 +641,8 @@ def pandas_matrix_zone_translation(
     missing_cols = set(matrix.columns.to_list()) - set(from_unique_index)
     if len(missing_cols) > 0:
         warnings.warn(
-            f"There are some zones in matrix.columns that have not been "
-            f"defined in from_unique_zones. These zones will be dropped "
+            f"Some zones in `matrix.columns` have not been defined in "
+            f"`from_unique_zones`. These zones will be dropped "
             f"before the translation!\n"
             f"Additional cols count: {len(missing_cols)}"
         )
@@ -659,19 +659,15 @@ def pandas_matrix_zone_translation(
         infill=translate_infill,
     )
 
-    # Can speed up with translation is not None - row and col translations are same
-    if translation is not None:
-        col_translation = row_translation.copy()
-    else:
-        col_translation = pd_utils.long_to_wide_infill(
-            df=col_translation,
-            index_col=translation_from_col,
-            columns_col=translation_to_col,
-            values_col=translation_factors_col,
-            index_vals=from_unique_index,
-            column_vals=to_unique_index,
-            infill=translate_infill,
-        )
+    col_translation = pd_utils.long_to_wide_infill(
+        df=col_translation,
+        index_col=translation_from_col,
+        columns_col=translation_to_col,
+        values_col=translation_factors_col,
+        index_vals=from_unique_index,
+        column_vals=to_unique_index,
+        infill=translate_infill,
+    )
 
     # Make sure all zones are in the matrix and infill 0s
     matrix = matrix.reindex(
@@ -689,6 +685,7 @@ def pandas_matrix_zone_translation(
         check_totals=check_totals,
         slow_fallback=slow_fallback,
         chunk_size=chunk_size,
+        _force_slow=_force_slow,
     )
 
     # Stick into pandas
