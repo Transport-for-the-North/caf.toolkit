@@ -5,6 +5,7 @@ Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
 from typing import Any
+from typing import TypeVar
 from typing import Iterable
 
 # Third Party
@@ -15,6 +16,7 @@ from typing import Iterable
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
+_T = TypeVar("_T")
 
 # # # CLASSES # # #
 
@@ -109,3 +111,47 @@ def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
         except ValueError:
             return False
     return not unmatched
+
+
+def get_missing_items(list_a: list[_T], list_b: list[_T]) -> tuple[list[_T], list[_T]]:
+    """Get a list of the items in each list, but not the other.
+
+    Parameters
+    ----------
+    list_a:
+        The first list to check.
+
+    list_b
+        The second list to check.
+
+    Returns
+    -------
+    a_not_b:
+        A list of the items in `list_a` but not `list_b`.
+
+    b_not_a:
+        A list of the items in `list_b` but not `list_a`.
+    """
+    set_a = set(list_a)
+    set_b = set(list_b)
+    a_not_b = set_a - set_b
+    b_not_a = set_b - set_a
+    return list(a_not_b), list(b_not_a)
+
+
+# TODO(BT): Can this take a Collection instead?
+def is_unique_list(unique_vals: list[Any]) -> bool:
+    """Check whether a list contains unique values only.
+
+    Parameters
+    ----------
+    unique_vals:
+        The list of unique values to validate.
+
+    Returns
+    -------
+    is_unique:
+        True if the list does not contain any duplicates. Otherwise False.
+
+    """
+    return len(unique_vals) == len(set(unique_vals))
