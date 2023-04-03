@@ -66,6 +66,7 @@ class NumpyMatrixResults:
         check_shapes: bool = True,
         check_totals: bool = True,
         force_slow: bool = False,
+        **kwargs
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
@@ -76,7 +77,7 @@ class NumpyMatrixResults:
             "check_shapes": check_shapes,
             "check_totals": check_totals,
             "_force_slow": force_slow,
-        }
+        } | kwargs
 
 
 @dataclasses.dataclass
@@ -800,12 +801,10 @@ class TestNumpyMatrix:
             "np_matrix_dtype",
         ],
     )
-    @pytest.mark.parametrize("check_totals", [True, False])
     @pytest.mark.parametrize("force_slow", [True, False])
-    def test_translation_correct(
+    def test_slow_translation(
         self,
         np_matrix_str: str,
-        check_totals: bool,
         force_slow: bool,
         request,
     ):
@@ -816,6 +815,34 @@ class TestNumpyMatrix:
         """
         np_mat = request.getfixturevalue(np_matrix_str)
         result = translation.numpy_matrix_zone_translation(
-            **np_mat.input_kwargs(check_totals=check_totals, force_slow=force_slow)
+            **np_mat.input_kwargs(force_slow=force_slow, chunk_size=2)
+        )
+        np.testing.assert_allclose(result, np_mat.expected_result)
+
+
+    @pytest.mark.parametrize(
+        "np_matrix_str",
+        [
+            "np_matrix_aggregation",
+            "np_matrix_aggregation2",
+            "np_matrix_split",
+            "np_matrix_dtype",
+        ],
+    )
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_translation_correct(
+        self,
+        np_matrix_str: str,
+        check_totals: bool,
+        request,
+    ):
+        """Test translation works as expected
+
+        Tests the matrix aggregation, using 2 different translations, and
+        translation splitting.
+        """
+        np_mat = request.getfixturevalue(np_matrix_str)
+        result = translation.numpy_matrix_zone_translation(
+            **np_mat.input_kwargs(check_totals=check_totals)
         )
         np.testing.assert_allclose(result, np_mat.expected_result)

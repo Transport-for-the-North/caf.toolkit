@@ -290,6 +290,8 @@ def numpy_matrix_zone_translation(
     if col_translation is None:
         col_translation = translation.copy()
 
+    slow_fallback = True if _force_slow else slow_fallback
+
     # ## OPTIONALLY CHECK INPUT SHAPES ## #
     if check_shapes:
         _check_matrix_translation_shapes(
@@ -325,6 +327,10 @@ def numpy_matrix_zone_translation(
 
     # If matrix is big enough, we might run out of memory
     try:
+        # Force except
+        if _force_slow:
+            raise MemoryError
+
         # Translate rows
         mult_shape = (n_in, n_in, n_out)
         expanded_rows = np.broadcast_to(np.expand_dims(matrix, axis=2), mult_shape)
