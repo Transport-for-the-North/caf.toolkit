@@ -608,6 +608,21 @@ def pandas_matrix_zone_translation(
     if col_translation is None:
         col_translation = translation.copy()
 
+    # Make sure columns exist in the translations
+    columns= [translation_from_col, translation_to_col, translation_factors_col]
+    row_translation = pd_utils.reindex_cols(
+        df=row_translation,
+        columns=columns,
+        throw_error=True,
+        dataframe_name="row_translation"
+    )
+    col_translation = pd_utils.reindex_cols(
+        df=col_translation,
+        columns=columns,
+        throw_error=True,
+        dataframe_name="col_translation"
+    )
+
     # Check the matrix and translation dtypes match
     if matrix.index.dtype != row_translation[translation_from_col].dtype:
         raise ValueError(
