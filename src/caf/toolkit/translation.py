@@ -97,6 +97,7 @@ def _lower_memory_matrix_zone_translation(
         kwarg_list=kwargs,
         process_count=process_count,
         in_order=True,
+        pbar_kwargs={"desc": "Translating rows"},
     )
 
     row_translated = np.vstack(row_translated).T
@@ -118,6 +119,7 @@ def _lower_memory_matrix_zone_translation(
         kwarg_list=kwargs,
         process_count=process_count,
         in_order=True,
+        pbar_kwargs={"desc": "Translating columns"},
     )
 
     return np.vstack(full_translated)
@@ -611,10 +613,16 @@ def pandas_matrix_zone_translation(
     # Make sure columns exist in the translations
     columns = [translation_from_col, translation_to_col, translation_factors_col]
     row_translation = pd_utils.reindex_cols(
-        df=row_translation, columns=columns, throw_error=True, dataframe_name="row_translation"
+        df=row_translation,
+        columns=columns,
+        throw_error=True,
+        dataframe_name="row_translation",
     )
     col_translation = pd_utils.reindex_cols(
-        df=col_translation, columns=columns, throw_error=True, dataframe_name="col_translation"
+        df=col_translation,
+        columns=columns,
+        throw_error=True,
+        dataframe_name="col_translation",
     )
 
     # Check the matrix and translation dtypes match
