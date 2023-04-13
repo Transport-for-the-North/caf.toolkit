@@ -5,6 +5,8 @@ Most will be used elsewhere in the codebase too
 """
 # Built-Ins
 import math
+import warnings
+
 from typing import Union
 from typing import Collection
 
@@ -173,6 +175,60 @@ def root_mean_squared_error(
             raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
 
     return float(np.mean(squared_diffs) ** 0.5)
+
+
+def curve_convergence(
+    target: np.ndarray,
+    achieved: np.ndarray,
+) -> float:
+    """Calculate the convergence between two curves.
+
+    Similar to r-squared, but weighted by the target values.
+
+    Parameters
+    ----------
+    target:
+        A np.array listing y values on the curve we are aiming for
+
+    achieved:
+        A np.array listing y values on the curve we have achieved
+
+    Returns
+    -------
+    convergence:
+        A float value between 0 and 1. Values closer to 1 indicate a better
+        convergence.
+
+    Raises
+    ------
+    ValueError:
+        If target and achieved are not the same shape
+    """
+    if target.shape != achieved.shape:
+        raise ValueError(
+            f"Shape of target and achieved do not match.\n"
+            f"\tTarget: {target.shape}\n"
+            f"\tAchieved: {achieved.shape}")
+
+    # Always return 0 if we achieved NaN
+    if np.isnan(achieved).sum() > 0:
+        return 0
+
+    # If NaN in our target, raise a warning too
+    if np.isnan(target).sum() > 0:
+        warnings.warn(
+            "Found NaN in the target while calculating curve_convergence. "
+            "A NaN value in target will mean 0 is always returned."
+        )
+        return 0
+
+    # Calculate convergence
+    convergence = np.sum((achieved - target) ** 2) / np.sum(
+        (target - np.sum(target) / len(target)) ** 2
+    )
+
+    # Limit between 0 and 1
+    return max(1 - convergence, 0)
 
 
 def nan_report_with_input(
