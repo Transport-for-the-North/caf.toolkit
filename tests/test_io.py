@@ -20,7 +20,7 @@ from caf.toolkit import io
 
 
 # # # TESTS # # #
-def test_safe_dataframe_to_csv(tmpdir: pathlib.Path):
+def test_safe_dataframe_to_csv(tmp_path: pathlib.Path):
     """Test that this function correctly passes arguments to df.to_csv()"""
     df = pd.DataFrame(
         {
@@ -29,6 +29,6 @@ def test_safe_dataframe_to_csv(tmpdir: pathlib.Path):
             "weapon": ["sai", "bo staff"],
         }
     )
-    path = tmpdir / "test.csv"
+    path = tmp_path / "test.csv"
     io.safe_dataframe_to_csv(df, path, index=False)
     pd.testing.assert_frame_equal(pd.read_csv(path), df)
