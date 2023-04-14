@@ -5,6 +5,8 @@ from __future__ import annotations
 # Built-Ins
 import logging
 
+from typing import Optional
+
 # Third Party
 import numpy as np
 
@@ -23,12 +25,12 @@ LOG = logging.getLogger(__name__)
 def normalised_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: list[float] | np.ndarray = None,
-    max_bounds: list[float] | np.ndarray = None,
-    bin_edges: list[float] | np.ndarray = None,
+    min_bounds: Optional[list[float] | np.ndarray] = None,
+    max_bounds: Optional[list[float] | np.ndarray] = None,
+    bin_edges: Optional[list[float] | np.ndarray] = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Calculates the normalised distribution of costs across a matrix.
+    Calculate the normalised distribution of costs across a matrix.
 
     Parameters
     ----------
@@ -87,12 +89,12 @@ def normalised_cost_distribution(
 def cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: list[float] | np.ndarray = None,
-    max_bounds: list[float] | np.ndarray = None,
-    bin_edges: list[float] | np.ndarray = None,
+    min_bounds: Optional[list[float] | np.ndarray] = None,
+    max_bounds: Optional[list[float] | np.ndarray] = None,
+    bin_edges: Optional[list[float] | np.ndarray] = None,
 ) -> np.ndarray:
     """
-    Calculates the distribution of costs across a matrix.
+    Calculate the distribution of costs across a matrix.
 
     Parameters
     ----------

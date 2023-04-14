@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-"""
+"""Common utility functions for file input and output."""
 # Built-Ins
 import time
 import logging
@@ -25,8 +24,9 @@ def safe_dataframe_to_csv(
     *args,
     **kwargs,
 ) -> None:
-    """
-    Wrapper around `df.to_csv()`. Gives the user a chance to close the open file.
+    """Prompt the user to close a file before saving.
+
+    Wrapper around `df.to_csv()`.
 
     Parameters
     ----------

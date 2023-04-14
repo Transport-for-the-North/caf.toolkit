@@ -208,7 +208,8 @@ def curve_convergence(
         raise ValueError(
             f"Shape of target and achieved do not match.\n"
             f"\tTarget: {target.shape}\n"
-            f"\tAchieved: {achieved.shape}")
+            f"\tAchieved: {achieved.shape}"
+        )
 
     # Always return 0 if we achieved NaN
     if np.isnan(achieved).sum() > 0:

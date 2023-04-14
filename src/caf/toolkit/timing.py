@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-"""
+"""Common utility functions for handling date and times."""
 # Built-Ins
 import time
 import math
@@ -23,12 +22,12 @@ TimePrecision = Literal["millisecond", "microsecond"]
 
 # # # FUNCTIONS # # #
 def current_milli_time() -> float:
-    """Get the current system time in milliseconds"""
+    """Get the current system time in milliseconds."""
     return time.perf_counter() * 1000
 
 
 def get_time() -> str:
-    """Get the current time with millisecond precision
+    """Get the current time with millisecond precision.
 
     The time is returned in "%H:%M:%S.%f" format
     """
@@ -57,7 +56,7 @@ def get_datetime(
         A string of the current datetime in `time_format`
     """
     # Init
-    valid_precision = TimePrecision.__args__
+    valid_precision = TimePrecision.__args__  # type: ignore
     precision = precision.strip().lower()
 
     # Validate
@@ -91,7 +90,7 @@ def time_taken(
     end_time: float,
 ) -> str:
     """
-    Format the time taken into hours, minutes and seconds
+    Format the time taken into hours, minutes and seconds.
 
     Parameters
     ----------
