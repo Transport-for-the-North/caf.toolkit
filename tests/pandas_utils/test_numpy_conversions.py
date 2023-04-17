@@ -241,7 +241,7 @@ class TestDataframeToNDimensionalArray:
                     sparse_ok=sparse_ok,
                 )
 
-    @pytest.mark.skip(reason="Fails on GitHub actions")
+    @pytest.mark.skipif(pytest.IN_GITHUB_ACTIONS, reason="Fails on GitHub actions")
     def test_auto_sparse_conversion(self, conversion_data_massive: SparseConversionData):
         """Test auto conversion to a sparse matrix when too big"""
         got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
