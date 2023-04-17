@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.toolbox module"""
+from __future__ import annotations
+
 # Built-Ins
+import dataclasses
+
 from typing import Any
 from typing import Iterable
 
@@ -109,3 +113,108 @@ class TestEqualIgnoreOrder:
     def test_not_match(self, one: Iterable[Any], two: Iterable[Any]):
         """Test when iterables do not match at all"""
         assert not toolbox.equal_ignore_order(one, two)
+
+
+class TestSetComparison:
+    """Tests for set/list comparison functions.
+
+    covers:
+        caf.toolkit.toolbox.get_missing_items()
+        caf.toolkit.toolbox.compare_sets()
+    """
+
+    @dataclasses.dataclass
+    class Results:
+        # Inputs
+        item1: list
+        item2: list
+
+        # Returns
+        item1_not_2: list
+        item2_not_1: list
+        equal: bool
+
+    @pytest.fixture(name="equal_items", scope="class")
+    def fixture_equal_items(self) -> Results:
+        """Object of two equal items"""
+        return self.Results(
+            item1=[1, 2, 3, 4, 5],
+            item2=[1, 2, 3, 4, 5],
+            item1_not_2=list(),
+            item2_not_1=list(),
+            equal=True,
+        )
+
+    @pytest.fixture(name="similar_items", scope="class")
+    def fixture_similar_items(self) -> Results:
+        """Object of two similar items"""
+        return self.Results(
+            item1=[1, 2, 3, 4, 5],
+            item2=[3, 4, 5, 6, 7],
+            item1_not_2=[1, 2],
+            item2_not_1=[6, 7],
+            equal=False,
+        )
+
+    @pytest.fixture(name="different_items", scope="class")
+    def fixture_different_items(self) -> Results:
+        """Object of two different items"""
+        item1 = [1, 2, 3, 4, 5]
+        item2 = [6, 7, 8, 9, 10]
+        return self.Results(
+            item1=item1,
+            item2=item2,
+            item1_not_2=item1,
+            item2_not_1=item2,
+            equal=False,
+        )
+
+    @pytest.mark.parametrize(
+        "item_results_str",
+        ["equal_items", "similar_items", "different_items"],
+    )
+    def test_correct_lists(self, item_results_str: str, request):
+        """Check that the list function returns the correct result"""
+        item_results = request.getfixturevalue(item_results_str)
+        result = toolbox.get_missing_items(item_results.item1, item_results.item2)
+        assert item_results.item1_not_2 == result[0]
+        assert item_results.item2_not_1 == result[1]
+
+    @pytest.mark.parametrize(
+        "item_results_str",
+        ["equal_items", "similar_items", "different_items"],
+    )
+    def test_correct_sets(self, item_results_str: str, request):
+        """Check that the list function returns the correct result"""
+        item_results = request.getfixturevalue(item_results_str)
+        result = toolbox.compare_sets(set(item_results.item1), set(item_results.item2))
+        assert item_results.equal == result[0]
+        assert set(item_results.item1_not_2) == set(result[1])
+        assert set(item_results.item2_not_1) == set(result[2])
+
+    @pytest.mark.parametrize(
+        "item_results_str",
+        ["equal_items", "similar_items", "different_items"],
+    )
+    def test_non_unique_list1(self, item_results_str: str, request):
+        """Check that an error is raised when items are not unique"""
+        item_results = request.getfixturevalue(item_results_str)
+        new_item1 = item_results.item1.copy()
+        new_item1 += new_item1
+        msg = "only works on lists of unique items"
+        with pytest.raises(ValueError, match=msg):
+            toolbox.get_missing_items(new_item1, item_results.item2)
+
+    @pytest.mark.parametrize(
+        "item_results_str",
+        ["equal_items", "similar_items", "different_items"],
+    )
+    def test_non_unique_list2(self, item_results_str: str, request):
+        """Check that an error is raised when items are not unique"""
+        item_results = request.getfixturevalue(item_results_str)
+        new_item2 = item_results.item2.copy()
+        new_item2 += new_item2
+        msg = "only works on lists of unique items"
+        with pytest.raises(ValueError, match=msg):
+            toolbox.get_missing_items(item_results.item1, new_item2)
+
