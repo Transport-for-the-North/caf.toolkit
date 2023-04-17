@@ -1,0 +1,8 @@
+# -*- coding: utf-8 -*-
+"""Configuration file for pytest"""
+import os
+import pytest
+
+
+def pytest_configure():
+    pytest.IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
