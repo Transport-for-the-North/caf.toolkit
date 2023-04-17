@@ -215,20 +215,12 @@ class TestCurveConvergence:
     @pytest.fixture(name="perfect_match_conv", scope="class")
     def fixture_perfect_match_conv(self) -> ConvergenceExample:
         target = np.arange(10)
-        return self.ConvergenceExample(
-            target=target,
-            achieved=target,
-            result=1
-        )
+        return self.ConvergenceExample(target=target, achieved=target, result=1)
 
     @pytest.fixture(name="zero_match_conv", scope="class")
     def fixture_zero_match_conv(self) -> ConvergenceExample:
         target = np.arange(10)
-        return self.ConvergenceExample(
-            target=target,
-            achieved=np.zeros_like(target),
-            result=0
-        )
+        return self.ConvergenceExample(target=target, achieved=np.zeros_like(target), result=0)
 
     @pytest.fixture(name="random_conv", scope="class")
     def fixture_random_conv(self) -> ConvergenceExample:
@@ -238,7 +230,7 @@ class TestCurveConvergence:
         return self.ConvergenceExample(
             target=target,
             achieved=achieved,
-            result=self.get_expected_convergence(target, achieved)
+            result=self.get_expected_convergence(target, achieved),
         )
 
     @pytest.mark.parametrize(
@@ -283,6 +275,3 @@ class TestCurveConvergence:
             achieved=new_achieved,
         )
         np.testing.assert_almost_equal(result, 0)
-
-
-
