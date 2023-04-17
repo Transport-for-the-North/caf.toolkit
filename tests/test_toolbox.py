@@ -217,4 +217,3 @@ class TestSetComparison:
         msg = "only works on lists of unique items"
         with pytest.raises(ValueError, match=msg):
             toolbox.get_missing_items(item_results.item1, new_item2)
-
