@@ -84,7 +84,11 @@ class TestSparseSum:
         """Test that all axis can be summed together"""
         target = random_3d_sparse_matrix.sum(axis=sum_axis)
         achieved = array_utils.sparse_sum(random_3d_sparse_matrix, axis=sum_axis)
-        np.testing.assert_almost_equal(achieved.todense(), target.todense())
+        # One of these sometimes returns a float instead of sparse. Leave separate
+        # until error comes back
+        one = achieved.todense()
+        two = target.todense()
+        np.testing.assert_almost_equal(one, two)
 
     def test_sum_axis_int(self, random_3d_sparse_matrix: sparse.COO):
         """Test that all axis can be summed together"""
