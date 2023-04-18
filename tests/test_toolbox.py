@@ -125,6 +125,8 @@ class TestSetComparison:
 
     @dataclasses.dataclass
     class Results:
+        """Hold input and expected output to functions"""
+
         # Inputs
         item1: list
         item2: list
