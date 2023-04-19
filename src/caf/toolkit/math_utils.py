@@ -7,6 +7,7 @@ Most will be used elsewhere in the codebase too
 import math
 import warnings
 
+from typing import Any
 from typing import Union
 from typing import Collection
 
@@ -271,3 +272,49 @@ def nan_report_with_input(
     for ddict in [idx_cols, output_col, in_cols]:
         final_dict.update(ddict)
     return pd.DataFrame(final_dict)
+
+
+def check_numeric(check_dict: dict[str, Any]) -> None:
+    """Check if check_dict values are numeric.
+
+    Numeric values are counted as anything that is float or int.
+
+    Parameters
+    ----------
+    check_dict:
+        A dictionary of argument names and argument values to check.
+        The names are used for the error if the value isn't a numeric.
+
+    Raises
+    ------
+    ValueError
+        If any of the parameters aren't floats or ints,
+        includes the parameter name in the message.
+    """
+    for name, val in check_dict.items():
+        if not (np.issubdtype(type(val), float) or np.issubdtype(type(val), int)):
+            raise ValueError(
+                f"{name} should be a scalar number (float or int) " f"not {type(val)}"
+            )
+
+
+def clip_small_non_zero(array: np.ndarray, min_val: float) -> np.ndarray:
+    """Clip all small, non-zero values in an array up to a minimal value.
+
+    Any 0 values will be left as is, and only the values less than `min_val`,
+    and greater than 0 will be changed to `min_val`.
+
+    Parameters
+    ----------
+    array:
+        The array to clip
+
+    min_val:
+        The minimum non-zero value to allow in `array`.
+
+    Returns
+    -------
+    clipped_array:
+        `array`, with all non-zero values clipped to min_val.
+    """
+    return np.where((array < min_val) & (array > 0), min_val, array)
