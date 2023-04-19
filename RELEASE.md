@@ -24,6 +24,8 @@ Below, a brief summary of patches made since the previous version can be found.
   - New functionality to write to a csv when open
   - Added helper functions to compare lists and sets
   - Added function to calculate the convergence of two curves
+  - Added function to clip small values in an array
+  - Added function to check if a value is numeric
   - Added functionality to get current time in various formats
   - Added functionality to produce a distribution curve from cost and demand 
     matrix inputs
