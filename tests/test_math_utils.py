@@ -214,16 +214,19 @@ class TestCurveConvergence:
 
     @pytest.fixture(name="perfect_match_conv", scope="class")
     def fixture_perfect_match_conv(self) -> ConvergenceExample:
+        """Data where there is a perfect match"""
         target = np.arange(10)
         return self.ConvergenceExample(target=target, achieved=target, result=1)
 
     @pytest.fixture(name="zero_match_conv", scope="class")
     def fixture_zero_match_conv(self) -> ConvergenceExample:
+        """Data where there is no match"""
         target = np.arange(10)
         return self.ConvergenceExample(target=target, achieved=np.zeros_like(target), result=0)
 
     @pytest.fixture(name="random_conv", scope="class")
     def fixture_random_conv(self) -> ConvergenceExample:
+        """Data where there is a random match"""
         target = np.arange(10)
         noise = [1 if random.random() > 0.5 else -1 for _ in range(target.shape[0])]
         achieved = target + noise
@@ -275,3 +278,54 @@ class TestCurveConvergence:
             achieved=new_achieved,
         )
         np.testing.assert_almost_equal(result, 0)
+
+
+class TestCheckNumeric:
+    """Tests for check_numeric"""
+
+    @pytest.mark.parametrize("value", [1, 1.0, np.float64(1), np.int32(1)])
+    def test_correct(self, value):
+        """Check that no error is raised when correct values passed in"""
+        math_utils.check_numeric({"name": value})
+
+    @pytest.mark.parametrize("value", ["str", list(), set(), dict()])
+    def test_error(self, value):
+        """Check that no error is raised when correct values passed in"""
+        msg = "test_name should be a scalar number"
+        with pytest.raises(ValueError, match=msg):
+            math_utils.check_numeric({"test_name": value})
+
+
+class TestClipSmallNonZero:
+    """Tests for clip_small_non_zero"""
+
+    @dataclasses.dataclass
+    class ClipResults:
+        """Collection of data to pass to an RMSE call"""
+
+        array_in: np.ndarray
+        min_val: float
+        array_out: np.ndarray
+
+    @pytest.mark.parametrize("min_val", [-1, -0.1, 0, 0.1, 1])
+    def test_no_change(self, min_val: float):
+        """Test that no change is made when min_val is too small"""
+        array_in = np.arange(10) + 10
+        result = math_utils.clip_small_non_zero(array_in, min_val=min_val)
+        np.testing.assert_almost_equal(result, array_in)
+
+    @pytest.mark.parametrize("min_val", [-1, -0.1, 0, 0.1, 1])
+    def test_no_change_neg_array(self, min_val: float):
+        """Test that no change is made when min_val is too small"""
+        array_in = np.arange(10) + 10
+        array_in[0] = -0.001
+        result = math_utils.clip_small_non_zero(array_in, min_val=min_val)
+        np.testing.assert_almost_equal(result, array_in)
+
+    @pytest.mark.parametrize("min_val", [1, 5, 7, 20])
+    def test_clip(self, min_val: float):
+        """Test that no change is made when min_val is too small"""
+        array_in = np.arange(10) + 1
+        array_out = np.where(array_in < min_val, min_val, array_in)
+        result = math_utils.clip_small_non_zero(array_in, min_val=min_val)
+        np.testing.assert_almost_equal(result, array_out)
