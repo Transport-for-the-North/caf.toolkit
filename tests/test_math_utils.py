@@ -283,7 +283,19 @@ class TestCurveConvergence:
 class TestCheckNumeric:
     """Tests for check_numeric"""
 
-    @pytest.mark.parametrize("value", [1, 1.0, np.float64(1), np.int32(1)])
+    @pytest.mark.parametrize(
+        "value",
+        [
+            1,
+            1.1,
+            np.float64(1.1),
+            np.int32(1),
+            np.uint(1),
+            np.short(1),
+            np.int_(1),
+            np.double(1.1),
+        ],
+    )
     def test_correct(self, value):
         """Check that no error is raised when correct values passed in"""
         math_utils.check_numeric({"name": value})

@@ -292,7 +292,7 @@ def check_numeric(check_dict: dict[str, Any]) -> None:
         includes the parameter name in the message.
     """
     for name, val in check_dict.items():
-        if not (np.issubdtype(type(val), float) or np.issubdtype(type(val), int)):
+        if not (np.issubdtype(type(val), np.floating) or np.issubdtype(type(val), np.integer)):
             raise ValueError(
                 f"{name} should be a scalar number (float or int) " f"not {type(val)}"
             )
