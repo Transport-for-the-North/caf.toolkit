@@ -19,11 +19,13 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.0.7
-- Index system translations
-  - Works with [caf.space](https://github.com/Transport-for-the-North/caf.space)
-  - Can take either pandas or numpy
-  - Matrix or vectors
-  - Weighted or direct translations
-  - When the memory is available, will perform fast translations
-    - Will fall back to a slower method when memory not available
+### v0.1.1
+- Added functionality for caf.distribute
+  - New functionality to write to a csv when open
+  - Added helper functions to compare lists and sets
+  - Added function to calculate the convergence of two curves
+  - Added function to clip small values in an array
+  - Added function to check if a value is numeric
+  - Added functionality to get current time in various formats
+  - Added functionality to produce a distribution curve from cost and demand 
+    matrix inputs
