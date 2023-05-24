@@ -146,7 +146,7 @@ class BaseConfig(pydantic.BaseModel):
 
             data[name] = examples.get(name, value)
 
-        example = cls.construct(**data)
+        example = cls.construct(_fields_set=None, **data)
         example.save_yaml(path_)
 
 
