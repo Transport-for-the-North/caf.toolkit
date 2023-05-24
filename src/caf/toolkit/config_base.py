@@ -125,12 +125,12 @@ class BaseConfig(pydantic.BaseModel):
         # pylint: enable = unspecified-encoding
 
     @classmethod
-    def write_example(cls, path: Path, **examples: str) -> None:
+    def write_example(cls, path_: Path, /, **examples: str) -> None:
         """Write examples to a config file.
 
         Parameters
         ----------
-        path : Path
+        path_ : Path
             Path to the YAML file to write.
         examples : str
             Fields of the config to write, any missing fields
@@ -147,7 +147,7 @@ class BaseConfig(pydantic.BaseModel):
             data[name] = examples.get(name, value)
 
         example = cls.construct(**data)
-        example.save_yaml(path)
+        example.save_yaml(path_)
 
 
 # # # FUNCTIONS # # #
