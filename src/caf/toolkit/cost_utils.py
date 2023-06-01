@@ -16,6 +16,7 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import pandas_utils as pd_utils
+
 # pylint: enable=import-error,wrong-import-position
 
 if TYPE_CHECKING:
@@ -28,9 +29,9 @@ LOG = logging.getLogger(__name__)
 
 
 # # # CLASSES # # #
-@dataclass
+@dataclass      # pylint: disable=used-before-assignment
 class CostDistribution:
-    """Distribution of cost values between variable bounds
+    """Distribution of cost values between variable bounds.
 
     Parameters
     ----------
@@ -69,7 +70,7 @@ class CostDistribution:
 
     @pydantic.root_validator
     def check_df_col_names(self, values):
-        """Check the given columns are in the given dataframe"""
+        """Check the given columns are in the given dataframe."""
         # init
         col_names = ["min_col", "max_col", "avg_col", "trips_col"]
         cols = {k: v for k, v in values.items() if k in col_names}
@@ -120,7 +121,7 @@ class CostDistribution:
 
     @property
     def band_share_vals(self) -> np.ndarray:
-        """Band share values for each of the cost distribution bins"""
+        """Band share values for each of the cost distribution bins."""
         trip_vals = self.trip_vals
         return trip_vals / np.sum(trip_vals)
 
@@ -179,18 +180,18 @@ class CostDistribution:
             max_bounds=max_bounds,
         )
         distribution = cost_distribution(
-            matrix=matrix,
-            cost_matrix=cost_matrix,
-            bin_edges=bin_edges
+            matrix=matrix, cost_matrix=cost_matrix, bin_edges=bin_edges
         )
 
         # Covert data into instance of this class
-        df = pd.DataFrame({
-            min_col: bin_edges[:-1],
-            max_col: bin_edges[1:],
-            avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
-            trips_col: distribution,
-        })
+        df = pd.DataFrame(
+            {
+                min_col: bin_edges[:-1],
+                max_col: bin_edges[1:],
+                avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
+                trips_col: distribution,
+            }
+        )
 
         return CostDistribution(
             df=df,
