@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 # # # CLASSES # # #
-@dataclass      # pylint: disable=used-before-assignment
+@dataclass(config={"arbitrary_types_allowed": True})  # type: ignore # pylint: disable=used-before-assignment, unexpected-keyword-arg
 class CostDistribution:
     """Distribution of cost values between variable bounds.
 
@@ -69,7 +69,7 @@ class CostDistribution:
     units: str = "km"
 
     @pydantic.root_validator
-    def check_df_col_names(self, values):
+    def check_df_col_names(cls, values):  # pylint:disable=no-self-argument
         """Check the given columns are in the given dataframe."""
         # init
         col_names = ["min_col", "max_col", "avg_col", "trips_col"]
