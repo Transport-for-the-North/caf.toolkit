@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import copy
 import logging
 
 from typing import Optional
@@ -15,6 +16,7 @@ import pandas as pd
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
+from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
 # pylint: enable=import-error,wrong-import-position
@@ -94,6 +96,14 @@ class CostDistribution:
         values["df"] = pd_utils.reindex_cols(df, cols)
         return values
 
+    def __len__(self):
+        """Get the number of bins in this cost distribution."""
+        return len(self.bin_edges)
+
+    def copy(self) -> CostDistribution:
+        """Create a copy of this instance."""
+        return copy.copy(self)
+
     @property
     def min_vals(self) -> np.ndarray:
         """Minimum values of the cost distribution bin edges."""
@@ -108,6 +118,11 @@ class CostDistribution:
     def bin_edges(self) -> np.ndarray:
         """Bin edges for the cost distribution."""
         return np.append(self.min_vals, self.max_vals[-1])
+
+    @property
+    def n_bins(self) -> int:
+        """Bin edges for the cost distribution."""
+        return len(self)
 
     @property
     def avg_vals(self) -> np.ndarray:
@@ -201,6 +216,137 @@ class CostDistribution:
             trips_col=trips_col,
         )
 
+    @staticmethod
+    def from_data_no_bins(
+        matrix: np.ndarray,
+        cost_matrix: np.ndarray,
+        *args,
+        **kwargs,
+    ) -> CostDistribution:
+        """Convert values and a cost matrix into a CostDistribution.
+
+        `create_log_bins` will be used to generate some bin edges.
+
+        Parameters
+        ----------
+        matrix:
+            The matrix to calculate the cost distribution for. This matrix
+            should be the same shape as cost_matrix
+
+        cost_matrix:
+            A matrix of cost relating to matrix. This matrix
+            should be the same shape as matrix
+
+        *args, **kwargs:
+            arguments to pass through to `create_log_bins`
+
+        Returns
+        -------
+        cost_distribution:
+            An instance of CostDistribution containing the given data.
+
+        See Also
+        --------
+        `cost_distribution`
+        """
+        bin_edges = create_log_bins(np.max(cost_matrix), *args, **kwargs)
+        return CostDistribution.from_data(
+            matrix=matrix,
+            cost_matrix=cost_matrix,
+            bin_edges=bin_edges,
+        )
+
+    def __validate_similar_bin_edges(self, other: CostDistribution) -> None:
+        """Check whether other is using the same bins as self.
+
+        Parameters
+        ----------
+        other:
+            Another instance of CostDistribution using the same bins.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError:
+            When self and other do not have similar enough bin_edges.
+        """
+        if not np.allclose(self.bin_edges, other.bin_edges):
+            raise ValueError(
+                "Bin edges are not similar enough.\n"
+                f"{self.bin_edges=}\n"
+                f"{other.bin_edges=}"
+            )
+
+    def create_similar(self, trip_vals: np.ndarray) -> CostDistribution:
+        """Create a similar cost distribution with different trip values.
+
+        Parameters
+        ----------
+        trip_vals:
+            A numpy array of trip values that will replace the current trip
+            values.
+
+        Returns
+        -------
+        cost_distribution:
+            A copy of this instance, with different trip values.
+        """
+        if trip_vals.shape != self.trip_vals.shape:
+            raise ValueError(
+                "The new trip_vals are not the correct shape to fit existing "
+                f"data. Expected a shape of {self.trip_vals.shape}, got "
+                f"{trip_vals.shape}."
+            )
+        new_distribution = self.copy()
+        new_distribution.df[new_distribution.trips_col] = trip_vals
+        return new_distribution
+
+    def residuals(self, other: CostDistribution) -> np.ndarray:
+        """Calculate the residuals between this and other.
+
+        Residuals are calculated as:
+        `self.band_share_vals - other.band_share_vals`
+
+        Parameters
+        ----------
+        other:
+            Another instance of CostDistribution using the same bins.
+
+        Returns
+        -------
+        residuals:
+            The residual difference between this and other.
+        """
+        self.__validate_similar_bin_edges(other)
+        return self.band_share_vals - other.band_share_vals
+
+    def convergence(self, other: CostDistribution) -> float:
+        """Calculate the convergence between this and other.
+
+        Residuals are calculated as:
+        `math_utils.curve_convergence(self.band_share_vals, other.band_share_vals)`
+
+        Parameters
+        ----------
+        other:
+            Another instance of CostDistribution using the same bins.
+
+        Returns
+        -------
+        convergence:
+            A float value between 0 and 1. Values closer to 1 indicate a better
+            convergence.
+
+        See Also
+        --------
+        `math_utils.curve_convergence`
+        """
+        self.__validate_similar_bin_edges(other)
+        return math_utils.curve_convergence(self.band_share_vals, other.band_share_vals)
+
 
 # # # FUNCTIONS # # #
 def _validate_bin_edges(
@@ -283,6 +429,45 @@ def normalised_cost_distribution(
     return distribution, normalised
 
 
+def dynamic_cost_distribution(
+    matrix: np.ndarray,
+    cost_matrix: np.ndarray,
+    *args,
+    **kwargs,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Calculate the distribution of costs across a matrix, using dynamic bins.
+
+    Parameters
+    ----------
+    matrix:
+        The matrix to calculate the cost distribution for. This matrix
+        should be the same shape as cost_matrix
+
+    cost_matrix:
+        A matrix of cost relating to matrix. This matrix
+        should be the same shape as matrix
+
+    *args, **kwargs:
+        arguments to pass through to `create_log_bins`
+
+    Returns
+    -------
+    cost_distribution:
+        A numpy array of the sum of trips by distance band.
+
+    See Also
+    --------
+    `create_log_bins`
+    """
+    bin_edges = create_log_bins(np.max(cost_matrix), *args, **kwargs)
+    distribution = cost_distribution(
+        matrix=matrix,
+        cost_matrix=cost_matrix,
+        bin_edges=bin_edges,
+    )
+    return distribution, bin_edges
+
+
 def cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
@@ -337,3 +522,53 @@ def cost_distribution(
         weights=matrix,
     )
     return distribution
+
+
+def create_log_bins(
+    max_value: float,
+    n_bin_pow: float = 0.51,
+    log_factor: float = 2.2,
+    final_val: float = 1500.0,
+) -> np.ndarray:
+    """Dynamically choose the bins based on the maximum possible value.
+
+    `n_bins = int(max_value ** n_bin_pow)` Is used to choose the number of
+    bins to use.
+    `bins = (np.array(range(2, n_bins)) / n_bins) ** log_factor * max_value`
+    is used to determine the bin edges being used.
+
+    Parameters
+    ----------
+    max_value:
+        The maximum value seen in the data, this is used to scale the bins
+        appropriately.
+
+    n_bin_pow:
+        The power used to determine the number of bins to use, depending
+        on the max value. This value should be between 0 and 1.
+        `max_value ** n_bin_pow`.
+
+    log_factor:
+        The log factor to determine the bin spacing. This should be a
+        value greater than 1. Larger numbers mean closer bins
+
+    final_val:
+        The final value to append to the end of the bin edges. The second
+        to last bin will be less than `max_value`, therefore this number
+        needs to be larger than the max value.
+
+    Returns
+    -------
+    bin_edges:
+        A numpy array of bin edges.
+    """
+    if final_val < max_value:
+        raise ValueError("`final_val` is lower than `max_value`.")
+
+    n_bins = int(max_value ** n_bin_pow)
+    bins = (np.array(range(2, n_bins + 1)) / n_bins) ** log_factor * max_value
+    bins = np.floor(bins)
+
+    # Add the first and last item
+    bins = np.insert(bins, 0, 0)
+    return np.insert(bins, len(bins), final_val)
