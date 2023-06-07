@@ -565,7 +565,7 @@ def create_log_bins(
     if final_val < max_value:
         raise ValueError("`final_val` is lower than `max_value`.")
 
-    n_bins = int(max_value ** n_bin_pow)
+    n_bins = int(max_value**n_bin_pow)
     bins = (np.array(range(2, n_bins + 1)) / n_bins) ** log_factor * max_value
     bins = np.floor(bins)
 
