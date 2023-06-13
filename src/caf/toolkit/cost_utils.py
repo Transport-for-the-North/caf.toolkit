@@ -257,6 +257,56 @@ class CostDistribution:
             bin_edges=bin_edges,
         )
 
+    @staticmethod
+    def from_file(
+        filepath: os.PathLike,
+        min_col: str = "min",
+        max_col: str = "max",
+        avg_col: str = "ave_km",
+        trips_col: str = "trips",
+    ) -> CostDistribution:
+        """Build an instance from a file on disk.
+
+        Parameters
+        ----------
+        filepath:
+            Path to the file to read in.
+
+        min_col:
+            The column of data at `filepath` that contains the minimum cost
+            value of each band.
+
+        max_col:
+            The column of data at `filepath` that contains the maximum cost
+            value of each band.
+
+        avg_col:
+            The column of data at `filepath` that contains the average cost
+            value of each band.
+
+        trips_col:
+            The column of data at `filepath` that contains the number of trips
+            of each cost band.
+
+        Returns
+        -------
+        cost_distribution:
+            An instance containing the data at filepath.
+        """
+        if not os.path.isfile(filepath):
+            raise ValueError(
+                f"'{filepath}' is not the location of a file."
+            )
+        use_cols = [min_col, max_col, avg_col, trips_col]
+        print(pd.read_csv(filepath, usecols=use_cols))
+        return CostDistribution(
+            df=pd.read_csv(filepath, usecols=use_cols),
+            min_col=min_col,
+            max_col=max_col,
+            avg_col=avg_col,
+            trips_col=trips_col,
+        )
+
     def __validate_similar_bin_edges(self, other: CostDistribution) -> None:
         """Check whether other is using the same bins as self.
 
