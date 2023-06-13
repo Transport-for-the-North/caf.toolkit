@@ -5,6 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import copy
 import logging
+import os
 
 from typing import Optional
 from typing import TYPE_CHECKING
@@ -64,8 +65,8 @@ class CostDistribution:
     # Default arguments
     min_col: str = "min"
     max_col: str = "max"
-    avg_col: str = "trips"
-    trips_col: str = "ave_km"
+    avg_col: str = "ave_km"
+    trips_col: str = "trips"
 
     # Ideas
     units: str = "km"
@@ -80,7 +81,7 @@ class CostDistribution:
 
         # Check columns are in df
         err_cols = {}
-        for col_name, col_val in cols:
+        for col_name, col_val in cols.items():
             if col_val not in df:
                 err_cols.update({col_name: col_val})
 
@@ -93,7 +94,7 @@ class CostDistribution:
             )
 
         # Tidy up df
-        values["df"] = pd_utils.reindex_cols(df, cols)
+        values["df"] = pd_utils.reindex_cols(df, cols.values())
         return values
 
     def __len__(self):
@@ -185,8 +186,8 @@ class CostDistribution:
         # Define columns names
         min_col = "min"
         max_col = "max"
-        avg_col = "trips"
-        trips_col = "ave_km"
+        avg_col = "ave_km"
+        trips_col = "trips"
 
         # Calculate the cost distribution
         bin_edges = _validate_bin_edges(
