@@ -133,7 +133,7 @@ class CostDistribution:
     @property
     def trip_vals(self) -> np.ndarray:
         """Trip values for each of the cost distribution bins."""
-        return self.df[self.trip_vals].values
+        return self.df[self.trips_col].values
 
     @property
     def band_share_vals(self) -> np.ndarray:
