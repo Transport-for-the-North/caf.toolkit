@@ -294,9 +294,7 @@ class CostDistribution:
             An instance containing the data at filepath.
         """
         if not os.path.isfile(filepath):
-            raise ValueError(
-                f"'{filepath}' is not the location of a file."
-            )
+            raise ValueError(f"'{filepath}' is not the location of a file.")
         use_cols = [min_col, max_col, avg_col, trips_col]
         print(pd.read_csv(filepath, usecols=use_cols))
         return CostDistribution(
