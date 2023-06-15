@@ -861,6 +861,24 @@ class TestPandasVector:
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_vector_aggregation", "pd_vector_split"],
+    )
+    def test_check_allow_similar_types(
+        self,
+        pd_vector_str: str,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_vector = request.getfixturevalue(pd_vector_str)
+        new_trans = pd_vector.translation.copy()
+        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        result = translation.pandas_vector_zone_translation(
+            **(pd_vector.input_kwargs() | {"translation": new_trans.df})
+        )
+        pd.testing.assert_series_equal(result, pd_vector.expected_result)
+
 
 @pytest.mark.usefixtures(
     "np_matrix_aggregation",
@@ -1147,5 +1165,39 @@ class TestPandasMatrix:
         pd_mat = request.getfixturevalue(pd_matrix_str)
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
+        )
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_matrix_str",
+        [
+            "pd_matrix_aggregation",
+            "pd_matrix_aggregation2",
+            "pd_matrix_split",
+            "pd_matrix_dtype",
+        ],
+    )
+    @pytest.mark.parametrize("row", [True, False])
+    def test_check_allow_similar_types(
+        self,
+        pd_matrix_str: str,
+        row: bool,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_mat = request.getfixturevalue(pd_matrix_str)
+
+        # Change the dtype of the row / col
+        if row:
+            new_trans = pd_mat.translation.copy()
+            keyword = "translation"
+        else:
+            new_trans = pd_mat.col_translation.copy()
+            keyword = "col_translation"
+
+        # Run the translation
+        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        result = translation.pandas_matrix_zone_translation(
+            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
