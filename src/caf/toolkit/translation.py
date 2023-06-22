@@ -304,8 +304,8 @@ def numpy_matrix_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        dtypes = [matrix.dtype, row_translation.dtype, col_translation.dtype]
-        translation_dtype = np.find_common_type(dtypes, [])
+        translation_dtype = np.promote_types(row_translation.dtype, col_translation.dtype)
+        translation_dtype = np.promote_types(translation_dtype, matrix.dtype)
     matrix = _convert_dtypes(
         arr=matrix,
         to_type=translation_dtype,
@@ -627,19 +627,21 @@ def pandas_matrix_zone_translation(
 
     # Check the matrix and translation dtypes match
     if matrix.index.dtype != row_translation[translation_from_col].dtype:
-        raise ValueError(
-            "dtypes of `matrix.index` and `translation` in `from_zone_col` "
-            "must match.\n"
-            f"Matrix index data type: {matrix.index.dtype}\n"
-            f"Row Translation data type: {row_translation[translation_from_col].dtype}"
+        common_dtype = np.promote_types(
+            matrix.index.dtype, row_translation[translation_from_col].dtype
+        )
+        matrix.index = matrix.index.astype(common_dtype)
+        row_translation[translation_from_col] = row_translation[translation_from_col].astype(
+            common_dtype
         )
 
     if matrix.columns.dtype != col_translation[translation_from_col].dtype:
-        raise ValueError(
-            "dtypes of `matrix.columns` and `col_translation` in `from_zone_col` "
-            "must match.\n"
-            f"Matrix column Dtype: {matrix.columns.dtype}\n"
-            f"Col Translation data type: {col_translation[translation_from_col].dtype}"
+        common_dtype = np.promote_types(
+            matrix.index.dtype, col_translation[translation_from_col].dtype
+        )
+        matrix.index = matrix.index.astype(common_dtype)
+        col_translation[translation_from_col] = col_translation[translation_from_col].astype(
+            common_dtype
         )
 
     validators.unique_list(from_unique_index, name="from_unique_index")
@@ -727,6 +729,7 @@ def pandas_vector_zone_translation(
     check_totals: bool = True,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
     """Efficiently translates a pandas vector between index systems.
 
     Internally, checks and converts the pandas inputs into numpy arrays
@@ -799,11 +802,12 @@ def pandas_vector_zone_translation(
 
     # Check the matrix and translation dtypes match
     if vector.index.dtype != translation[translation_from_col].dtype:
-        raise ValueError(
-            "dtypes of `vector.index` and `translation` in `from_zone_col` "
-            "must match.\n"
-            f"vector index data type: {vector.index.dtype}\n"
-            f"translation[from_zone_col] data type: {translation[translation_from_col].dtype}"
+        common_dtype = np.promote_types(
+            vector.index.dtype, translation[translation_from_col].dtype
+        )
+        vector.index = vector.index.astype(common_dtype)
+        translation[translation_from_col] = translation[translation_from_col].astype(
+            common_dtype
         )
 
     validators.unique_list(from_unique_index, name="from_unique_index")
