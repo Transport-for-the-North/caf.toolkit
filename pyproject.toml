@@ -22,7 +22,7 @@ disable = [
 
 # Pylint settings
 [tool.pylint.basic]
-good-names = ["df", "fn", "ca", "tp", "to", "x", "i", "f", "q"]
+good-names = ["df", "fn", "ca", "tp", "to", "x", "x1", "x2", "i", "f", "q"]
 extension-pkg-allow-list = ["pydantic"]
 
 [tool.pylint.main]

@@ -306,6 +306,7 @@ def numpy_matrix_zone_translation(
     if translation_dtype is None:
         translation_dtype = np.promote_types(row_translation.dtype, col_translation.dtype)
         translation_dtype = np.promote_types(translation_dtype, matrix.dtype)
+    assert translation_dtype is not None
     matrix = _convert_dtypes(
         arr=matrix,
         to_type=translation_dtype,
@@ -625,24 +626,15 @@ def pandas_matrix_zone_translation(
         dataframe_name="col_translation",
     )
 
-    # Check the matrix and translation dtypes match
-    if matrix.index.dtype != row_translation[translation_from_col].dtype:
-        common_dtype = np.promote_types(
-            matrix.index.dtype, row_translation[translation_from_col].dtype
-        )
-        matrix.index = matrix.index.astype(common_dtype)
-        row_translation[translation_from_col] = row_translation[translation_from_col].astype(
-            common_dtype
-        )
-
-    if matrix.columns.dtype != col_translation[translation_from_col].dtype:
-        common_dtype = np.promote_types(
-            matrix.index.dtype, col_translation[translation_from_col].dtype
-        )
-        matrix.index = matrix.index.astype(common_dtype)
-        col_translation[translation_from_col] = col_translation[translation_from_col].astype(
-            common_dtype
-        )
+    # Set the dtypes to match
+    matrix.index, row_translation[translation_from_col] = pd_utils.cast_to_common_type(
+        matrix.index,
+        row_translation[translation_from_col],
+    )
+    matrix.index, col_translation[translation_from_col] = pd_utils.cast_to_common_type(
+        matrix.index,
+        col_translation[translation_from_col],
+    )
 
     validators.unique_list(from_unique_index, name="from_unique_index")
     validators.unique_list(to_unique_index, name="to_unique_index")
@@ -800,15 +792,11 @@ def pandas_vector_zone_translation(
             )
         vector = vector[vector.columns[0]]
 
-    # Check the matrix and translation dtypes match
-    if vector.index.dtype != translation[translation_from_col].dtype:
-        common_dtype = np.promote_types(
-            vector.index.dtype, translation[translation_from_col].dtype
-        )
-        vector.index = vector.index.astype(common_dtype)
-        translation[translation_from_col] = translation[translation_from_col].astype(
-            common_dtype
-        )
+    # Set the dtypes to match
+    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+        vector.index,
+        translation[translation_from_col],
+    )
 
     validators.unique_list(from_unique_index, name="from_unique_index")
     validators.unique_list(to_unique_index, name="to_unique_index")
