@@ -23,7 +23,7 @@ class CastProtocol(Protocol):
 
     dtype: type
 
-    def astype(self: _T, dtype: type) -> _T:
+    def astype(self: _T, dtype: np.dtype) -> _T:
         """Cast this object to a new type."""
 
 
