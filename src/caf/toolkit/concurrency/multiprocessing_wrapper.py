@@ -513,7 +513,7 @@ def multiprocess(
 
         return [fn(*a, **k) for a, k in zip(arg_list, kwarg_list)]
 
-    # If we get here, the process count must be > 0 and valid
+    # If we get here, the process count must be > 0 and valid 
     # Now either run in order or not
     if in_order:
         return _process_pool_wrapper_kwargs_in_order(
@@ -535,3 +535,24 @@ def multiprocess(
         result_timeout=result_timeout,
         pbar_kwargs=pbar_kwargs,
     )
+
+def multiprocess_keys(keys: list, 
+                      fn: Callable[..., _T],
+                      arg_list: Optional[Collection[Iterable[Any]]] = None,
+                      kwarg_list: Optional[Collection[Mapping[str, Any]]] = None,
+                      process_count: Optional[int] = None,
+                      pool_maxtasksperchild: int = 4,) -> dict:
+    """
+    Wrapper function for multiprocess. Calls multiprocess and assigns keys to the output to put it into a dict
+    Args:
+        keys (list): Keys for the output dict. There must be a key for every argument.
+        For other arguments see multiprocess docs.
+
+    Returns:
+        dict: A dict of outputs, where keys are input keys.
+    """
+    arg_len = len(arg_list) if arg_list else len(kwarg_list)
+    if len(keys) != arg_len:
+        raise ValueError("There must be a key for every iterable. I.e. there must be a key for every iteration.")
+    outputs = multiprocess(fn, arg_list, kwarg_list, process_count, pool_maxtasksperchild, in_order=True)
+    return dict(zip(keys, outputs))
