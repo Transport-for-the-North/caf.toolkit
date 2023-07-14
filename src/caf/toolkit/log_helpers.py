@@ -23,7 +23,7 @@ from typing import Any, Iterable, Optional
 
 # Third Party
 import pydantic
-from pydantic import dataclasses
+from pydantic import dataclasses, types
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -35,6 +35,14 @@ DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+
+# Regular expression for semantic versioning string from https://semver.org/
+_SEMVER_REGEX = (
+    r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+)
 
 
 # # # CLASSES # # #
@@ -55,7 +63,7 @@ class ToolDetails:
     """
 
     name: str
-    version: str
+    version: types.constr(strip_whitespace=True, regex=_SEMVER_REGEX)  # type: ignore
     homepage: Optional[pydantic.HttpUrl] = None
     source_url: Optional[pydantic.HttpUrl] = None
 
@@ -65,10 +73,16 @@ class ToolDetails:
 
         # pylint false positive for __dataclass_fields__ no-member
         # pylint: disable=no-member
-        length = functools.reduce(max, (len(i) for i in self.__dataclass_fields__))
+        length = functools.reduce(
+            max, (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None)
+        )
 
         for name in self.__dataclass_fields__:
-            message.append(f"{name:<{length}.{length}} : {getattr(self, name)}")
+            value = getattr(self, name)
+            if value is None:
+                continue
+
+            message.append(f"{name:<{length}.{length}} : {value}")
 
         return "\n".join(message)
 
