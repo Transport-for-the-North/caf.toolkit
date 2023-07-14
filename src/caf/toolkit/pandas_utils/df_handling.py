@@ -421,9 +421,9 @@ def long_product_infill(
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
 
-    Infills missing values of df in `index_cols.keys()` columns by generating
+    Infills missing values of df in `index_dict.keys()` columns by generating
     a new MultiIndex from a product of the values in `index_cols.values()`.
-    Where a None-like values is given, all unique values are taken from `df`
+    Where a None-like value is given, all unique values are taken from `df`
     in that column.
 
     Parameters
@@ -433,7 +433,7 @@ def long_product_infill(
 
     index_dict:
         A dictionary mapping the columns of `df` to infill, and with what
-        values. Where a None-like values is given, all unique values are taken
+        values. Where a None-like value is given, all unique values are taken
         from `df` in that column.
         i.e, `df[index_col].unique()` will be used.
 
@@ -602,7 +602,6 @@ def long_to_wide_infill(
         columns=columns_col,
         values=values_col,
     )
-
     return df
 
 

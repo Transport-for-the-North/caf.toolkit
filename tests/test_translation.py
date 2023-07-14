@@ -1114,3 +1114,44 @@ class TestPandasMatrix:
             **(pd_mat.input_kwargs() | {keyword: new_trans.df})
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_matrix_str",
+        [
+            "pd_matrix_aggregation",
+            "pd_matrix_aggregation2",
+            "pd_matrix_split",
+            "pd_matrix_dtype",
+        ],
+    )
+    @pytest.mark.parametrize("row", [True, False])
+    @pytest.mark.parametrize("trans_dtype", [str, int, float])
+    @pytest.mark.parametrize("matrix_dtype", [str, int, float])
+    def test_allow_different_types(
+        self,
+        pd_matrix_str: str,
+        row: bool,
+        trans_dtype: type,
+        matrix_dtype: type,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_mat = request.getfixturevalue(pd_matrix_str)
+
+        # Change the dtype of the row / col
+        new_matrix = pd_mat.mat.copy()
+        if row:
+            new_trans = pd_mat.translation.copy()
+            keyword = "translation"
+            new_matrix.index = new_matrix.index.astype(matrix_dtype)
+        else:
+            new_trans = pd_mat.col_translation.copy()
+            keyword = "col_translation"
+            new_matrix.columns = new_matrix.columns.astype(matrix_dtype)
+
+        # Run the translation
+        new_trans.from_col = new_trans.from_col.astype(trans_dtype)
+        result = translation.pandas_matrix_zone_translation(
+            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+        )
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
