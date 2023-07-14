@@ -133,7 +133,7 @@ class SystemInformation:
         length = functools.reduce(max, (len(i) for i in self.__dataclass_fields__))
 
         for name in self.__dataclass_fields__:
-            message.append(f"{name:<{length}.{length}} : {getattr(self, name)}")
+            message.append(f"{name:<{length}.{length}} : {getattr(self, name, 'unknown')}")
 
         return "\n".join(message)
 
