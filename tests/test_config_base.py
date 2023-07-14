@@ -70,7 +70,7 @@ def fixture_basic(path):
 
 
 @dataclasses.dataclass
-class TestSubClass:
+class SubClassTest:
     """
     Subclass to be included as a parameter in ConfigTestClass
     """
@@ -90,7 +90,7 @@ class ConfigTestClass(BaseConfig):
     list: list[str]
     set: set[int]
     tuple: tuple[Path, Path]
-    sub: TestSubClass = None
+    sub: SubClassTest = None
     default: bool = True
     option: int = None
 
@@ -210,9 +210,9 @@ class TestYaml:
         None
         """
         conf = basic
-        conf.sub = TestSubClass(whole=3, decimal=5.7)
+        conf.sub = SubClassTest(whole=3, decimal=5.7)
         yam = conf.to_yaml()
-        assert isinstance(ConfigTestClass.from_yaml(yam).sub, TestSubClass)
+        assert isinstance(ConfigTestClass.from_yaml(yam).sub, SubClassTest)
 
     def test_save_load(self, basic, path):
         """
@@ -268,7 +268,7 @@ class TestExample:
             list="This is a list",
             set="This is a set",
             tuple="Two paths to files",
-            sub=TestSubClass("integer value", "decimal value"),
+            sub=SubClassTest("integer value", "decimal value"),
             default="This value defaults to true",
             option="This value is optional",
         )
