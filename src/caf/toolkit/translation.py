@@ -631,8 +631,8 @@ def pandas_matrix_zone_translation(
         matrix.index,
         row_translation[translation_from_col],
     )
-    matrix.index, col_translation[translation_from_col] = pd_utils.cast_to_common_type(
-        matrix.index,
+    matrix.columns, col_translation[translation_from_col] = pd_utils.cast_to_common_type(
+        matrix.columns,
         col_translation[translation_from_col],
     )
 
