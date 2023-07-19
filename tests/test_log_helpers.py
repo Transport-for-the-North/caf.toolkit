@@ -3,9 +3,13 @@
 Tests for the `log_helpers` module in caf.toolkit
 """
 # Built-Ins
+import collections
 import getpass
+import logging
+import os
 import platform
 from typing import NamedTuple
+import psutil
 
 # Third Party
 import pydantic
@@ -48,6 +52,25 @@ def fixture_monkeypatch_username(monkeypatch: pytest.MonkeyPatch) -> str:
     user = "Test User"
     monkeypatch.setattr(getpass, "getuser", lambda: user)
     return user
+
+
+@pytest.fixture(name="cpu_count")
+def fixture_monkeypatch_cpu_count(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Monkeypatch `os.cpu_count()` to return constant."""
+    cpu_count = "10"
+    monkeypatch.setattr(os, "cpu_count", lambda: cpu_count)
+    return cpu_count
+
+
+@pytest.fixture(name="total_ram")
+def fixture_monkeypatch_total_ram(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Monkeypatch `psutil.virtual_memory()` to return constant."""
+    ram = 30_000
+    readable = "29.3K"
+
+    memory = collections.namedtuple("memory", ["total"])
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: memory(ram))
+    return readable
 
 
 # # # Tests # # #
@@ -111,7 +134,14 @@ class TestToolDetails:
 class TestSystemInformation:
     """Test SystemInformation class."""
 
-    def test_load(self, uname: UnameResult, python_version: str, username: str) -> None:
+    def test_load(
+        self,
+        uname: UnameResult,
+        python_version: str,
+        username: str,
+        cpu_count: str,
+        total_ram: str,
+    ) -> None:
         """Test loading system information."""
         os_label = f"{uname.system} {uname.release} ({uname.version})"
 
@@ -121,6 +151,8 @@ class TestSystemInformation:
         assert info.python_version == python_version, "incorrect Python version"
         assert info.operating_system == os_label, "incorrect OS"
         assert info.architecture == uname.machine, "incorrect architecture"
+        assert info.cpu_count == cpu_count, "incorrect CPU count"
+        assert info.total_ram == total_ram, "incorrect total RAM"
 
     def test_str(self) -> None:
         """Test string if formatted correctly."""
@@ -129,6 +161,8 @@ class TestSystemInformation:
         python_version = "3.0.0"
         operating_system = "Test 10 (10.0.1)"
         architecture = "AMD64"
+        cpu_count = "16"
+        total_ram = "30.3K"
 
         correct = (
             "System Information\n"
@@ -137,9 +171,13 @@ class TestSystemInformation:
             f"pc_name          : {pc_name}\n"
             f"python_version   : {python_version}\n"
             f"operating_system : {operating_system}\n"
-            f"architecture     : {architecture}"
+            f"architecture     : {architecture}\n"
+            f"cpu_count        : {cpu_count}\n"
+            f"total_ram        : {total_ram}"
         )
 
-        info = SystemInformation(user, pc_name, python_version, operating_system, architecture)
+        info = SystemInformation(
+            user, pc_name, python_version, operating_system, architecture, cpu_count, total_ram
+        )
 
         assert str(info) == correct, "incorrect string format"

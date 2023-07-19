@@ -22,6 +22,8 @@ import platform
 from typing import Any, Iterable, Optional
 
 # Third Party
+import psutil
+from psutil import _common
 import pydantic
 from pydantic import dataclasses, types
 
@@ -103,6 +105,11 @@ class SystemInformation:
         Information about the name and version of OS.
     architecture: str
         Name of the machine architecture e.g. "AMD64".
+    cpu_count: str
+        Number of logical CPU cores on the machine.
+    total_ram: str
+        Total virtual memory on the machine in a human
+        readable format.
     """
 
     user: str
@@ -110,12 +117,20 @@ class SystemInformation:
     python_version: str
     operating_system: str
     architecture: str
-    # TODO(MB) Add information about PC RAM, CPU etc.
+    cpu_count: str
+    total_ram: str
 
     @classmethod
     def load(cls) -> SystemInformation:
         """Load system information."""
         info = platform.uname()
+        cpus = os.cpu_count()
+
+        ram = psutil.virtual_memory()
+        if ram is None:
+            total_ram = "unknown"
+        else:
+            total_ram = _common.bytes2human(ram.total)
 
         return SystemInformation(
             user=getpass.getuser(),
@@ -123,6 +138,8 @@ class SystemInformation:
             python_version=platform.python_version(),
             operating_system=f"{info.system} {info.release} ({info.version})",
             architecture=info.machine,
+            cpu_count="unknown" if cpus is None else str(cpus),
+            total_ram=total_ram,
         )
 
     def __str__(self) -> str:
