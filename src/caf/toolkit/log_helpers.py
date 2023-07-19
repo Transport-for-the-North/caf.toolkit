@@ -110,6 +110,7 @@ class SystemInformation:
     python_version: str
     operating_system: str
     architecture: str
+    # TODO(MB) Add information about PC RAM, CPU etc.
 
     @classmethod
     def load(cls) -> SystemInformation:
@@ -149,12 +150,14 @@ class LogHelper:
         tool_details: ToolDetails,
         console: bool = True,
         log_file: os.PathLike | None = None,
+        warning_capture: bool = True,
     ):
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
         self.logger.setLevel(logging.DEBUG)
 
         self.tool_details = tool_details
+        self._warning_logger: logging.Logger | None = None
 
         if console:
             handler = get_console_handler()
@@ -165,6 +168,9 @@ class LogHelper:
             self.logger.addHandler(handler)
 
         self.write_instantiate_message()
+
+        if warning_capture:
+            self.capture_warnings()
 
     def add_console_handler(
         self,
@@ -189,6 +195,9 @@ class LogHelper:
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
         self.logger.addHandler(handler)
+
+        if self._warning_logger is not None:
+            self._warning_logger.addHandler(handler)
 
     def add_file_handler(
         self,
@@ -219,6 +228,9 @@ class LogHelper:
         handler = get_file_handler(log_file, fh_format, datetime_format, log_level)
         self.logger.addHandler(handler)
 
+        if self._warning_logger is not None:
+            self._warning_logger.addHandler(handler)
+
     def capture_warnings(self) -> None:
         """Capture warnings using logging.
 
@@ -227,13 +239,13 @@ class LogHelper:
         """
         logging.captureWarnings(True)
 
-        warning_logger = logging.getLogger("py.warnings")
+        self._warning_logger = logging.getLogger("py.warnings")
 
         for handler in self.logger.handlers:
-            if handler in warning_logger.handlers:
+            if handler in self._warning_logger.handlers:
                 continue
 
-            warning_logger.addHandler(handler)
+            self._warning_logger.addHandler(handler)
 
     def write_instantiate_message(self) -> None:
         """Write instatiation message with tool / system information."""
