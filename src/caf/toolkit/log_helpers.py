@@ -281,6 +281,7 @@ class LogHelper:
             self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
+        self.logger.handlers.clear()
         logging.shutdown()
 
 

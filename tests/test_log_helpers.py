@@ -4,11 +4,14 @@ Tests for the `log_helpers` module in caf.toolkit
 """
 # Built-Ins
 import collections
+import dataclasses
 import getpass
 import logging
 import os
+import pathlib
 import platform
 from typing import NamedTuple
+import warnings
 import psutil
 
 # Third Party
@@ -28,6 +31,17 @@ class UnameResult(NamedTuple):
     release: str
     version: str
     machine: str
+
+
+@dataclasses.dataclass
+class LogInitDetails:
+    """Information for testing `LogHelper`."""
+
+    details: ToolDetails
+    details_message: str
+    system: SystemInformation
+    system_message: str
+    init_message: list[str]
 
 
 @pytest.fixture(name="uname")
@@ -71,6 +85,20 @@ def fixture_monkeypatch_total_ram(monkeypatch: pytest.MonkeyPatch) -> str:
     memory = collections.namedtuple("memory", ["total"])
     monkeypatch.setattr(psutil, "virtual_memory", lambda: memory(ram))
     return readable
+
+
+@pytest.fixture(name="log_init")
+def fixture_log_init() -> LogInitDetails:
+    """Initialise details for `LogHelper` tests."""
+    name = "test tool"
+
+    details = ToolDetails(name, "1.2.3")
+    info = SystemInformation.load()
+
+    msg = f"***  {name}  ***"
+    init_message = ["", "*" * len(msg), msg, "*" * len(msg)]
+
+    return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
 
 
 # # # Tests # # #
@@ -181,3 +209,97 @@ class TestSystemInformation:
         )
 
         assert str(info) == correct, "incorrect string format"
+
+
+class TestLogHelper:
+    """Test `LogHelper` class."""
+
+    def _load_log(self, log_file: pathlib.Path) -> str:
+        assert log_file.is_file(), "log file not created"
+        with open(log_file, "rt", encoding="utf-8") as file:
+            text = file.read()
+        return text
+
+    def test_initialising(
+        self, caplog: pytest.LogCaptureFixture, log_init: LogInitDetails
+    ) -> None:
+        """Test initialising the logger without a file."""
+        LogHelper("test", log_init.details, warning_capture=False)
+
+        messages = [i.message for i in caplog.get_records("call")]
+
+        assert messages[:4] == log_init.init_message, "initialisation messages"
+
+        assert messages[4] == log_init.details_message, "incorrect tool details"
+        assert messages[5] == log_init.system_message, "incorrect system info"
+
+    def test_file_initialisation(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails
+    ) -> None:
+        """Test initialising the logger with a file."""
+        log_file = tmp_path / "test.log"
+        assert not log_file.is_file(), "log file already exists"
+
+        LogHelper(
+            "test", log_init.details, console=False, log_file=log_file, warning_capture=False
+        )
+
+        text = self._load_log(log_file)
+
+        for i, line in enumerate(log_init.init_message):
+            assert line in text, f"line {i} init message"
+
+        assert log_init.details_message in text, "incorrect tool details"
+        assert log_init.system_message in text, "incorrect system information"
+
+    def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
+        """Test logging to file within `with` statement.
+
+        Tests all log calls within `with` statement are logged to file
+        and any outside are ignored.
+        """
+        root = "test"
+        log = logging.getLogger(f"{root}.test_basic_file")
+        log_file = tmp_path / "test.log"
+
+        levels = list(range(10, 60, 10))
+        messages = [f"testing level {i} - test basic file" for i in levels]
+
+        with LogHelper(
+            root, log_init.details, console=False, log_file=log_file, warning_capture=False
+        ):
+            for i, msg in zip(levels, messages):
+                log.log(i, msg)
+
+        # Messages logged after the log helper class has cleaned up so shouldn't be saved to file
+        unlogged_messages = [f"not logging this message for level {i}" for i in levels]
+        for i, msg in zip(levels, unlogged_messages):
+            log.log(i, msg)
+
+        text = self._load_log(log_file)
+
+        for i, msg in zip(levels, messages):
+            assert msg in text, f"missed logging level {i}"
+
+        for i, msg in zip(levels, unlogged_messages):
+            assert msg not in text, f"logged after closing class level {i}"
+
+    def test_capture_warnings(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
+        """Test Python warnings are captured and saved to log file."""
+        root = "test"
+        log_file = tmp_path / "test.log"
+
+        log_warnings = [
+            ("testing runtime warning", RuntimeWarning),
+            ("testing user warning", UserWarning),
+        ]
+        # Note: ImportWarnings aren't logged by default
+
+        with LogHelper(root, log_init.details, console=False, log_file=log_file):
+            for msg, warn in log_warnings:
+                warnings.warn(msg, warn)
+
+        text = self._load_log(log_file)
+
+        for msg, warn in log_warnings:
+            assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
