@@ -290,7 +290,13 @@ class TemporaryLogFile:
 
     # TODO(MB) Add examples to docstring
 
-    def __init__(self, logger: logging.Logger, log_file: os.PathLike, **kwargs) -> None:
+    def __init__(
+        self,
+        logger: logging.Logger,
+        log_file: os.PathLike,
+        base_log_file: os.PathLike | None = None,
+        **kwargs,
+    ) -> None:
         """Add temporary log file handler to `logger`.
 
         Parameters
@@ -298,18 +304,25 @@ class TemporaryLogFile:
         logger : logging.Logger
             Logger to add FileHandler to.
 
-        log_file : nd.PathLike
+        log_file : os.PathLike
             Path to new log file to create.
+
+        base_log_file : os.PathLike, optional
+            Path to base log file, location will be logged
+            in new log file.
 
         kwargs : Keyword arguments, optional
             Any arguments to pass to `get_file_handler`.
         """
         self.logger = logger
         self.log_file = log_file
+
         self.logger.debug('Creating temporary log file: "%s"', self.log_file)
         self.handler = get_file_handler(log_file, **kwargs)
         self.logger.addHandler(self.handler)
-        # TODO(MB) Log location of base log file
+
+        if base_log_file is not None:
+            self.logger.debug('Base log file: "%s"', base_log_file)
 
     def __enter__(self) -> TemporaryLogFile:
         """Initialise TemporaryLogFile."""

@@ -101,6 +101,29 @@ def fixture_log_init() -> LogInitDetails:
     return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
 
 
+def _log_messages(
+    logger: logging.Logger, message: str = "testing logging level {level}"
+) -> list[tuple[int, str]]:
+    """Log messages for each logging level."""
+    levels = list(range(10, 60, 10))
+    messages = []
+    for i in levels:
+        msg = message.format(level=i)
+        logger.log(i, msg)
+        messages.append(msg)
+
+    return list(zip(levels, messages))
+
+
+def _load_log(log_file: pathlib.Path) -> str:
+    """Assert log file exists and load the text."""
+    assert log_file.is_file(), "log file not created"
+    with open(log_file, "rt", encoding="utf-8") as file:
+        text = file.read()
+
+    return text
+
+
 # # # Tests # # #
 class TestToolDetails:
     """Test ToolDetails class validation."""
@@ -214,12 +237,6 @@ class TestSystemInformation:
 class TestLogHelper:
     """Test `LogHelper` class."""
 
-    def _load_log(self, log_file: pathlib.Path) -> str:
-        assert log_file.is_file(), "log file not created"
-        with open(log_file, "rt", encoding="utf-8") as file:
-            text = file.read()
-        return text
-
     def test_initialising(
         self, caplog: pytest.LogCaptureFixture, log_init: LogInitDetails
     ) -> None:
@@ -244,7 +261,7 @@ class TestLogHelper:
             "test", log_init.details, console=False, log_file=log_file, warning_capture=False
         )
 
-        text = self._load_log(log_file)
+        text = _load_log(log_file)
 
         for i, line in enumerate(log_init.init_message):
             assert line in text, f"line {i} init message"
@@ -262,26 +279,21 @@ class TestLogHelper:
         log = logging.getLogger(f"{root}.test_basic_file")
         log_file = tmp_path / "test.log"
 
-        levels = list(range(10, 60, 10))
-        messages = [f"testing level {i} - test basic file" for i in levels]
-
         with LogHelper(
             root, log_init.details, console=False, log_file=log_file, warning_capture=False
         ):
-            for i, msg in zip(levels, messages):
-                log.log(i, msg)
+            messages = _log_messages(log, "testing level {level} - test basic file")
 
-        # Messages logged after the log helper class has cleaned up so shouldn't be saved to file
-        unlogged_messages = [f"not logging this message for level {i}" for i in levels]
-        for i, msg in zip(levels, unlogged_messages):
-            log.log(i, msg)
+        # Messages logged after the log helper class has
+        # cleaned up so shouldn't be saved to file
+        unlogged_messages = _log_messages(log, "not logging this message for level {level}")
 
-        text = self._load_log(log_file)
+        text = _load_log(log_file)
 
-        for i, msg in zip(levels, messages):
+        for i, msg in messages:
             assert msg in text, f"missed logging level {i}"
 
-        for i, msg in zip(levels, unlogged_messages):
+        for i, msg in unlogged_messages:
             assert msg not in text, f"logged after closing class level {i}"
 
     def test_capture_warnings(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
@@ -299,7 +311,36 @@ class TestLogHelper:
             for msg, warn in log_warnings:
                 warnings.warn(msg, warn)
 
-        text = self._load_log(log_file)
+        text = _load_log(log_file)
 
         for msg, warn in log_warnings:
             assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
+
+
+class TestTemporaryLogFile:
+    # pylint: disable=too-few-public-methods
+    """Test `TemporaryLogFile` class."""
+
+    def test_log_file(self, tmp_path: pathlib.Path) -> None:
+        """Test log file handler is added and removed correctly."""
+        base_log_file = tmp_path / "base_log_file.log"
+        log_file = tmp_path / "test.log"
+        logger = logging.getLogger("test")
+        logger.setLevel(logging.DEBUG)
+
+        with TemporaryLogFile(logger, log_file, base_log_file=base_log_file):
+            messages = _log_messages(logger)
+
+        # Messages logged after the temporary log file class has
+        # cleaned up so shouldn't be saved to file
+        unlogged_messages = _log_messages(logger, "not logging this message for level {level}")
+
+        text = _load_log(log_file)
+
+        assert str(base_log_file) in text, "base log file missing"
+
+        for i, msg in messages:
+            assert msg in text, f"missed logging level {i}"
+
+        for i, msg in unlogged_messages:
+            assert msg not in text, f"logged after closing class level {i}"
