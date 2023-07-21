@@ -42,7 +42,7 @@ class BaseConfig(pydantic.BaseModel):
     ... )
     >>> parameters
     ExampleParameters(import_folder=WindowsPath('Test Folder'), name='Test', some_option=False)
-    
+
     >>> parameters.to_yaml()
     'import_folder: Test Folder\nname: Test\nsome_option: no\n'
 

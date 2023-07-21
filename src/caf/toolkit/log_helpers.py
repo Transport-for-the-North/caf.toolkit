@@ -376,9 +376,9 @@ class LogHelper:
         """Initialise class with 'with' statement."""
         return self
 
-    def __exit__(self, excepType, excepVal, traceback):
+    def __exit__(self, exc_type, exc, exc_tb):
         """Write any error to the logger and closes the file."""
-        if excepType is not None or excepVal is not None or traceback is not None:
+        if exc_type is not None or exc is not None or exc_tb is not None:
             self.logger.critical("Oh no a critical error occurred", exc_info=True)
         else:
             self.logger.info("Program completed without any critical errors")
@@ -469,10 +469,10 @@ class TemporaryLogFile:
         """Initialise TemporaryLogFile."""
         return self
 
-    def __exit__(self, excepType, excepVal, traceback) -> None:
+    def __exit__(self, exc_type, exc, exc_tb) -> None:
         """Close temporary log file."""
         # pylint: disable=invalid-name
-        if excepType is not None or excepVal is not None or traceback is not None:
+        if exc_type is not None or exc is not None or exc_tb is not None:
             self.logger.critical("Oh no a critical error occurred", exc_info=True)
 
         self.logger.removeHandler(self.handler)
