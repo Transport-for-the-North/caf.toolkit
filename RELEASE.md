@@ -19,11 +19,9 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.0.7
-- Index system translations
-  - Works with [caf.space](https://github.com/Transport-for-the-North/caf.space)
-  - Can take either pandas or numpy
-  - Matrix or vectors
-  - Weighted or direct translations
-  - When the memory is available, will perform fast translations
-    - Will fall back to a slower method when memory not available
+### v0.1.2
+- Added functionality for BaseConfig
+  - Added `write_example` method to create example config files
+- Bug Fixes
+  - Fixed a bug in translations where similar compatible types for index 
+    identifiers would throw an error.

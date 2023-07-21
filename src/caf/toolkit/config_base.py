@@ -126,6 +126,31 @@ class BaseConfig(pydantic.BaseModel):
             file.write(self.to_yaml())
         # pylint: enable = unspecified-encoding
 
+    @classmethod
+    def write_example(cls, path_: Path, /, **examples: str) -> None:
+        """Write examples to a config file.
+
+        Parameters
+        ----------
+        path_ : Path
+            Path to the YAML file to write.
+        examples : str
+            Fields of the config to write, any missing fields
+            are filled in with their default value (if they have
+            one) or 'REQUIRED' / 'OPTIONAL'.
+        """
+        data = {}
+        for name, field in cls.__fields__.items():
+            if field.default is not None:
+                value = field.default
+            else:
+                value = "REQUIRED" if field.required else "OPTIONAL"
+
+            data[name] = examples.get(name, value)
+
+        example = cls.construct(_fields_set=None, **data)
+        example.save_yaml(path_)
+
 
 # # # FUNCTIONS # # #
 def _remove_none_dict(data: dict) -> dict:

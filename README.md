@@ -20,3 +20,9 @@ planning and appraisal functionalities. It's the beginning of a project to make
 a lot of the useful stuff from
 [NorMITs Demand](https://github.com/Transport-for-the-North/NorMITs-Demand)
 more widely available and easily accessible.
+
+
+## Contributing
+CAF.Toolkit happily accepts contributions.
+
+The best way to contribute to this project is to go to the issues tab and report bugs or submit a feature request. This helps CAF.Toolkit become more stable and full-featured. Please check the closed bugs before submitting a bug report to see if your question has already been answered.

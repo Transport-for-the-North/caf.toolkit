@@ -116,6 +116,8 @@ def equal_ignore_order(one: Iterable[Any], two: Iterable[Any]) -> bool:
 def get_missing_items(list_a: list[_T], list_b: list[_T]) -> tuple[list[_T], list[_T]]:
     """Get a list of the items in each list, but not the other.
 
+    Only works on lists of unique items!
+
     Parameters
     ----------
     list_a:
@@ -132,11 +134,46 @@ def get_missing_items(list_a: list[_T], list_b: list[_T]) -> tuple[list[_T], lis
     b_not_a:
         A list of the items in `list_b` but not `list_a`.
     """
-    set_a = set(list_a)
-    set_b = set(list_b)
-    a_not_b = set_a - set_b
-    b_not_a = set_b - set_a
+    if not is_unique_list(list_a) or not is_unique_list(list_b):
+        raise ValueError(
+            "get_missing_items() only works on lists of unique items. One "
+            "of the given lists is not unique."
+        )
+    _, a_not_b, b_not_a = compare_sets(set(list_a), set(list_b))
     return list(a_not_b), list(b_not_a)
+
+
+def compare_sets(set_a: set[_T], set_b: set[_T]) -> tuple[bool, set[_T], set[_T]]:
+    """
+    Check whether set_a and set_b are the same.
+
+    Checks for items that are in set_a, and not set_b.
+    Checks for items that are in set_b and not set_a.
+    If both above checks are empty, then sets must be equal.
+
+    Parameters
+    ----------
+    set_a:
+        The first set the check
+
+    set_b:
+        The second set the check
+
+    Returns
+    -------
+    equal:
+        True if set_a and set_b are equal, otherwise False.
+
+    a_not_in_b:
+        A set of items that are in set_a, but not in set_b.
+
+    b_not_in_a:
+        A set of items that are in set_b, but not in set_a.
+    """
+    a_not_in_b = set_a - set_b
+    b_not_in_a = set_b - set_a
+    equal = len(a_not_in_b) == 0 and len(b_not_in_a) == 0
+    return equal, a_not_in_b, b_not_in_a
 
 
 # TODO(BT): Can this take a Collection instead?
