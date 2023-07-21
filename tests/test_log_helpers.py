@@ -296,6 +296,10 @@ class TestLogHelper:
         for i, msg in unlogged_messages:
             assert msg not in text, f"logged after closing class level {i}"
 
+    @pytest.mark.serial(
+        reason="fails when running all tests, I think "
+        "due to warnings not being logged quick enough"
+    )
     def test_capture_warnings(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
         """Test Python warnings are captured and saved to log file."""
         root = "test"
