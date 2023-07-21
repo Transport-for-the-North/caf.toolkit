@@ -3,6 +3,8 @@
 Tests for the `log_helpers` module in caf.toolkit
 """
 # Built-Ins
+from __future__ import annotations
+
 import collections
 import dataclasses
 import getpass
