@@ -136,8 +136,15 @@ class SystemInformation:
         else:
             total_ram = _common.bytes2human(ram.total)
 
+        try:
+            user = getpass.getuser()
+        except ModuleNotFoundError:
+            # If LOGNAME, USER, LNAME and USERNAME are not set, then
+            # uses the pwd module which isn't available on all systems
+            user = "unknown"
+
         return SystemInformation(
-            user=getpass.getuser(),
+            user=user,
             pc_name=info.node,
             python_version=platform.python_version(),
             operating_system=f"{info.system} {info.release} ({info.version})",
