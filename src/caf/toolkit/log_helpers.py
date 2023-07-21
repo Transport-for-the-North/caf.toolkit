@@ -353,6 +353,25 @@ class LogHelper:
         write_instantiate_message(self.logger, self.tool_details.name)
         write_information(self.logger, self.tool_details)
 
+    @staticmethod
+    def _cleanup_handlers(logger: logging.Logger) -> None:
+        """Flush and close all handlers before removing from the `logger`."""
+        for handler in logger.handlers:
+            handler.flush()
+            handler.close()
+
+        logger.handlers.clear()
+
+    def cleanup_handlers(self) -> None:
+        """Flush and close all handlers before removing from the logger.
+
+        Cleans up `logger` and warnings logger (if exists).
+        """
+        self._cleanup_handlers(self.logger)
+
+        if self._warning_logger is not None:
+            self._cleanup_handlers(self._warning_logger)
+
     def __enter__(self):
         """Initialise class with 'with' statement."""
         return self
@@ -365,7 +384,7 @@ class LogHelper:
             self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
-        self.logger.handlers.clear()
+        self.cleanup_handlers()
         logging.shutdown()
 
 
