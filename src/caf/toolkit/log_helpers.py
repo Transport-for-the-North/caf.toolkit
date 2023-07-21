@@ -2,6 +2,9 @@
 """
 Helper functions for creating and managing a logger.
 
+This module is designed to initialise Python logging consistently
+and automatically log tool and system information.
+
 Classes
 -------
 LogHelper
@@ -57,7 +60,8 @@ class ToolDetails:
     name: str
         Name of the tool.
     version: str
-        Version of the tool.
+        Version of the tool, should be in semantic versioning
+        format https://semver.org/.
     homepage: str, optional
         URL of the homepage for the tool.
     source_url: str, optional
@@ -96,7 +100,7 @@ class SystemInformation:
     Attributes
     ----------
     user: str
-        Account name of the currenly logged in user.
+        Account name of the currently logged in user.
     pc_name: str
         Name of the PC.
     python_version: str
@@ -157,9 +161,77 @@ class SystemInformation:
 
 
 class LogHelper:
-    """Class for managing Python loggers."""
+    """Class for managing Python loggers.
 
-    # TODO(MB) Add examples to docstring
+    Parameters
+    ----------
+    root_logger : str
+        Name of the root logger to add handlers to,
+        should be the name of the Python package.
+    tool_details : ToolDetails
+        Details of the tool being ran.
+    console : bool, optional
+        If True (default) output log messages to the console
+        with default settings.
+    log_file : os.PathLike, optional
+        If given output log messages to a file with default
+        settings.
+    warning_capture : bool, optional
+        If True (default) capture, and log, Python warnings.
+
+    Examples
+    --------
+    When using Python's built-in logging functionality a module level
+    logger constant should be used.
+
+    >>> import logging
+    >>>
+    >>> LOG = logging.getLogger(__name__)
+
+    This module constant should be used for logging any messages, in
+    one of 5 levels.
+
+    >>> LOG.debug("Log a debug message")
+    >>> LOG.info("Log an info message")
+    >>> LOG.warning("Log a warning message")
+    >>> LOG.error("Log an error message")
+    >>> LOG.critical("Log a critical message")
+
+    To determine where log messages are written to (console / log file)
+    the log handlers need to be setup, the `LogHelper` class can do
+    this and will automatically clean-up upon exiting using a `with`
+    statement.
+
+    The example below shows how to setup logging with a log file using
+    the `LogHelper` class, which will create a log file and write system
+    and tool information to it automatically.
+
+    >>> # Temp directory for testing purposes
+    >>> tmp_path = getfixture('tmp_path')
+    >>> path = tmp_path / "test.log"
+    >>> details = ToolDetails("test", "1.2.3")
+    >>>
+    >>> with LogHelper(__package__, details, log_file=path):
+    ...     # Add main function for running your tool here
+    ...
+    ...     # Any log messages within the with statement will be written to
+    ...     # the log file, even if running in other functions / modules
+    ...     LOG.info("Log messages using module logger")
+
+    The following example shows how to setup logging with a custom console
+    or file output, this also allows log files to be added after initial
+    setup of `LogHelper` e.g. in another function after the output
+    directory is known.
+
+    >>> with LogHelper(__package__, details, console=False) as log_helper:
+    ...     # Console handler with custom message format
+    ...     log_helper.add_console_handler(ch_format="[%(levelname)-8.8s] %(message)s")
+    ...     # File handler with custom message format
+    ...     log_helper.add_file_handler(path, fh_format="[%(levelname)-8.8s] %(message)s")
+    ...
+    ...     # Write initialisation log message with system and tool information
+    ...     log_helper.write_instantiate_message()
+    """
 
     def __init__(
         self,
@@ -195,7 +267,7 @@ class LogHelper:
         datetime_format: str = DEFAULT_CONSOLE_DATETIME,
         log_level: int = logging.INFO,
     ) -> None:
-        """Wrapper around `get_console_handler` to add custom console handlers.
+        """Add custom console handler to the logger.
 
         Parameters
         ----------
@@ -209,6 +281,10 @@ class LogHelper:
 
         log_level:
             The logging level to give to the StreamHandler.
+
+        See Also
+        --------
+        `get_console_handler`
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
         self.logger.addHandler(handler)
@@ -223,7 +299,7 @@ class LogHelper:
         datetime_format: str = DEFAULT_FILE_DATETIME,
         log_level: int = logging.DEBUG,
     ) -> None:
-        """Wrapper around `get_file_handler` to add custom file handlers.
+        """Add custom file handler to the logger.
 
         Parameters
         ----------
@@ -241,6 +317,10 @@ class LogHelper:
 
         log_level:
             The logging level to give to the FileHandler.
+
+        See Also
+        --------
+        `get_file_handler`
         """
         handler = get_file_handler(log_file, fh_format, datetime_format, log_level)
         self.logger.addHandler(handler)
@@ -253,6 +333,10 @@ class LogHelper:
 
         Runs `logging.captureWarnings(True)` to capture warnings then
         adds all the handlers from the root `logger`.
+
+        See Also
+        --------
+        `capture_warnings`
         """
         logging.captureWarnings(True)
 
@@ -265,16 +349,16 @@ class LogHelper:
             self._warning_logger.addHandler(handler)
 
     def write_instantiate_message(self) -> None:
-        """Write instatiation message with tool / system information."""
+        """Log instatiation message with tool and system information."""
         write_instantiate_message(self.logger, self.tool_details.name)
         write_information(self.logger, self.tool_details)
 
     def __enter__(self):
-        """Called when initialising class with 'with' statement."""
+        """Initialise class with 'with' statement."""
         return self
 
     def __exit__(self, excepType, excepVal, traceback):
-        """Called when exiting with statement, writes any error to the logger and closes the file."""
+        """Write any error to the logger and closes the file."""
         if excepType is not None or excepVal is not None or traceback is not None:
             self.logger.critical("Oh no a critical error occurred", exc_info=True)
         else:
@@ -286,9 +370,64 @@ class LogHelper:
 
 
 class TemporaryLogFile:
-    """Add temporary log file to a logger."""
+    """Add temporary log file to a logger.
 
-    # TODO(MB) Add examples to docstring
+    This context manager class is designed to temporarily add another
+    log file to an existing logger for any messages in a `with`
+    statement. When adding a new file handler to an existing logger
+    any previous handlers will remain, so log messages will be written
+    to the new and old log files for example.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        Logger to add FileHandler to.
+
+    log_file : os.PathLike
+        Path to new log file to create.
+
+    base_log_file : os.PathLike, optional
+        Path to base log file, location will be logged
+        in new log file.
+
+    kwargs : Keyword arguments, optional
+        Any arguments to pass to `get_file_handler`.
+
+    See Also
+    --------
+    `LogHelper`: for setting up logging for a tool.
+
+    Examples
+    --------
+    When using Python's built-in logging functionality a module level
+    logger constant should be used.
+
+    >>> import logging
+    >>>
+    >>> LOG = logging.getLogger(__name__)
+
+    The code below is defining the log file path for testing purposes.
+
+    >>> log_file = getfixture('tmp_path') / "test.log"
+
+    Setting up a new temporary log file for a single module can be done
+    using the following:
+
+    >>> with TemporaryLogFile(LOG, log_file):
+    ...     LOG.info("Message logged to new file")
+    ...     # Includes logging messages from functions which are
+    ...     # in the current module only
+
+    >>> LOG.info("Message not in new file")
+
+    Logging all messages from the current package to the new file can
+    be done by passing the package logger.
+
+    >>> with TemporaryLogFile(logging.getLogger(__package__), log_file):
+    ...     LOG.info("Message logged to new file")
+    ...     # Includes logging messages from functions called here which
+    ...     # are in other modules in the package
+    """
 
     def __init__(
         self,
@@ -297,23 +436,6 @@ class TemporaryLogFile:
         base_log_file: os.PathLike | None = None,
         **kwargs,
     ) -> None:
-        """Add temporary log file handler to `logger`.
-
-        Parameters
-        ----------
-        logger : logging.Logger
-            Logger to add FileHandler to.
-
-        log_file : os.PathLike
-            Path to new log file to create.
-
-        base_log_file : os.PathLike, optional
-            Path to base log file, location will be logged
-            in new log file.
-
-        kwargs : Keyword arguments, optional
-            Any arguments to pass to `get_file_handler`.
-        """
         self.logger = logger
         self.log_file = log_file
 
@@ -343,8 +465,6 @@ def write_information(
     logger: logging.Logger, tool_details: ToolDetails | None = None, system_info: bool = True
 ) -> None:
     """Write tool and system information to `logger`.
-
-    _extended_summary_
 
     Parameters
     ----------
