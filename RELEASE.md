@@ -19,9 +19,5 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.1.2
-- Added functionality for BaseConfig
-  - Added `write_example` method to create example config files
-- Bug Fixes
-  - Fixed a bug in translations where similar compatible types for index 
-    identifiers would throw an error.
+### v0.1.3
+ - example
