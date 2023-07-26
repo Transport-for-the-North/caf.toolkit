@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
 # Built-Ins
-from typing import Any
 from typing import TypeVar
 from typing import Protocol
 
