@@ -19,12 +19,7 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.1.2
-- Added functionality for BaseConfig
-  - Added `write_example` method to create example config files
+### v0.1.3
 - Added helper module for setting up logging
   - New `LogHelpers` class for initialising Python loggers and log files
   - New `TemporaryLogFile` class for temporarily adding more log files to loggers
-- Bug Fixes
-  - Fixed a bug in translations where similar compatible types for index 
-    identifiers would throw an error.
