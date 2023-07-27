@@ -120,8 +120,8 @@ class SystemInformation:
     python_version: str
     operating_system: str
     architecture: str
-    cpu_count: int | None
-    total_ram: int | None
+    cpu_count: Optional[int]
+    total_ram: Optional[int]
 
     @classmethod
     def load(cls) -> SystemInformation:

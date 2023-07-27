@@ -22,7 +22,7 @@ import pytest
 
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
-from caf.toolkit.log_helpers import get_logger
+from caf.toolkit.log_helpers import capture_warnings, get_logger
 
 
 # # # Fixture # # #
@@ -328,10 +328,11 @@ class TestLogHelper:
         reason="fails when running all tests, I think "
         "due to warnings not being logged quick enough"
     )
-    def test_capture_warnings(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
-        """Test Python warnings are captured and saved to log file."""
+    def test_capture_warnings(
+        self, caplog: pytest.LogCaptureFixture, log_init: LogInitDetails
+    ) -> None:
+        """Test Python warnings are captured."""
         root = "test"
-        log_file = tmp_path / "test.log"
 
         log_warnings = [
             ("testing runtime warning", RuntimeWarning),
@@ -339,14 +340,12 @@ class TestLogHelper:
         ]
         # Note: ImportWarnings aren't logged by default
 
-        with LogHelper(root, log_init.details, console=False, log_file=log_file):
+        with LogHelper(root, log_init.details):
             for msg, warn in log_warnings:
                 warnings.warn(msg, warn)
 
-        text = _load_log(log_file)
-
         for msg, warn in log_warnings:
-            assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
+            assert f"{warn.__name__}: {msg}" in caplog.text, f"missing {warn.__name__} warning"
 
 
 class TestTemporaryLogFile:
@@ -416,3 +415,53 @@ class TestGetLogger:
 
         assert f"Code Version: v{version}" in caplog.messages, "missing version log"
         assert f"***  {message}  ***" in caplog.messages, "missing instantiation message"
+
+
+class TestCaptureWarnings:
+    """Test `capture_warnings` function."""
+
+    _LOG_WARNINGS = [
+        ("testing runtime warning", RuntimeWarning),
+        ("testing user warning", UserWarning),
+    ]
+    # Note: ImportWarnings aren't logged by default
+
+    def _warnings(self) -> None:
+        """Run all warnings."""
+        for msg, warn in self._LOG_WARNINGS:
+            warnings.warn(msg, warn)
+
+    def _check_warnings(self, text: str) -> None:
+        """Check warnings are in `text`."""
+        for msg, warn in self._LOG_WARNINGS:
+            assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
+
+    @pytest.mark.serial(
+        reason="fails when running all tests, I think "
+        "due to warnings not being logged quick enough"
+    )
+    def test_stream_handler(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test Python warnings are captured."""
+        capture_warnings()
+        self._warnings()
+        self._check_warnings(caplog.text)
+
+    @pytest.mark.serial(
+        reason="fails when running all tests, I think "
+        "due to warnings not being logged quick enough"
+    )
+    def test_file_handler(self, tmp_path: pathlib.Path) -> None:
+        """Test capturing warnings to log file."""
+        log_file = tmp_path / "test.log"
+
+        assert not log_file.is_file(), "log file already exists"
+
+        capture_warnings(file_handler_args={"log_file": log_file})
+        self._warnings()
+
+        assert log_file.is_file(), "log file not created"
+
+        with open(log_file, "rt", encoding="utf-8") as file:
+            text = file.read()
+
+        self._check_warnings(text)
