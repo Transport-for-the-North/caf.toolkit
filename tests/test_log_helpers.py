@@ -22,6 +22,7 @@ import pytest
 
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
+from caf.toolkit.log_helpers import get_logger
 
 
 # # # Fixture # # #
@@ -251,6 +252,7 @@ class TestSystemInformation:
 
     def test_getpass_module_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test user is unknown if `getuser` raises ModuleNotFoundError."""
+
         def getuser() -> None:
             raise ModuleNotFoundError()
 
@@ -374,3 +376,43 @@ class TestTemporaryLogFile:
 
         for i, msg in unlogged_messages:
             assert msg not in text, f"logged after closing class level {i}"
+
+
+class TestGetLogger:
+    """Tests for `get_logger` function."""
+
+    def test_console_handler(self) -> None:
+        """Test a console handler is added correctly."""
+        logger_name = "test_console_handler"
+        logger = get_logger(logger_name, "1.2.3")
+
+        assert logger.name == logger_name, "incorrect logger name"
+        assert isinstance(
+            logger.handlers[0], logging.StreamHandler
+        ), "incorrect stream handler"
+
+    def test_file_handler(self, tmp_path: pathlib.Path) -> None:
+        """Test file handler is added and log file is created."""
+        logger_name = "test_file_handler"
+        log_file = tmp_path / "test.log"
+
+        assert not log_file.is_file(), "log file already exists"
+
+        logger = get_logger(
+            logger_name, "1.2.3", console_handler=False, log_file_path=log_file
+        )
+
+        assert log_file.is_file(), "log file not created"
+        assert isinstance(logger.handlers[0], logging.FileHandler), "incorrect file handler"
+
+    def test_instantiate_message(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test instantiation message and code version are logged."""
+        logger_name = "test_instantiate_message"
+        version = "1.2.3-testing_version_logging"
+        message = "testing instantiation message 123456789"
+
+        logging.getLogger(logger_name).setLevel(logging.DEBUG)
+        get_logger(logger_name, version, instantiate_msg=message)
+
+        assert f"Code Version: v{version}" in caplog.messages, "missing version log"
+        assert f"***  {message}  ***" in caplog.messages, "missing instantiation message"
