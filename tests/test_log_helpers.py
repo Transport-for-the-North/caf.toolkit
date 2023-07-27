@@ -25,6 +25,14 @@ from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDeta
 from caf.toolkit.log_helpers import capture_warnings, get_logger
 
 
+# # # Constants # # #
+_LOG_WARNINGS = [
+    ("testing runtime warning", RuntimeWarning),
+    ("testing user warning", UserWarning),
+]
+# Note: ImportWarnings aren't logged by default
+
+
 # # # Fixture # # #
 class UnameResult(NamedTuple):
     """Result from `platform.uname()` for testing."""
@@ -118,6 +126,18 @@ def fixture_log_init() -> LogInitDetails:
     return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
 
 
+@pytest.fixture(name="warnings_logger")
+def fixture_warnings_logger() -> logging.Logger:
+    """Get 'py.warnings' logger and clear handlers."""
+    logger = logging.getLogger("py.warnings")
+
+    for handler in logger.handlers:
+        handler.close()
+
+    logger.handlers.clear()
+    return logger
+
+
 def _log_messages(
     logger: logging.Logger, message: str = "testing logging level {level}"
 ) -> list[tuple[int, str]]:
@@ -139,6 +159,18 @@ def _load_log(log_file: pathlib.Path) -> str:
         text = file.read()
 
     return text
+
+
+def _run_warnings() -> None:
+    """Run all warnings."""
+    for msg, warn in _LOG_WARNINGS:
+        warnings.warn(msg, warn)
+
+
+def _check_warnings(text: str) -> None:
+    """Check warnings are in `text`."""
+    for msg, warn in _LOG_WARNINGS:
+        assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
 
 
 # # # Tests # # #
@@ -324,28 +356,68 @@ class TestLogHelper:
         for i, msg in unlogged_messages:
             assert msg not in text, f"logged after closing class level {i}"
 
-    @pytest.mark.serial(
-        reason="fails when running all tests, I think "
-        "due to warnings not being logged quick enough"
-    )
-    def test_capture_warnings(
-        self, caplog: pytest.LogCaptureFixture, log_init: LogInitDetails
-    ) -> None:
-        """Test Python warnings are captured."""
+    def test_handler_cleanup(self, log_init: LogInitDetails) -> None:
+        """Test handlers are added to logger and removed upon exiting with statement."""
         root = "test"
-
-        log_warnings = [
-            ("testing runtime warning", RuntimeWarning),
-            ("testing user warning", UserWarning),
-        ]
-        # Note: ImportWarnings aren't logged by default
+        logger = logging.getLogger(root)
+        assert logger.handlers == [], "logger already has handlers"
 
         with LogHelper(root, log_init.details):
-            for msg, warn in log_warnings:
-                warnings.warn(msg, warn)
+            assert len(logger.handlers) == 1, "incorrect number of handlers"
+            assert isinstance(
+                logger.handlers[0], logging.StreamHandler
+            ), "incorrect stream handler"
 
-        for msg, warn in log_warnings:
-            assert f"{warn.__name__}: {msg}" in caplog.text, f"missing {warn.__name__} warning"
+        assert len(logger.handlers) == 0, "handlers not cleaned up"
+
+    def test_setup_warnings_stream_handler(
+        self, log_init: LogInitDetails, warnings_logger: logging.Logger
+    ) -> None:
+        """Test file handler is added to warnings logger."""
+        with LogHelper("test", log_init.details):
+            _run_warnings()
+
+            assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
+            assert isinstance(
+                warnings_logger.handlers[0], logging.StreamHandler
+            ), "error with stream handler"
+
+        assert len(warnings_logger.handlers) == 0, "incorrect handler cleanup"
+
+    def test_setup_warnings_file_handler(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails, warnings_logger: logging.Logger
+    ) -> None:
+        """Test file handler is added to warnings logger and log file is created."""
+        log_file = tmp_path / "test.log"
+
+        assert not log_file.is_file(), "log file already exists"
+
+        with LogHelper("test", log_init.details, console=False, log_file=log_file):
+            _run_warnings()
+
+            assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
+            assert isinstance(
+                warnings_logger.handlers[0], logging.FileHandler
+            ), "error with file handler"
+
+        assert log_file.is_file(), "log file not created"
+
+    @pytest.mark.skip(
+        reason="fails when running all tests, I think due to warnings be captured by pytest"
+    )
+    def test_capture_warnings(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        log_init: LogInitDetails,
+        warnings_logger: logging.Logger,
+    ) -> None:
+        """Test Python warnings are captured."""
+        del warnings_logger  # Fixture clears handlers from logger
+
+        with LogHelper("test", log_init.details):
+            _run_warnings()
+
+        _check_warnings(caplog.text)
 
 
 class TestTemporaryLogFile:
@@ -420,48 +492,65 @@ class TestGetLogger:
 class TestCaptureWarnings:
     """Test `capture_warnings` function."""
 
-    _LOG_WARNINGS = [
-        ("testing runtime warning", RuntimeWarning),
-        ("testing user warning", UserWarning),
-    ]
-    # Note: ImportWarnings aren't logged by default
-
-    def _warnings(self) -> None:
-        """Run all warnings."""
-        for msg, warn in self._LOG_WARNINGS:
-            warnings.warn(msg, warn)
-
-    def _check_warnings(self, text: str) -> None:
-        """Check warnings are in `text`."""
-        for msg, warn in self._LOG_WARNINGS:
-            assert f"{warn.__name__}: {msg}" in text, f"missing {warn.__name__} warning"
-
-    @pytest.mark.serial(
-        reason="fails when running all tests, I think "
-        "due to warnings not being logged quick enough"
-    )
-    def test_stream_handler(self, caplog: pytest.LogCaptureFixture) -> None:
-        """Test Python warnings are captured."""
+    def test_stream_handler_logger(self, warnings_logger: logging.Logger) -> None:
+        """Test stream handler is added to warnings logger."""
         capture_warnings()
-        self._warnings()
-        self._check_warnings(caplog.text)
 
-    @pytest.mark.serial(
-        reason="fails when running all tests, I think "
-        "due to warnings not being logged quick enough"
-    )
-    def test_file_handler(self, tmp_path: pathlib.Path) -> None:
-        """Test capturing warnings to log file."""
+        assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
+        assert isinstance(
+            warnings_logger.handlers[0], logging.StreamHandler
+        ), "error with stream handler"
+
+    def test_file_handler_logger(
+        self, tmp_path: pathlib.Path, warnings_logger: logging.Logger
+    ) -> None:
+        """Test file handler is added to warnings logger and log file is created."""
         log_file = tmp_path / "test.log"
 
         assert not log_file.is_file(), "log file already exists"
 
-        capture_warnings(file_handler_args={"log_file": log_file})
-        self._warnings()
+        capture_warnings(stream_handler=False, file_handler_args={"log_file": log_file})
+        _run_warnings()
+
+        assert log_file.is_file(), "log file not created"
+
+        assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
+        assert isinstance(
+            warnings_logger.handlers[0], logging.FileHandler
+        ), "error with file handler"
+
+    @pytest.mark.skip(
+        reason="fails when running all tests, I think due to warnings be captured by pytest"
+    )
+    def test_stream_handler_captures(
+        self, caplog: pytest.LogCaptureFixture, warnings_logger: logging.Logger
+    ) -> None:
+        """Test Python warnings are captured."""
+        del warnings_logger  # Fixture clears handlers from logger
+
+        capture_warnings()
+        _run_warnings()
+        _check_warnings(caplog.text)
+
+    @pytest.mark.skip(
+        reason="fails when running all tests, I think due to warnings be captured by pytest"
+    )
+    def test_file_handler_captures(
+        self, tmp_path: pathlib.Path, warnings_logger: logging.Logger
+    ) -> None:
+        """Test capturing warnings to log file."""
+        del warnings_logger  # Fixture clears handlers from logger
+
+        log_file = tmp_path / "test.log"
+
+        assert not log_file.is_file(), "log file already exists"
+
+        capture_warnings(stream_handler=False, file_handler_args={"log_file": log_file})
+        _run_warnings()
 
         assert log_file.is_file(), "log file not created"
 
         with open(log_file, "rt", encoding="utf-8") as file:
             text = file.read()
 
-        self._check_warnings(text)
+        _check_warnings(text)
