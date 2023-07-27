@@ -109,11 +109,10 @@ class SystemInformation:
         Information about the name and version of OS.
     architecture: str
         Name of the machine architecture e.g. "AMD64".
-    cpu_count: str
+    cpu_count: int | None
         Number of logical CPU cores on the machine.
-    total_ram: str
-        Total virtual memory on the machine in a human
-        readable format.
+    total_ram: int | None
+        Total virtual memory (bytes) on the machine.
     """
 
     user: str
@@ -121,20 +120,19 @@ class SystemInformation:
     python_version: str
     operating_system: str
     architecture: str
-    cpu_count: str
-    total_ram: str
+    cpu_count: int | None
+    total_ram: int | None
 
     @classmethod
     def load(cls) -> SystemInformation:
         """Load system information."""
         info = platform.uname()
-        cpus = os.cpu_count()
 
         ram = psutil.virtual_memory()
         if ram is None:
-            total_ram = "unknown"
+            total_ram = None
         else:
-            total_ram = _common.bytes2human(ram.total)
+            total_ram = ram.total
 
         try:
             user = getpass.getuser()
@@ -149,7 +147,7 @@ class SystemInformation:
             python_version=platform.python_version(),
             operating_system=f"{info.system} {info.release} ({info.version})",
             architecture=info.machine,
-            cpu_count="unknown" if cpus is None else str(cpus),
+            cpu_count=os.cpu_count(),
             total_ram=total_ram,
         )
 
@@ -162,7 +160,13 @@ class SystemInformation:
         length = functools.reduce(max, (len(i) for i in self.__dataclass_fields__))
 
         for name in self.__dataclass_fields__:
-            message.append(f"{name:<{length}.{length}} : {getattr(self, name, 'unknown')}")
+            value = getattr(self, name)
+            if value is None:
+                value = "unknown"
+            elif name == "total_ram":
+                value = _common.bytes2human(value)
+
+            message.append(f"{name:<{length}.{length}} : {value}")
 
         return "\n".join(message)
 

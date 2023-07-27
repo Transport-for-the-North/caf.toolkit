@@ -71,22 +71,36 @@ def fixture_monkeypatch_username(monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 @pytest.fixture(name="cpu_count")
-def fixture_monkeypatch_cpu_count(monkeypatch: pytest.MonkeyPatch) -> str:
+def fixture_monkeypatch_cpu_count(monkeypatch: pytest.MonkeyPatch) -> int:
     """Monkeypatch `os.cpu_count()` to return constant."""
-    cpu_count = "10"
+    cpu_count = 10
     monkeypatch.setattr(os, "cpu_count", lambda: cpu_count)
     return cpu_count
 
 
-@pytest.fixture(name="total_ram")
-def fixture_monkeypatch_total_ram(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Monkeypatch `psutil.virtual_memory()` to return constant."""
-    ram = 30_000
-    readable = "29.3K"
+@pytest.fixture(name="total_ram", params=[True, False])
+def fixture_monkeypatch_total_ram(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> tuple[int | None, str]:
+    """Monkeypatch `psutil.virtual_memory()` to return constant.
 
+    If param is True set total ram to constant int, otherwise
+    total ram is None.
+    """
     memory = collections.namedtuple("memory", ["total"])
-    monkeypatch.setattr(psutil, "virtual_memory", lambda: memory(ram))
-    return readable
+
+    if request.param:
+        ram = 30_000
+        value = memory(ram)
+        readable = "29.3K"
+
+    else:
+        ram = None
+        value = None
+        readable = "unknown"
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: value)
+    return ram, readable
 
 
 @pytest.fixture(name="log_init")
@@ -192,8 +206,8 @@ class TestSystemInformation:
         uname: UnameResult,
         python_version: str,
         username: str,
-        cpu_count: str,
-        total_ram: str,
+        cpu_count: int,
+        total_ram: tuple[int | None, str],
     ) -> None:
         """Test loading system information."""
         os_label = f"{uname.system} {uname.release} ({uname.version})"
@@ -205,17 +219,17 @@ class TestSystemInformation:
         assert info.operating_system == os_label, "incorrect OS"
         assert info.architecture == uname.machine, "incorrect architecture"
         assert info.cpu_count == cpu_count, "incorrect CPU count"
-        assert info.total_ram == total_ram, "incorrect total RAM"
+        assert info.total_ram == total_ram[0], "incorrect total RAM"
 
-    def test_str(self) -> None:
+    def test_str(self, total_ram: tuple[int | None, str]) -> None:
         """Test string if formatted correctly."""
         user = "Test Name"
         pc_name = "Test PC"
         python_version = "3.0.0"
         operating_system = "Test 10 (10.0.1)"
         architecture = "AMD64"
-        cpu_count = "16"
-        total_ram = "30.3K"
+        cpu_count = 16
+        ram, ram_readable = total_ram
 
         correct = (
             "System Information\n"
@@ -226,14 +240,24 @@ class TestSystemInformation:
             f"operating_system : {operating_system}\n"
             f"architecture     : {architecture}\n"
             f"cpu_count        : {cpu_count}\n"
-            f"total_ram        : {total_ram}"
+            f"total_ram        : {ram_readable}"
         )
 
         info = SystemInformation(
-            user, pc_name, python_version, operating_system, architecture, cpu_count, total_ram
+            user, pc_name, python_version, operating_system, architecture, cpu_count, ram
         )
 
         assert str(info) == correct, "incorrect string format"
+
+    def test_getpass_module_not_found(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test user is unknown if `getuser` raises ModuleNotFoundError."""
+        def getuser() -> None:
+            raise ModuleNotFoundError()
+
+        monkeypatch.setattr(getpass, "getuser", getuser)
+        info = SystemInformation.load()
+
+        assert info.user == "unknown", "incorrect username"
 
 
 class TestLogHelper:
