@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
 # Built-Ins
-from typing import Any
 from typing import TypeVar
 from typing import Protocol
 
@@ -22,7 +21,7 @@ class CastProtocol(Protocol):
     # pylint: disable=too-few-public-methods
     """Type that as the `dtype` property and `astype` method."""
 
-    dtype: np.dtype[Any]
+    dtype: np.dtype
 
     def astype(self: _T, dtype: np.dtype) -> _T:
         """Cast this object to a new type."""

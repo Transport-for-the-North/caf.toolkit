@@ -20,4 +20,6 @@ there.
 Below, a brief summary of patches made since the previous version can be found.
 
 ### v0.1.3
- - example
+- Added helper module for setting up logging
+  - New `LogHelpers` class for initialising Python loggers and log files
+  - New `TemporaryLogFile` class for temporarily adding more log files to loggers
