@@ -30,7 +30,7 @@ aggregate_functions = (
     "DENSE_RANK",
     "PERCENT_RANK",
     "CUME_DIST",
-    "ROW_NUMBER"
+    "ROW_NUMBER",
 )
 
 
@@ -79,10 +79,10 @@ class WhereInfo(BaseConfig):
     operator: str
     match: Union[str, int, list]
 
+
 def connection(file):
-    return pyodbc.connect(
-        f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}"
-    )
+    return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}")
+
 
 class QueryBuilder:
     """
