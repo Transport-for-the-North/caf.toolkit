@@ -15,6 +15,7 @@ import sqlite3
 from unittest.mock import patch
 # Third Party
 from caf.toolkit.pandas_utils import sql_handling
+import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -25,12 +26,12 @@ from caf.toolkit.pandas_utils import sql_handling
 # # # CLASSES # # #
 
 # # # FUNCTIONS # # #
-@pytest.fixture
-def mock_database_connection():
-    with patch('pyodbc.connect') as mock_connect, patch('pyodbc.Cursor') as mock_cursor:
-        yield mock_connect, mock_cursor
+# @pytest.fixture
+# def mock_database_connection():
+#     with patch('pyodbc.connect') as mock_connect, patch('pyodbc.Cursor') as mock_cursor:
+#         yield mock_connect, mock_cursor
 
-@pytest.fixture(name="testing_db", scope="module")
+@pytest.fixture(name="testing_db", scope="session")
 def fixture_testing_db():
     # Connect to an in-memory SQLite database
     connection = sqlite3.connect(":memory:")
@@ -96,7 +97,7 @@ def fixture_testing_db():
 
     # Commit the changes and close the connection
     connection.commit()
-    connection.close()
+    # connection.close()
 
     return connection
 
@@ -105,25 +106,35 @@ def fixture_testing_db():
 def fixture_tables():
     cols_1 = [sql_handling.Column(column_name="id"),
               sql_handling.Column(column_name='age', groupby_fn='SUM')]
-    cols_2 = [sql_handling.Column(column_name="table_1_id"),
-              sql_handling.Column(column_name='department', groupby_fn='COUNT')]
-    return [sql_handling.TableColumns(table_name="table_1", columns=cols_1),
-            sql_handling.TableColumns(table_name="table_2", columns=cols_2)]
+    cols_2 = [sql_handling.Column(column_name="table1_id"),
+              sql_handling.Column(column_name='address', groupby_fn='COUNT')]
+    return [sql_handling.TableColumns(table_name="table1", columns=cols_1),
+            sql_handling.TableColumns(table_name="table2", columns=cols_2)]
 
 @pytest.fixture(name="group", scope="session")
 def fixture_group():
     group_col = [sql_handling.Column(column_name="id")]
-    return [sql_handling.TableColumns(table_name="table_1", columns=group_col)]
-@pytest.fixutre(name="joins", scope="session")
+    return [sql_handling.TableColumns(table_name="table1", columns=group_col)]
+@pytest.fixture(name="joins", scope="session")
 def fixture_joins():
-    return sql_handling.JoinInfo(left_table="table_1", right_table="table_2",
-                                 left_column="id", right_column="table_1_id")
+    return [sql_handling.JoinInfo(left_table="table1", right_table="table2",
+                                 left_column="id", right_column="table1_id")]
+
 
 @pytest.fixture(name="query_test", scope="session")
 def fixture_build_query_class(testing_db, tables, joins, group):
     return sql_handling.QueryBuilder(testing_db, tables, joins, group=group)
+
+
+@pytest.fixture(name="expected_out", scope="session")
+def fixture_expected_out():
+    return pd.DataFrame({'age': {1: 30, 2: 25, 3: 35},
+                         'table1_id': {1: 1, 2: 2, 3: 3},
+                         'address': {1: '123 Main St', 2: '456 Elm St', 3: '789 Oak St'}})
+
+
 class TestBroad:
-    def test_connection(self, query_test):
-        assert query_test == 5
+    def test_connection(self, query_test, expected_out):
+        assert query_test.load_db().equals(expected_out)
 
 # You can also define other fixtures or setup/teardown functions as needed.

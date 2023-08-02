@@ -97,9 +97,6 @@ class QueryBuilder:
         where: list[WhereInfo] = None,
         group: list[TableColumns] = None,
     ):
-        self.conn = pyodbc.connect(
-            f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}"
-        )
         self.cursor = conn.cursor()
         self.tables = tables
         self.joins = joins
