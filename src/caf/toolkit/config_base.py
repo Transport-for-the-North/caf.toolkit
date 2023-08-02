@@ -29,6 +29,10 @@ class BaseConfig(pydantic.BaseModel):
 
     Examples
     --------
+    Example of creating a config class and initialising it with
+    values, values will be validated and converted to correct
+    type on initialisation.
+
     >>> from pathlib import Path
     >>> from caf.toolkit import BaseConfig
     >>> class ExampleParameters(BaseConfig):
@@ -40,17 +44,34 @@ class BaseConfig(pydantic.BaseModel):
     ...    name="Test",
     ...    some_option=False,
     ... )
-    >>> parameters
-    ExampleParameters(import_folder=WindowsPath('Test Folder'), name='Test', some_option=False)
-    >>> parameters.to_yaml()
-    'import_folder: Test Folder\nname: Test\nsome_option: False\n'
+
+    Example of instance of class after initialisation, the path differs
+    depending on operating system.
+
+    >>> parameters # doctest: +SKIP
+    ExampleParameters(
+        import_folder=WindowsPath('Test Folder'),
+        name='Test',
+        some_option=False,
+    )
+
+    Config class can be converted to YAML or saved with `save_yaml`.
+
+    >>> print(parameters.to_yaml())
+    import_folder: Test Folder
+    name: Test
+    some_option: no
+
+    Config class data can be loaded from a YAML config file using `load_yaml`.
+
     >>> yaml_text = '''
-    ... import_folder: Test YAML Folder
-    ... name: YAML test
-    ... some_option: True
+    ... import_folder: Test Folder
+    ... name: Test
+    ... some_option: no
     ... '''
-    >>> ExampleParameters.from_yaml(yaml_text)
-    ExampleParameters(import_folder=WindowsPath('Test YAML Folder'), name='YAML test', some_option=True)
+    >>> loaded_parameters = ExampleParameters.from_yaml(yaml_text)
+    >>> loaded_parameters == parameters
+    True
     """
 
     @classmethod
