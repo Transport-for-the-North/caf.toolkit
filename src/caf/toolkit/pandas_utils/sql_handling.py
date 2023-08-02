@@ -3,9 +3,35 @@ from pathlib import Path
 from typing import Union
 import pyodbc
 import pandas as pd
-
+from pydantic import validator
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
+
+aggregate_functions = (
+    "COUNT",
+    "SUM",
+    "AVG",
+    "MIN",
+    "MAX",
+    "FIRST",
+    "LAST",
+    "STDDEV",
+    "STDEV_POP",
+    "VARIANCE",
+    "VAR_POP",
+    "MEDIAN",
+    "GROUP_CONCAT",
+    "STRING_AGG",
+    "ANY",
+    "SOME",
+    "ALL",
+    "EVERY",
+    "RANK",
+    "DENSE_RANK",
+    "PERCENT_RANK",
+    "CUME_DIST",
+    "ROW_NUMBER"
+)
 
 
 class Column(BaseConfig):
@@ -15,6 +41,11 @@ class Column(BaseConfig):
 
     column_name: str
     groupby_fn: str = None
+
+    @validator("groupby_fn")
+    def valid_aggregate(cls, val):
+        if val.upper() not in aggregate_functions:
+            raise ValueError(f"{val} is not a valid aggregate function")
 
 
 class TableColumns(BaseConfig):
@@ -48,6 +79,10 @@ class WhereInfo(BaseConfig):
     operator: str
     match: Union[str, int, list]
 
+def connection(file):
+    return pyodbc.connect(
+        f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}"
+    )
 
 class QueryBuilder:
     """
@@ -56,7 +91,7 @@ class QueryBuilder:
 
     def __init__(
         self,
-        file: Path,
+        conn: pyodbc.Connection,
         tables: list[TableColumns],
         joins: list[JoinInfo],
         where: list[WhereInfo] = None,
@@ -65,7 +100,7 @@ class QueryBuilder:
         self.conn = pyodbc.connect(
             f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}"
         )
-        self.cursor = self.conn.cursor()
+        self.cursor = conn.cursor()
         self.tables = tables
         self.joins = joins
         self.where = where
