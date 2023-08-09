@@ -29,6 +29,10 @@ class BaseConfig(pydantic.BaseModel):
 
     Examples
     --------
+    Example of creating a config class and initialising it with
+    values, values will be validated and converted to correct
+    type on initialisation.
+
     >>> from pathlib import Path
     >>> from caf.toolkit import BaseConfig
     >>> class ExampleParameters(BaseConfig):
@@ -40,17 +44,34 @@ class BaseConfig(pydantic.BaseModel):
     ...    name="Test",
     ...    some_option=False,
     ... )
-    >>> parameters
-    ExampleParameters(import_folder=WindowsPath('Test Folder'), name='Test', some_option=False)
-    >>> parameters.to_yaml()
-    'import_folder: Test Folder\nname: Test\nsome_option: False\n'
+
+    Example of instance of class after initialisation, the path differs
+    depending on operating system.
+
+    >>> parameters # doctest: +SKIP
+    ExampleParameters(
+        import_folder=WindowsPath('Test Folder'),
+        name='Test',
+        some_option=False,
+    )
+
+    Config class can be converted to YAML or saved with `save_yaml`.
+
+    >>> print(parameters.to_yaml())
+    import_folder: Test Folder
+    name: Test
+    some_option: no
+
+    Config class data can be loaded from a YAML config file using `load_yaml`.
+
     >>> yaml_text = '''
-    ... import_folder: Test YAML Folder
-    ... name: YAML test
-    ... some_option: True
+    ... import_folder: Test Folder
+    ... name: Test
+    ... some_option: no
     ... '''
-    >>> ExampleParameters.from_yaml(yaml_text)
-    ExampleParameters(import_folder=WindowsPath('Test YAML Folder'), name='YAML test', some_option=True)
+    >>> loaded_parameters = ExampleParameters.from_yaml(yaml_text)
+    >>> loaded_parameters == parameters
+    True
     """
 
     @classmethod
@@ -123,6 +144,31 @@ class BaseConfig(pydantic.BaseModel):
         with open(path, "wt") as file:
             file.write(self.to_yaml())
         # pylint: enable = unspecified-encoding
+
+    @classmethod
+    def write_example(cls, path_: Path, /, **examples: str) -> None:
+        """Write examples to a config file.
+
+        Parameters
+        ----------
+        path_ : Path
+            Path to the YAML file to write.
+        examples : str
+            Fields of the config to write, any missing fields
+            are filled in with their default value (if they have
+            one) or 'REQUIRED' / 'OPTIONAL'.
+        """
+        data = {}
+        for name, field in cls.__fields__.items():
+            if field.default is not None:
+                value = field.default
+            else:
+                value = "REQUIRED" if field.required else "OPTIONAL"
+
+            data[name] = examples.get(name, value)
+
+        example = cls.construct(_fields_set=None, **data)
+        example.save_yaml(path_)
 
 
 # # # FUNCTIONS # # #

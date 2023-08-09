@@ -211,6 +211,9 @@ class PandasMatrixResults:
         self.from_unique_index = self.translation.unique_from
         self.to_unique_index = self.translation.unique_to
 
+        if self.col_translation is None:
+            self.col_translation = self.translation.copy()
+
         # Input and results
         self.mat = pd.DataFrame(
             data=np_matrix,
@@ -781,43 +784,6 @@ class TestPandasVector:
                 **(pd_vector_split.input_kwargs() | new_kwargs)
             )
 
-    @pytest.mark.parametrize("dtype1", [np.float64, np.int64, str])
-    @pytest.mark.parametrize("dtype2", [np.float64, np.int64, str])
-    def test_col_dtypes(
-        self,
-        pd_vector_split: PandasVectorResults,
-        dtype1: type,
-        dtype2: type,
-    ):
-        """Check that correct errors are thrown when types don't match"""
-        # Cast types
-        new_vector = pd_vector_split.vector.copy()
-        new_vector.index = new_vector.index.astype(dtype1)
-        new_trans = pd_vector_split.translation.copy()
-        new_trans.from_col = new_trans.from_col.astype(dtype2)
-        new_kwargs = {"vector": new_vector, "translation": new_trans.df}
-
-        if dtype1 == str and dtype2 == str:
-            # Pandas handles strings weirdly (as objects), making this hard to test
-            pass
-        elif dtype1 == dtype2:
-            # Should run normally with matching dtypes
-            result = translation.pandas_vector_zone_translation(
-                **(pd_vector_split.input_kwargs() | new_kwargs)
-            )
-            pd.testing.assert_series_equal(
-                result,
-                pd_vector_split.expected_result,
-                check_names=False,
-            )
-        else:
-            # Only throw error when not matching types
-            msg = "dtypes of `vector.index` and `translation` in `from_zone_col` must match."
-            with pytest.raises(ValueError, match=msg):
-                translation.pandas_vector_zone_translation(
-                    **(pd_vector_split.input_kwargs() | new_kwargs)
-                )
-
     def test_non_vector(self, pd_vector_split: PandasVectorResults):
         """Test that an error is thrown when a non-vector is passed in"""
         new_vector = pd.DataFrame(pd_vector_split.vector)
@@ -858,6 +824,24 @@ class TestPandasVector:
         pd_vector = request.getfixturevalue(pd_vector_str)
         result = translation.pandas_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
+        )
+        pd.testing.assert_series_equal(result, pd_vector.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_vector_aggregation", "pd_vector_split"],
+    )
+    def test_check_allow_similar_types(
+        self,
+        pd_vector_str: str,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_vector = request.getfixturevalue(pd_vector_str)
+        new_trans = pd_vector.translation.copy()
+        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        result = translation.pandas_vector_zone_translation(
+            **(pd_vector.input_kwargs() | {"translation": new_trans.df})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
@@ -1042,59 +1026,6 @@ class TestPandasMatrix:
                 **(pd_matrix_split.input_kwargs() | new_kwargs)
             )
 
-    @pytest.mark.parametrize("mat_dtype", [np.float64, np.int64, str])
-    @pytest.mark.parametrize("row_translation_dtype", [np.float64, np.int64, str])
-    def test_col_dtypes(
-        self,
-        pd_matrix_split: PandasMatrixResults,
-        mat_dtype: type,
-        row_translation_dtype: type,
-        col_translation_dtype: type = np.float64,
-    ):
-        """Check that correct errors are thrown when types don't match"""
-        # Cast types
-        new_matrix = pd_matrix_split.mat.copy()
-        new_matrix.index = new_matrix.index.astype(mat_dtype)
-        new_matrix.columns = new_matrix.columns.astype(mat_dtype)
-
-        new_trans = pd_matrix_split.translation.copy()
-        new_trans.from_col = new_trans.from_col.astype(row_translation_dtype)
-        col_trans = pd_matrix_split.translation.copy()
-        col_trans.from_col = col_trans.from_col.astype(col_translation_dtype)
-        new_kwargs = {
-            "matrix": new_matrix,
-            "translation": new_trans.df,
-            "col_translation": col_trans.df,
-        }
-
-        if mat_dtype == str and row_translation_dtype == str:
-            # Pandas handles strings weirdly (as objects), making this hard to test
-            pass
-        elif mat_dtype == row_translation_dtype == col_translation_dtype:
-            # Should run normally with matching dtypes
-            result = translation.pandas_matrix_zone_translation(
-                **(pd_matrix_split.input_kwargs() | new_kwargs)
-            )
-            pd.testing.assert_frame_equal(
-                result,
-                pd_matrix_split.expected_result,
-                check_names=False,
-            )
-        elif mat_dtype == row_translation_dtype:
-            # If the row matches, but the column doesn't
-            msg = "dtypes of `matrix.columns` and `col_translation` in `from_zone_col` must match."
-            with pytest.raises(ValueError, match=msg):
-                translation.pandas_matrix_zone_translation(
-                    **(pd_matrix_split.input_kwargs() | new_kwargs)
-                )
-        else:
-            # If row row and data dtypes don't match
-            msg = "dtypes of `matrix.index` and `translation` in `from_zone_col` must match."
-            with pytest.raises(ValueError, match=msg):
-                translation.pandas_matrix_zone_translation(
-                    **(pd_matrix_split.input_kwargs() | new_kwargs)
-                )
-
     @pytest.mark.parametrize(
         "pd_matrix_str",
         [
@@ -1147,5 +1078,80 @@ class TestPandasMatrix:
         pd_mat = request.getfixturevalue(pd_matrix_str)
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
+        )
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_matrix_str",
+        [
+            "pd_matrix_aggregation",
+            "pd_matrix_aggregation2",
+            "pd_matrix_split",
+            "pd_matrix_dtype",
+        ],
+    )
+    @pytest.mark.parametrize("row", [True, False])
+    def test_check_allow_similar_types(
+        self,
+        pd_matrix_str: str,
+        row: bool,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_mat = request.getfixturevalue(pd_matrix_str)
+
+        # Change the dtype of the row / col
+        if row:
+            new_trans = pd_mat.translation.copy()
+            keyword = "translation"
+        else:
+            new_trans = pd_mat.col_translation.copy()
+            keyword = "col_translation"
+
+        # Run the translation
+        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        result = translation.pandas_matrix_zone_translation(
+            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+        )
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_matrix_str",
+        [
+            "pd_matrix_aggregation",
+            "pd_matrix_aggregation2",
+            "pd_matrix_split",
+            "pd_matrix_dtype",
+        ],
+    )
+    @pytest.mark.parametrize("row", [True, False])
+    @pytest.mark.parametrize("trans_dtype", [str, int, float])
+    @pytest.mark.parametrize("matrix_dtype", [str, int, float])
+    def test_allow_different_types(
+        self,
+        pd_matrix_str: str,
+        row: bool,
+        trans_dtype: type,
+        matrix_dtype: type,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_mat = request.getfixturevalue(pd_matrix_str)
+
+        # Change the dtype of the row / col
+        new_matrix = pd_mat.mat.copy()
+        if row:
+            new_trans = pd_mat.translation.copy()
+            keyword = "translation"
+            new_matrix.index = new_matrix.index.astype(matrix_dtype)
+        else:
+            new_trans = pd_mat.col_translation.copy()
+            keyword = "col_translation"
+            new_matrix.columns = new_matrix.columns.astype(matrix_dtype)
+
+        # Run the translation
+        new_trans.from_col = new_trans.from_col.astype(trans_dtype)
+        result = translation.pandas_matrix_zone_translation(
+            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)

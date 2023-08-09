@@ -41,12 +41,20 @@ def std_out_err_redirect_tqdm():
     >>> from tqdm import tqdm
     >>> from time import sleep
     >>>
+    >>> # Removing times from tqdm output for testing only
+    >>> bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt}"
+    >>>
     >>> # Redirect stdout to tqdm.write() (don't forget the `as save_stdout`)
     >>> with std_out_err_redirect_tqdm() as orig_stdout:
-    >>> # tqdm needs the original stdout
-    >>> # and dynamic_ncols=True to autodetect console width
-    >>> for i in tqdm(range(3), file=orig_stdout, dynamic_ncols=True):
-    >>>     sleep(.5)
+    ...     # tqdm needs the original stdout
+    ...     # and dynamic_ncols=True to autodetect console width
+    ...     for i in tqdm(range(3), file=orig_stdout, bar_format=bar_format):
+    ...         sleep(.5)
+      0%|          | 0/3
+     33%|###3      | 1/3
+     67%|######6   | 2/3
+    100%|##########| 3/3
+    100%|##########| 3/3
     """
     # Init
     orig_out_err = sys.stdout, sys.stderr

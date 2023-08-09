@@ -5,6 +5,9 @@ Most will be used elsewhere in the codebase too
 """
 # Built-Ins
 import math
+import warnings
+
+from typing import Any
 from typing import Union
 from typing import Collection
 
@@ -175,6 +178,61 @@ def root_mean_squared_error(
     return float(np.mean(squared_diffs) ** 0.5)
 
 
+def curve_convergence(
+    target: np.ndarray,
+    achieved: np.ndarray,
+) -> float:
+    """Calculate the convergence between two curves.
+
+    Similar to r-squared, but weighted by the target values.
+
+    Parameters
+    ----------
+    target:
+        A np.array listing y values on the curve we are aiming for
+
+    achieved:
+        A np.array listing y values on the curve we have achieved
+
+    Returns
+    -------
+    convergence:
+        A float value between 0 and 1. Values closer to 1 indicate a better
+        convergence.
+
+    Raises
+    ------
+    ValueError:
+        If target and achieved are not the same shape
+    """
+    if target.shape != achieved.shape:
+        raise ValueError(
+            f"Shape of target and achieved do not match.\n"
+            f"\tTarget: {target.shape}\n"
+            f"\tAchieved: {achieved.shape}"
+        )
+
+    # Always return 0 if we achieved NaN
+    if np.isnan(achieved).sum() > 0:
+        return 0
+
+    # If NaN in our target, raise a warning too
+    if np.isnan(target).sum() > 0:
+        warnings.warn(
+            "Found NaN in the target while calculating curve_convergence. "
+            "A NaN value in target will mean 0 is always returned."
+        )
+        return 0
+
+    # Calculate convergence
+    convergence = np.sum((achieved - target) ** 2) / np.sum(
+        (target - np.sum(target) / len(target)) ** 2
+    )
+
+    # Limit between 0 and 1
+    return max(1 - convergence, 0)
+
+
 def nan_report_with_input(
     array: np.ndarray, input_dict: dict[str, np.ndarray]
 ) -> pd.DataFrame:
@@ -214,3 +272,49 @@ def nan_report_with_input(
     for ddict in [idx_cols, output_col, in_cols]:
         final_dict.update(ddict)
     return pd.DataFrame(final_dict)
+
+
+def check_numeric(check_dict: dict[str, Any]) -> None:
+    """Check if check_dict values are numeric.
+
+    Numeric values are counted as anything that is float or int.
+
+    Parameters
+    ----------
+    check_dict:
+        A dictionary of argument names and argument values to check.
+        The names are used for the error if the value isn't a numeric.
+
+    Raises
+    ------
+    ValueError
+        If any of the parameters aren't floats or ints,
+        includes the parameter name in the message.
+    """
+    for name, val in check_dict.items():
+        if not (np.issubdtype(type(val), np.floating) or np.issubdtype(type(val), np.integer)):
+            raise ValueError(
+                f"{name} should be a scalar number (float or int) " f"not {type(val)}"
+            )
+
+
+def clip_small_non_zero(array: np.ndarray, min_val: float) -> np.ndarray:
+    """Clip all small, non-zero values in an array up to a minimal value.
+
+    Any 0 values will be left as is, and only the values less than `min_val`,
+    and greater than 0 will be changed to `min_val`.
+
+    Parameters
+    ----------
+    array:
+        The array to clip
+
+    min_val:
+        The minimum non-zero value to allow in `array`.
+
+    Returns
+    -------
+    clipped_array:
+        `array`, with all non-zero values clipped to min_val.
+    """
+    return np.where((array < min_val) & (array > 0), min_val, array)
