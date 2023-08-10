@@ -7,7 +7,7 @@ name = "caf.toolkit"
 dynamic = ["version"]
 description = "A toolkit of transport planning and appraisal functionalities"
 readme = "README.md"
-license = {"file"= "LICENSE.md"}
+license = {"file"= "LICENSE"}
 requires-python = ">=3.9"
 authors = [
     { name = "Transport for the North" },
@@ -115,6 +115,10 @@ omit = ["*/_version.py"]
 method = "git"
 match = ["v*"]
 default-tag = "0.0.1"
+
+[tool.versioningit.onbuild]
+source-file = "src/caf/toolkit/_version.py"
+build-file = "caf/toolkit/_version.py"
 
 [tool.versioningit.format]
 distance = "{base_version}+{distance}.{vcs}{rev}"
