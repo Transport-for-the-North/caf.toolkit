@@ -1,10 +1,7 @@
 """A toolkit of transport planning and appraisal functionalities."""
 
-from . import _version
-__version__ = _version.get_versions()['version']
-del _version
-
-# __version__ = "0.0.56"
+from importlib.metadata import version
+__version__ = version("caf.toolkit")
 
 # Alias
 # from caf.toolkit.config_base import BaseConfig

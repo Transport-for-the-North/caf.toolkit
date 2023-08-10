@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64.0.0", "versioneer[toml]==0.29"]
+requires = ["setuptools>=64.0.0", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -45,15 +45,11 @@ testing = [
 Homepage = "https://github.com/Transport-for-the-North/caf.toolkit"
 Source = "https://github.com/Transport-for-the-North/caf.toolkit"
 
-#[tool.setuptools]
-#packages = ["caf.toolkit"]
-#package-dir = {"" = "src"}
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.dynamic]
-version = {attr = "caf.toolkit.__version__"}
+#[tool.setuptools.dynamic]
+#version = {attr = "caf.toolkit.__version__"}
 
 [tool.black]
 line-length = 95
@@ -114,6 +110,16 @@ markers = [
 
 [tool.coverage.run]
 omit = ["*/_version.py"]
+
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+default-tag = "0.0.1"
+
+[tool.versioningit.format]
+distance = "{base_version}+{distance}.{vcs}{rev}"
+dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 
 [tool.versioneer]
 VCS = "git"
