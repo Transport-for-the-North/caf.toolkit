@@ -54,7 +54,7 @@ Source = "https://github.com/Transport-for-the-North/caf.toolkit"
 where = ["src"]
 
 [tool.setuptools.package-data]
-caf.toolkit = ["py.typed"]
+"caf.toolkit" = ["py.typed"]
 
 # Linters
 [tool.black]
