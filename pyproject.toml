@@ -29,15 +29,15 @@ dependencies = [
 
 [project.optional-dependencies]
 testing = [
-    "mypy>=0.910",
-    "mypy_extensions>=0.4.3",
-    "psutil>=5.9.0",
+    "mypy>=1.0.0, <2.0.0",
+    "mypy_extensions>=1.0.0, <2.0.0",
     "pydocstyle>=6.1.1",
     "pydocstyle[toml]",
     "pylint>=2.14.5",
     "pytest-cov~=2.12.1",
     "pytest~=7.1.2",
     "tox~=3.24.3",
+    "psutil>=5.9.0",
 ]
 
 [project.urls]
@@ -45,12 +45,14 @@ testing = [
 Homepage = "https://github.com/Transport-for-the-North/caf.toolkit"
 Source = "https://github.com/Transport-for-the-North/caf.toolkit"
 
+# Packaging options
 [tool.setuptools.packages.find]
 where = ["src"]
 
-#[tool.setuptools.dynamic]
-#version = {attr = "caf.toolkit.__version__"}
+[tool.setuptools.package-data]
+caf.toolkit = py.typed
 
+# Linters
 [tool.black]
 line-length = 95
 target-version = ['py39']
@@ -101,6 +103,7 @@ add-ignore = [
     "D202",    # Temporary compatibility with black
 ]
 
+# Tests
 [tool.pytest.ini_options]
 addopts = '--cov=caf.toolkit --cov-report=xml --doctest-modules -n auto'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
@@ -111,6 +114,7 @@ markers = [
 [tool.coverage.run]
 omit = ["*/_version.py"]
 
+# Versioning
 [tool.versioningit.vcs]
 method = "git"
 match = ["v*"]
@@ -124,10 +128,3 @@ build-file = "caf/toolkit/_version.py"
 distance = "{base_version}+{distance}.{vcs}{rev}"
 dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
-
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "src/caf/toolkit/_version.py"
-versionfile_build = "caf/toolkit/_version.py"
-tag_prefix = "v"
