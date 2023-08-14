@@ -109,6 +109,7 @@ add-ignore = [
 
 # Tests
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 addopts = '--cov=caf.toolkit --cov-report=xml --doctest-modules -n auto'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = [
