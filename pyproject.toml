@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
 ]
 dependencies = [
-    "numpy>=1.19.0, <1.25.0",
+    "numpy>=1.19.0, <1.26.0",
     "pandas>=1.4.0, <2.0.0" ,
     "tqdm>=4.50.2",
     "sparse>=0.13.0",
