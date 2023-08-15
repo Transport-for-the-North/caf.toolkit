@@ -1,7 +1,62 @@
 [build-system]
-requires = ["setuptools", "versioneer-518"]
+requires = ["setuptools>=64.0.0", "versioningit"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "caf.toolkit"
+dynamic = ["version"]
+description = "A toolkit of transport planning and appraisal functionalities"
+readme = "README.md"
+license = {"file"= "LICENSE"}
+requires-python = ">=3.9"
+authors = [
+    { name = "Transport for the North" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+]
+dependencies = [
+    "numpy>=1.19.0, <1.25.0",
+    "pandas>=1.4.0, <2.0.0" ,
+    "tqdm>=4.50.2",
+    "sparse>=0.13.0",
+    "numba>=0.56.4",
+    "pydantic>=1.10, <2.0.0",
+    "strictyaml>=1.6, <2.0.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+lint = [
+    "black>=22.6.0",
+    "mypy>=1.0.0, <2.0.0",
+    "mypy_extensions>=1.0.0, <2.0.0",
+    "pydocstyle>=6.1.1",
+    "pydocstyle[toml]",
+    "pylint>=2.14.5",
+]
+
+test = [
+    "pytest>=7.4.0, <8.0.0",
+    "pytest-cov>=4.1.0, < 5.0.0",
+    "pytest-xdist>=3.3.1, <4.0.0",
+    "tox>=3.24.3, <4.0.0",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Transport-for-the-North/caf.toolkit/issues"
+Homepage = "https://github.com/Transport-for-the-North/caf.toolkit"
+Source = "https://github.com/Transport-for-the-North/caf.toolkit"
+
+# Packaging options
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"caf.toolkit" = ["py.typed"]
+
+# Linters
 [tool.black]
 line-length = 95
 target-version = ['py39']
@@ -34,7 +89,8 @@ max-attributes = 15
 max-statements = 100
 
 [tool.mypy]
-mypy_path = "src"
+packages = ["caf.toolkit"]
+namespace_packages = true
 ignore_missing_imports = true
 allow_redefinition = true
 
@@ -51,7 +107,9 @@ add-ignore = [
     "D202",    # Temporary compatibility with black
 ]
 
+# Tests
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 addopts = '--cov=caf.toolkit --cov-report=xml --doctest-modules -n auto'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = [
@@ -60,3 +118,18 @@ markers = [
 
 [tool.coverage.run]
 omit = ["*/_version.py"]
+
+# Versioning
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+default-tag = "0.0.1"
+
+[tool.versioningit.onbuild]
+source-file = "src/caf/toolkit/_version.py"
+build-file = "caf/toolkit/_version.py"
+
+[tool.versioningit.format]
+distance = "{base_version}+{distance}.{vcs}{rev}"
+dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"

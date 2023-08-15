@@ -1,6 +1,5 @@
-from . import _version
-
-__version__ = _version.get_versions()["version"]
+"""A toolkit of transport planning and appraisal functionalities."""
+from ._version import __version__
 
 # Alias
 from caf.toolkit.config_base import BaseConfig
