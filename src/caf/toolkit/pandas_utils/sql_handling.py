@@ -46,6 +46,7 @@ class Column(BaseConfig):
     def valid_aggregate(cls, val):
         if val.upper() not in aggregate_functions:
             raise ValueError(f"{val} is not a valid aggregate function")
+        return  val
 
 
 class TableColumns(BaseConfig):
@@ -80,6 +81,19 @@ class WhereInfo(BaseConfig):
     match: Union[str, int, list]
 
 
+class MainSqlConf(BaseConfig):
+    file: Path
+    tables: list[TableColumns]
+    joins: list[JoinInfo]  = None
+    wheres: list[WhereInfo] = None
+    groups: list[TableColumns] = None
+
+
+    @property
+    def conn(self):
+        return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={self.file}")
+
+
 def connection(file):
     return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}")
 
@@ -91,17 +105,13 @@ class QueryBuilder:
 
     def __init__(
         self,
-        conn: pyodbc.Connection,
-        tables: list[TableColumns],
-        joins: list[JoinInfo],
-        where: list[WhereInfo] = None,
-        group: list[TableColumns] = None,
+        params: MainSqlConf,
     ):
-        self.cursor = conn.cursor()
-        self.tables = tables
-        self.joins = joins
-        self.where = where
-        self.group = group
+        self.cursor = params.conn.cursor()
+        self.tables = params.tables
+        self.joins = params.joins
+        self.where = params.wheres
+        self.group = params.groups
 
     @property
     def table_info(self):
@@ -137,11 +147,14 @@ class QueryBuilder:
     @property
     def join_string(self):
         join_strings = []
-        for join in self.joins:
-            join_string = f"""{join.how.upper()} JOIN {join.right_table} ON {join.left_table}.{join.left_column} = {join.right_table}.{join.right_column}"""
-            join_strings.append(join_string)
-        join_strings.insert(0, self.joins[0].left_table)
-        return " ".join(join_strings)
+        if self.joins:
+            for join in self.joins:
+                join_string = f"""{join.how.upper()} JOIN {join.right_table} ON {join.left_table}.{join.left_column} = {join.right_table}.{join.right_column})"""
+                join_strings.append(join_string)
+            join_strings.insert(0, self.joins[0].left_table)
+            return "(" * len(self.joins) + " ".join(join_strings)
+        else:
+            return  self.tables[0].table_name
 
     @property
     def where_string(self):
@@ -161,7 +174,7 @@ class QueryBuilder:
             where_strings.append(
                 f"[{where.table}].[{where.column}] {where.operator} {match_string}"
             )
-        return f'\n WHERE {" AND ".join(where_strings)};'
+        return f'\nWHERE {" AND ".join(where_strings)}'
 
     @property
     def group_string(self):
@@ -171,15 +184,15 @@ class QueryBuilder:
                 f"[{table.table_name}].[{column.column_name}]" for column in table.columns
             )
             table_strings.append(string)
-        return ", ".join(table_strings)
+        return ", ".join(table_strings) + ';'
 
     def load_db(self):
         query = f"""SELECT {self.select_string}
 FROM {self.join_string}"""
-        if self.group is not None:
-            query += f"\nGROUP BY {self.group_string}"
         if self.where is not None:
             query += self.where_string
+        if self.group is not None:
+            query += f"\nGROUP BY {self.group_string}"
         self.cursor.execute(query)
         rows = self.cursor.fetchall()
         columns = []
@@ -200,3 +213,4 @@ FROM {self.join_string}"""
                     index_cols.append(name.column_name)
             df.set_index(index_cols, inplace=True)
         return df
+

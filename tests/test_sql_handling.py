@@ -136,5 +136,3 @@ def fixture_expected_out():
 class TestBroad:
     def test_connection(self, query_test, expected_out):
         assert query_test.load_db().equals(expected_out)
-
-# You can also define other fixtures or setup/teardown functions as needed.
