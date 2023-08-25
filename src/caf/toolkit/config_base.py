@@ -6,6 +6,7 @@ import datetime as dt
 import json
 from pathlib import Path
 import textwrap
+from typing import Optional
 
 # pylint: disable=import-error
 import pydantic
@@ -137,7 +138,7 @@ class BaseConfig(pydantic.BaseModel):
         self,
         path: Path,
         datetime_comment: bool = True,
-        other_comment: str | None = None,
+        other_comment: Optional[str] = None,
         format_comment: bool = False,
     ) -> None:
         """Write data from self to a YAML file.
@@ -183,7 +184,7 @@ class BaseConfig(pydantic.BaseModel):
 
     @classmethod
     def write_example(
-        cls, path_: Path, /, comment_: str | None = None, **examples: str
+        cls, path_: Path, /, comment_: Optional[str] = None, **examples: str
     ) -> None:
         """Write examples to a config file.
 

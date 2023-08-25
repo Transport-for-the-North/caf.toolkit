@@ -7,6 +7,7 @@ from pathlib import Path
 import dataclasses
 import datetime
 import pathlib
+from typing import Optional
 
 # Third Party
 import pytest
@@ -252,7 +253,7 @@ class TestYaml:
 class TestExample:
     """Test writing the example file is correct."""
 
-    def write_example(self, path_: pathlib.Path, comment_: str | None, /, **kwargs) -> str:
+    def write_example(self, path_: pathlib.Path, comment_: Optional[str], /, **kwargs) -> str:
         """Run `ConfigTestClass.write_example` and read output."""
         example_file = path_ / "test_example.yml"
         ConfigTestClass.write_example(example_file, comment_=comment_, **kwargs)
@@ -261,7 +262,7 @@ class TestExample:
             return file.read()
 
     @pytest.mark.parametrize("comment", [None, "# config example comment"])
-    def test_default_example(self, path: pathlib.Path, comment: str | None) -> None:
+    def test_default_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
         """Write example without descriptions."""
         example = self.write_example(path, comment)
 
@@ -282,7 +283,7 @@ class TestExample:
         assert example == expected, "Write example without descriptions"
 
     @pytest.mark.parametrize("comment", [None, "# config example comment"])
-    def test_example(self, path: pathlib.Path, comment: str | None) -> None:
+    def test_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
         """Write example with descriptions."""
         example_values = dict(
             dictionary="This is a dictionary",
@@ -358,8 +359,8 @@ class TestConfigComments:
         self,
         basic: ConfigTestClass,
         tmp_path: pathlib.Path,
-        comment: str | None,
-        formatted: str | None,
+        comment: Optional[str],
+        formatted: Optional[str],
         format_: bool,
     ) -> None:
         """Test the formatted and unformatted custom comments."""
