@@ -99,7 +99,7 @@ class CostDistribution:
 
     def __len__(self):
         """Get the number of bins in this cost distribution."""
-        return len(self.bin_edges)
+        return len(self.bin_edges) - 1
 
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
