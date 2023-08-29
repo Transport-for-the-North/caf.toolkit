@@ -5,6 +5,7 @@ Tests for the config_base module in caf.toolkit
 # Built-Ins
 from pathlib import Path
 import dataclasses
+import pathlib
 
 # Third Party
 import pytest
@@ -69,7 +70,7 @@ def fixture_basic(path):
 
 
 @dataclasses.dataclass
-class TestSubClass:
+class SubClassTest:
     """
     Subclass to be included as a parameter in ConfigTestClass
     """
@@ -89,7 +90,7 @@ class ConfigTestClass(BaseConfig):
     list: list[str]
     set: set[int]
     tuple: tuple[Path, Path]
-    sub: TestSubClass = None
+    sub: SubClassTest = None
     default: bool = True
     option: int = None
 
@@ -209,9 +210,9 @@ class TestYaml:
         None
         """
         conf = basic
-        conf.sub = TestSubClass(whole=3, decimal=5.7)
+        conf.sub = SubClassTest(whole=3, decimal=5.7)
         yam = conf.to_yaml()
-        assert isinstance(ConfigTestClass.from_yaml(yam).sub, TestSubClass)
+        assert isinstance(ConfigTestClass.from_yaml(yam).sub, SubClassTest)
 
     def test_save_load(self, basic, path):
         """
@@ -229,6 +230,64 @@ class TestYaml:
         file_path = path / "save_test.yml"
         basic.save_yaml(file_path)
         assert ConfigTestClass.load_yaml(file_path) == basic
+
+
+class TestExample:
+    """Test writing the example file is correct."""
+
+    def write_example(self, path_: pathlib.Path, /, **kwargs) -> str:
+        """Run `ConfigTestClass.write_example` and read output."""
+        example_file = path_ / "test_example.yml"
+        ConfigTestClass.write_example(example_file, **kwargs)
+
+        with open(example_file, "rt", encoding="utf-8") as file:
+            return file.read()
+
+    def test_default_example(self, path: pathlib.Path) -> None:
+        """Write example without descriptions."""
+        example = self.write_example(path)
+
+        expected = (
+            "dictionary: REQUIRED\n"
+            "path: REQUIRED\n"
+            "list: REQUIRED\n"
+            "set: REQUIRED\n"
+            "tuple: REQUIRED\n"
+            "sub: OPTIONAL\n"
+            "default: yes\n"
+            "option: OPTIONAL\n"
+        )
+
+        assert example == expected, "Write example without descriptions"
+
+    def test_example(self, path: pathlib.Path) -> None:
+        """Write example with descriptions."""
+        example_values = dict(
+            dictionary="This is a dictionary",
+            path="This is a path",
+            list="This is a list",
+            set="This is a set",
+            tuple="Two paths to files",
+            sub=SubClassTest("integer value", "decimal value"),
+            default="This value defaults to true",
+            option="This value is optional",
+        )
+        example = self.write_example(path, **example_values)
+
+        expected = (
+            "dictionary: {dictionary}\n"
+            "path: {path}\n"
+            "list: {list}\n"
+            "set: {set}\n"
+            "tuple: {tuple}\n"
+            "sub:\n"
+            "  whole: integer value\n"
+            "  decimal: decimal value\n"
+            "default: {default}\n"
+            "option: {option}\n"
+        ).format(**example_values)
+
+        assert example == expected, "Write example with descriptions"
 
 
 # # # FUNCTIONS # # #

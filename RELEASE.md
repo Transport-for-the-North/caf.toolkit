@@ -19,13 +19,10 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.1.1
-- Added functionality for caf.distribute
-  - New functionality to write to a csv when open
-  - Added helper functions to compare lists and sets
-  - Added function to calculate the convergence of two curves
-  - Added function to clip small values in an array
-  - Added function to check if a value is numeric
-  - Added functionality to get current time in various formats
-  - Added functionality to produce a distribution curve from cost and demand 
-    matrix inputs
+### v0.1.4
+ - Packaging system has been updated
+   - Moved versioning to [verisoningit](https://github.com/jwodder/versioningit)
+   - Updates to the packaging infrastructure to become compliant with [PEP-517](https://peps.python.org/pep-0517/) and [PEP-518](https://peps.python.org/pep-0518/)
+   - Removed explicit references to namespace package CAF ([PEP-420](https://peps.python.org/pep-0420/))
+   - Dependencies have been updated where necessary to meet new needs
+   - (Nearly) All project config and data is stored in `pyproject.toml`
