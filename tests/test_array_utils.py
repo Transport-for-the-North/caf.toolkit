@@ -77,6 +77,20 @@ class TestSparseSum:
         achieved = array_utils.sparse_sum(random_sparse_matrix)
         np.testing.assert_almost_equal(achieved, target)
 
+    @pytest.mark.parametrize("sum_axis", itertools.permutations((0, 1, 2), 3))
+    @pytest.mark.parametrize("repeat", range(2))
+    def test_sum_all_axis_explicit(
+        self,
+        random_3d_sparse_matrix: sparse.COO,
+        sum_axis: tuple[int, ...],
+        repeat: int,
+    ):
+        """Test that all axis can be summed together"""
+        del repeat
+        target = random_3d_sparse_matrix.sum()
+        achieved = array_utils.sparse_sum(random_3d_sparse_matrix, axis=sum_axis)
+        np.testing.assert_almost_equal(achieved, target)
+
     @pytest.mark.parametrize("sum_axis", axis_permutations(3))
     def test_sum_axis_subset(
         self, random_3d_sparse_matrix: sparse.COO, sum_axis: tuple[int, ...]
@@ -84,11 +98,11 @@ class TestSparseSum:
         """Test that all axis can be summed together"""
         target = random_3d_sparse_matrix.sum(axis=sum_axis)
         achieved = array_utils.sparse_sum(random_3d_sparse_matrix, axis=sum_axis)
-        # One of these sometimes returns a float instead of sparse. Leave separate
-        # until error comes back
         one = achieved.todense()
         two = target.todense()
         np.testing.assert_almost_equal(one, two)
+
+    # TODO(BT): Add test for sum all axis
 
     def test_sum_axis_int(self, random_3d_sparse_matrix: sparse.COO):
         """Test that all axis can be summed together"""
