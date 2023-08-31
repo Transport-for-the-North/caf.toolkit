@@ -152,7 +152,7 @@ def _sort_2d_sparse_coords_and_data(sparse_array: sparse.COO) -> sparse.COO:
     """Quickly sort the coordinates and data of a 2D sparse array.
 
     Used to replace the built-in sort method, as this is optimised for 2D
-    arrays abd will only work for them.
+    arrays and will only work for them.
 
     Parameters
     ----------
