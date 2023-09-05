@@ -5,6 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import logging
 
+from typing import overload
 from typing import Optional
 from typing import Iterable
 from typing import Sequence
@@ -149,6 +150,9 @@ def _sparse_unsorted_axis_swap(
 
 def _sort_2d_sparse_coords_and_data(sparse_array: sparse.COO) -> sparse.COO:
     """Quickly sort the coordinates and data of a 2D sparse array.
+
+    Used to replace the built-in sort method, as this is optimised for 2D
+    arrays and will only work for them.
 
     Parameters
     ----------
@@ -457,9 +461,26 @@ def broadcast_sparse_matrix(
     )
 
 
+@overload
 def sparse_sum(
-    sparse_array: sparse.COO, axis: Optional[Iterable[int] | int] = None
+    sparse_array: sparse.COO,
+    axis: Iterable[int] | int,
 ) -> sparse.COO:
+    ...  # pragma: no cover
+
+
+@overload
+def sparse_sum(
+    sparse_array: sparse.COO,
+    axis=None,
+) -> float:
+    ...  # pragma: no cover
+
+
+def sparse_sum(
+    sparse_array: sparse.COO,
+    axis: Optional[Iterable[int] | int] = None,
+) -> sparse.COO | float:
     """Faster sum for a sparse.COO matrix.
 
     Converts the sum to a 2D operation and then optimises functionality for
@@ -497,6 +518,10 @@ def sparse_sum(
         sparse_array=sparse_array, new_axis_order=list(keep_axis) + axis
     )
 
+    # Return a float if summing all axis
+    if keep_axis == tuple():
+        return sparse_array.data.sum()
+
     # Reshape into the 2d array
     array = array.reshape(
         (
@@ -512,9 +537,7 @@ def sparse_sum(
     unique_idxs, _ = _get_unique_idxs_and_counts(array.coords[0])
     result = np.add.reduceat(array.data, unique_idxs)
 
-    if len(result) == 1:
-        return result[0]
-
+    # Reshape back to original final shape
     final_array = sparse.COO(
         data=result,
         coords=array.coords[:1, unique_idxs],
@@ -524,6 +547,4 @@ def sparse_sum(
         prune=True,
         fill_value=0,
     )
-
-    # Reshape back to original final shape
     return final_array.reshape(final_shape)
