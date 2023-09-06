@@ -593,7 +593,7 @@ def create_log_bins(
 
     n_bin_pow:
         The power used to determine the number of bins to use, depending
-        on the max value. This value should be between 0 and 1.
+        on the max value. This value should be between 0 and 1. (0, 1)
         `max_value ** n_bin_pow`.
 
     log_factor:
@@ -610,8 +610,15 @@ def create_log_bins(
     bin_edges:
         A numpy array of bin edges.
     """
+    # Validate
     if final_val < max_value:
         raise ValueError("`final_val` is lower than `max_value`.")
+
+    if not (0 < n_bin_pow < 1):
+        raise ValueError(
+            f"`n_bin_pow` should be in the range (0, 1). Got a value of "
+            f"{n_bin_pow}."
+        )
 
     n_bins = int(max_value**n_bin_pow)
     bins = (np.array(range(2, n_bins + 1)) / n_bins) ** log_factor * max_value
