@@ -620,6 +620,13 @@ def create_log_bins(
             f"{n_bin_pow}."
         )
 
+    if log_factor <= 0:
+        raise ValueError(
+            f"`log_factor` should be greater than 0. Got a value of "
+            f"{log_factor}."
+        )
+
+    # Calculate
     n_bins = int(max_value**n_bin_pow)
     bins = (np.array(range(2, n_bins + 1)) / n_bins) ** log_factor * max_value
     bins = np.floor(bins)

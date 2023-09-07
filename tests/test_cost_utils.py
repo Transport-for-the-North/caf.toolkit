@@ -45,6 +45,26 @@ class CostDistFnResults:
 
 
 @dataclasses.dataclass
+class DynamicCostDistFnResults(CostDistFnResults):
+    """Inputs and expected results for a cost_distribution function"""
+
+    # Inputs
+    n_bin_pow: float
+    log_factor: float
+    final_val: float
+
+    def get_kwargs(self) -> dict[str, Any]:
+        """Get the kwarg dict for easy calls."""
+        return{
+            "matrix": self.matrix,
+            "cost_matrix": self.cost_matrix,
+            "n_bin_pow": self.n_bin_pow,
+            "log_factor": self.log_factor,
+            "final_val": self.final_val,
+        }
+
+
+@dataclasses.dataclass
 class LogBinsResults:
     """Inputs and expected results for create_log_bins function."""
 
@@ -69,7 +89,7 @@ class LogBinsResults:
 
 # # # FIXTURES # # #
 @pytest.fixture(name="cost_dist_1d", scope="class")
-def fixture_cost_dist_1d():
+def fixture_cost_dist_1d() -> CostDistFnResults:
     """Create a 1D matrix to distribute"""
     return CostDistFnResults(
         matrix=np.array([26.0, 43.0, 5.0, 8.0, 18.0, 51.0, 35.0, 39.0, 32.0, 37.0]),
@@ -80,7 +100,7 @@ def fixture_cost_dist_1d():
 
 
 @pytest.fixture(name="cost_dist_2d", scope="class")
-def fixture_cost_dist_2d():
+def fixture_cost_dist_2d() -> CostDistFnResults:
     """Create a 2D matrix to distribute"""
     matrix = np.array(
         [
@@ -107,6 +127,38 @@ def fixture_cost_dist_2d():
         cost_matrix=cost_matrix,
         bin_edges=np.array([0, 5, 10, 20, 40, 75, 100]),
         distribution=np.array([106.0, 69.0, 122.0, 210.0, 542.0, 151.0]),
+    )
+
+
+@pytest.fixture(name="dynamic_cost_dist_1d", scope="class")
+def fixture_dynamic_cost_dist_1d(cost_dist_1d) -> DynamicCostDistFnResults:
+    """Create a 1d dynamic cost distribution and results"""
+    dynamic_bin_edges = np.array([0, 2, 6, 12, 20, 30, 42, 57, 74, 94, 110.])
+    distribution = np.array([0, 0, 0, 35, 0, 32, 5, 59, 145, 18])
+    return DynamicCostDistFnResults(
+        matrix=cost_dist_1d.matrix,
+        cost_matrix=cost_dist_1d.cost_matrix,
+        n_bin_pow=0.51,
+        log_factor=2.2,
+        final_val=110,
+        bin_edges=dynamic_bin_edges,
+        distribution=distribution,
+    )
+
+
+@pytest.fixture(name="dynamic_cost_dist_2d", scope="class")
+def fixture_dynamic_cost_dist_2d(cost_dist_2d) -> DynamicCostDistFnResults:
+    """Create a 2d dynamic cost distribution and results"""
+    distribution = np.array([0, 106, 69, 122, 62, 258, 178, 254, 148, 3])
+    dynamic_bin_edges = np.array([0, 2, 6, 13, 21, 31, 44, 59, 77, 98, 110])
+    return DynamicCostDistFnResults(
+        matrix=cost_dist_2d.matrix,
+        cost_matrix=cost_dist_2d.cost_matrix,
+        n_bin_pow=0.51,
+        log_factor=2.2,
+        final_val=110,
+        bin_edges=dynamic_bin_edges,
+        distribution=distribution,
     )
 
 
@@ -346,17 +398,42 @@ class TestCreateLogBins:
     @pytest.mark.parametrize("log_factor", [-1, 0])
     def test_bad_log_factor(self, small_log_bins: LogBinsResults, log_factor: float):
         """Check an error is thrown when the power is an invalid value."""
-        with pytest.raises(ValueError, match="should be in the range"):
+        with pytest.raises(ValueError, match="should be greater than 0"):
             cost_utils.create_log_bins(
                 **(small_log_bins.get_kwargs() | {"log_factor": log_factor})
             )
 
 
+@pytest.mark.usefixtures("dynamic_cost_dist_1d", "dynamic_cost_dist_2d")
 class TestDynamicCostDistribution:
-    """Tests for the cost distribution helper functions."""
+    """Tests for the dynamic_cost_distribution function.
 
-    # Tests for:
-    # create_log_bins
-    # dynamic_cost_distribution
+    No error checks needed as these are carried out in other tests.
+    """
 
-    pass
+    @pytest.mark.parametrize(
+        "dist_str",
+        ["dynamic_cost_dist_1d", "dynamic_cost_dist_2d"],
+    )
+    def test_correct_distribution(self, dist_str: str, request):
+        """Check that the expected distribution is returned."""
+        cost_dist: DynamicCostDistFnResults = request.getfixturevalue(dist_str)
+        result, bins = cost_utils.dynamic_cost_distribution(
+            matrix=cost_dist.matrix,
+            cost_matrix=cost_dist.cost_matrix,
+
+        )
+        np.testing.assert_almost_equal(result, cost_dist.distribution)
+        np.testing.assert_almost_equal(bins[:-1], cost_dist.bin_edges[:-1])
+
+
+    @pytest.mark.parametrize(
+        "dist_str",
+        ["dynamic_cost_dist_1d", "dynamic_cost_dist_2d"],
+    )
+    def test_kwarg_passing(self, dist_str: str, request):
+        """Check that the expected distribution is returned."""
+        cost_dist: DynamicCostDistFnResults = request.getfixturevalue(dist_str)
+        result, bins = cost_utils.dynamic_cost_distribution(**cost_dist.get_kwargs())
+        np.testing.assert_almost_equal(result, cost_dist.distribution)
+        np.testing.assert_almost_equal(bins, cost_dist.bin_edges)
