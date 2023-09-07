@@ -55,7 +55,7 @@ class DynamicCostDistFnResults(CostDistFnResults):
 
     def get_kwargs(self) -> dict[str, Any]:
         """Get the kwarg dict for easy calls."""
-        return{
+        return {
             "matrix": self.matrix,
             "cost_matrix": self.cost_matrix,
             "n_bin_pow": self.n_bin_pow,
@@ -79,7 +79,7 @@ class LogBinsResults:
 
     def get_kwargs(self) -> dict[str, Any]:
         """Get the kwarg dict for easy calls."""
-        return{
+        return {
             "max_value": self.max_value,
             "n_bin_pow": self.n_bin_pow,
             "log_factor": self.log_factor,
@@ -133,7 +133,7 @@ def fixture_cost_dist_2d() -> CostDistFnResults:
 @pytest.fixture(name="dynamic_cost_dist_1d", scope="class")
 def fixture_dynamic_cost_dist_1d(cost_dist_1d) -> DynamicCostDistFnResults:
     """Create a 1d dynamic cost distribution and results"""
-    dynamic_bin_edges = np.array([0, 2, 6, 12, 20, 30, 42, 57, 74, 94, 110.])
+    dynamic_bin_edges = np.array([0, 2, 6, 12, 20, 30, 42, 57, 74, 94, 110.0])
     distribution = np.array([0, 0, 0, 35, 0, 32, 5, 59, 145, 18])
     return DynamicCostDistFnResults(
         matrix=cost_dist_1d.matrix,
@@ -383,9 +383,7 @@ class TestCreateLogBins:
     def test_small_final_val(self, small_log_bins: LogBinsResults):
         """Check an error is thrown when the max value is too small."""
         with pytest.raises(ValueError, match="lower than"):
-            cost_utils.create_log_bins(
-                **(small_log_bins.get_kwargs() | {"final_val": 0})
-            )
+            cost_utils.create_log_bins(**(small_log_bins.get_kwargs() | {"final_val": 0}))
 
     @pytest.mark.parametrize("n_bin_pow", [-1, 0, 1, 2])
     def test_bad_power(self, small_log_bins: LogBinsResults, n_bin_pow: float):
@@ -421,11 +419,9 @@ class TestDynamicCostDistribution:
         result, bins = cost_utils.dynamic_cost_distribution(
             matrix=cost_dist.matrix,
             cost_matrix=cost_dist.cost_matrix,
-
         )
         np.testing.assert_almost_equal(result, cost_dist.distribution)
         np.testing.assert_almost_equal(bins[:-1], cost_dist.bin_edges[:-1])
-
 
     @pytest.mark.parametrize(
         "dist_str",

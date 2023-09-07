@@ -614,16 +614,14 @@ def create_log_bins(
     if final_val < max_value:
         raise ValueError("`final_val` is lower than `max_value`.")
 
-    if not (0 < n_bin_pow < 1):
+    if not 0 < n_bin_pow < 1:
         raise ValueError(
-            f"`n_bin_pow` should be in the range (0, 1). Got a value of "
-            f"{n_bin_pow}."
+            f"`n_bin_pow` should be in the range (0, 1). Got a value of " f"{n_bin_pow}."
         )
 
     if log_factor <= 0:
         raise ValueError(
-            f"`log_factor` should be greater than 0. Got a value of "
-            f"{log_factor}."
+            f"`log_factor` should be greater than 0. Got a value of " f"{log_factor}."
         )
 
     # Calculate
