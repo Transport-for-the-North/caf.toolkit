@@ -7,6 +7,7 @@ import dataclasses
 
 from typing import Any
 
+import pandas as pd
 # Third Party
 import pytest
 import numpy as np
@@ -62,6 +63,50 @@ class DynamicCostDistFnResults(CostDistFnResults):
             "log_factor": self.log_factor,
             "final_val": self.final_val,
         }
+
+
+@dataclasses.dataclass
+class CostDistClassResults(CostDistFnResults):
+    """Inputs and expected results for a CostDistribution class."""
+
+    # Inputs
+    min_col: str = "min"
+    max_col: str = "max"
+    avg_col: str = "ave"
+    trips_col: str = "trips"
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.avg_bounds = (self.min_bounds + self.max_bounds) / 2
+        self.df = pd.DataFrame({
+            self.min_col: self.min_bounds,
+            self.max_col: self.max_bounds,
+            self.avg_col: self.avg_bounds,
+            self.trips_col: self.distribution,
+        })
+        self.normalised_df = pd.DataFrame({
+            self.min_col: self.min_bounds,
+            self.max_col: self.max_bounds,
+            self.avg_col: self.avg_bounds,
+            self.trips_col: self.normalised_distribution,
+        })
+
+    @property
+    def default_name_df(self) -> pd.DataFrame:
+        """Get the internal pandas dataframe using the default col names."""
+        naming_dict = {
+            self.min_col: "min",
+            self.max_col: "max",
+            self.avg_col: "ave",
+            self.trips_col: "trips",
+        }
+        return self.df.rename(columns=naming_dict)
+
+
+@dataclasses.dataclass
+class DynamicCostDistClassResults(CostDistClassResults, DynamicCostDistFnResults):
+    """Inputs and expected results for a CostDistribution class w/ dynamic bounds."""
 
 
 @dataclasses.dataclass
@@ -206,7 +251,189 @@ def fixture_large_log_bins():
     )
 
 
+@pytest.fixture(name="cost_dist_1d_class", scope="class")
+def fixture_cost_dist_1d_class(cost_dist_1d) -> CostDistClassResults:
+    """Create a 1D array of values to pass to CostDistribution."""
+    return CostDistClassResults(
+        matrix=cost_dist_1d.matrix,
+        cost_matrix=cost_dist_1d.cost_matrix,
+        bin_edges=cost_dist_1d.bin_edges,
+        distribution=cost_dist_1d.distribution,
+    )
+
+
+@pytest.fixture(name="cost_dist_2d_class", scope="class")
+def fixture_cost_dist_2d_class(cost_dist_2d) -> CostDistClassResults:
+    """Create a 1D array of values to pass to CostDistribution."""
+    return CostDistClassResults(
+        matrix=cost_dist_2d.matrix,
+        cost_matrix=cost_dist_2d.cost_matrix,
+        bin_edges=cost_dist_2d.bin_edges,
+        distribution=cost_dist_2d.distribution,
+    )
+
+
+@pytest.fixture(name="cost_dist_2d_class_cols", scope="class")
+def fixture_cost_dist_2d_class_cols(cost_dist_2d) -> CostDistClassResults:
+    """Create a 1D array of values to pass to CostDistribution."""
+    return CostDistClassResults(
+        matrix=cost_dist_2d.matrix,
+        cost_matrix=cost_dist_2d.cost_matrix,
+        bin_edges=cost_dist_2d.bin_edges,
+        distribution=cost_dist_2d.distribution,
+        min_col="smallest",
+        max_col="biggest34",
+        avg_col="in the middle",
+        trips_col="some random values",
+    )
+
+@pytest.fixture(name="dynamic_cost_dist_1d_class", scope="class")
+def fixture_dynamic_cost_dist_1d_class(dynamic_cost_dist_1d) -> DynamicCostDistClassResults:
+    """Create a 1d dynamic cost distribution and results"""
+    return DynamicCostDistClassResults(
+        matrix=dynamic_cost_dist_1d.matrix,
+        cost_matrix=dynamic_cost_dist_1d.cost_matrix,
+        n_bin_pow=dynamic_cost_dist_1d.n_bin_pow,
+        log_factor=dynamic_cost_dist_1d.log_factor,
+        final_val=dynamic_cost_dist_1d.final_val,
+        bin_edges=dynamic_cost_dist_1d.bin_edges,
+        distribution=dynamic_cost_dist_1d.distribution,
+    )
+
+
+@pytest.fixture(name="dynamic_cost_dist_2d_class", scope="class")
+def fixture_dynamic_cost_dist_2d_class(dynamic_cost_dist_2d) -> DynamicCostDistClassResults:
+    """Create a 1d dynamic cost distribution and results"""
+    return DynamicCostDistClassResults(
+        matrix=dynamic_cost_dist_2d.matrix,
+        cost_matrix=dynamic_cost_dist_2d.cost_matrix,
+        n_bin_pow=dynamic_cost_dist_2d.n_bin_pow,
+        log_factor=dynamic_cost_dist_2d.log_factor,
+        final_val=dynamic_cost_dist_2d.final_val,
+        bin_edges=dynamic_cost_dist_2d.bin_edges,
+        distribution=dynamic_cost_dist_2d.distribution,
+    )
+
+
 # # # TESTS # # #
+@pytest.mark.usefixtures("cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols", "dynamic_cost_dist_1d_class", "dynamic_cost_dist_2d_class")
+class TestCostDistributionClassConstructors:
+    """Tests for the construction methods for CostDistribution class."""
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_correct_init(self, io_str: str, request):
+        """Test the class constructor creates the correct DF internally."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution(
+            df=input_and_results.df,
+            min_col=input_and_results.min_col,
+            max_col=input_and_results.max_col,
+            avg_col=input_and_results.avg_col,
+            trips_col=input_and_results.trips_col,
+        )
+        pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_init_wrong_col(self, io_str: str, request):
+        """Test the class constructor throws errors with bad column names."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        with pytest.raises(ValueError, match="The following columns are missing"):
+            cost_utils.CostDistribution(df=input_and_results.df, min_col="wrong_name")
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_correct_from_data_edges(self, io_str: str, request):
+        """Test an alternate class constructor works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution.from_data(
+            matrix=input_and_results.matrix,
+            cost_matrix=input_and_results.cost_matrix,
+            bin_edges=input_and_results.bin_edges,
+        )
+        pd.testing.assert_frame_equal(cost_dist.df, input_and_results.default_name_df)
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_correct_from_data_bounds(self, io_str: str, request):
+        """Test an alternate class constructor works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution.from_data(
+            matrix=input_and_results.matrix,
+            cost_matrix=input_and_results.cost_matrix,
+            min_bounds=input_and_results.min_bounds,
+            max_bounds=input_and_results.max_bounds,
+        )
+        pd.testing.assert_frame_equal(cost_dist.df, input_and_results.default_name_df)
+
+    @pytest.mark.parametrize("which_do", ["none", "min", "max"])
+    def test_bad_bounds(self, cost_dist_2d_class: CostDistFnResults, which_do: str):
+        """Check an error is raised when bad bounds given"""
+        # Determine the kwargs
+        kwargs = {"matrix": cost_dist_2d_class.matrix, "cost_matrix": cost_dist_2d_class.cost_matrix,}
+        if which_do == "min":
+            kwargs.update({"min_bounds": cost_dist_2d_class.min_bounds})
+        elif which_do == "max":
+            kwargs.update({"max_bounds": cost_dist_2d_class.max_bounds})
+        # Implicit if "none", do nothing
+
+        # Check fro error
+        msg = (
+            "Either `bin_edges` needs to be set, or both `min_bounds` and "
+            "`max_bounds` needs to be set."
+        )
+        with pytest.raises(ValueError, match=msg):
+            cost_utils.CostDistribution.from_data(
+                matrix=cost_dist_2d_class.matrix,
+                cost_matrix=cost_dist_2d_class.cost_matrix,
+                min_bounds=cost_dist_2d_class.min_bounds,
+            )
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["dynamic_cost_dist_1d_class", "dynamic_cost_dist_2d_class"],
+    )
+    def test_correct_data_no_bins(self, io_str: str, request):
+        """Test an alternate class constructor works correctly."""
+        input_and_results: DynamicCostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution.from_data_no_bins(
+            **input_and_results.get_kwargs()
+        )
+        pd.testing.assert_frame_equal(
+            cost_dist.df, input_and_results.default_name_df, check_dtype=False,)
+
+    @pytest.mark.parametrize(
+        "io_str",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_correct_from_file(self, io_str: str, request, tmp_path):
+        """Test that the constructor can be called correctly from file"""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+
+        # Create path and write out df
+        filepath = tmp_path / "tld.csv"
+        input_and_results.df.to_csv(filepath, index=False)
+
+        # Load in and assert
+        cost_dist = cost_utils.CostDistribution.from_file(
+            filepath=filepath,
+            min_col=input_and_results.min_col,
+            max_col=input_and_results.max_col,
+            avg_col=input_and_results.avg_col,
+            trips_col=input_and_results.trips_col,
+        )
+        pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df, check_dtype=False,)
+
+
 @pytest.mark.usefixtures("cost_dist_1d", "cost_dist_2d")
 class TestCostDistributionFunction:
     """Tests for the cost distribution function"""
@@ -358,12 +585,6 @@ class TestCostDistributionFunction:
         )
         np.testing.assert_almost_equal(result, np.zeros_like(cost_dist_2d.distribution))
         np.testing.assert_almost_equal(norm_result, np.zeros_like(cost_dist_2d.distribution))
-
-
-class TestCostDistributionClass:
-    """Tests for the CostDistribution class."""
-
-    pass
 
 
 @pytest.mark.usefixtures("small_log_bins", "med_log_bins", "large_log_bins")

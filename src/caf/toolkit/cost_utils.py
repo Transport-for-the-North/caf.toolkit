@@ -88,7 +88,7 @@ class CostDistribution:
         # Throw error if missing columns found
         if err_cols != dict():
             raise ValueError(
-                "Not all of the given column names exist in the given df. "
+                "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
                 f"With the following in the Df: {df.columns}"
             )
@@ -186,7 +186,7 @@ class CostDistribution:
         # Define columns names
         min_col = "min"
         max_col = "max"
-        avg_col = "ave_km"
+        avg_col = "ave"
         trips_col = "trips"
 
         # Calculate the cost distribution
