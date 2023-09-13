@@ -101,6 +101,12 @@ class CostDistribution:
         """Get the number of bins in this cost distribution."""
         return len(self.bin_edges) - 1
 
+    def __eq__(self, other):
+        """Check if two items are the same."""
+        if not isinstance(other, CostDistribution):
+            return False
+        return (self.df == other.df).values.all()
+
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
         return copy.copy(self)

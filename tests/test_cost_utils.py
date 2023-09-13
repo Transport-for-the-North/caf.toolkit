@@ -98,6 +98,16 @@ class CostDistClassResults(CostDistFnResults):
         )
 
     @property
+    def constructor_kwargs(self) -> dict[str, Any]:
+        return {
+            "df": self.df,
+            "min_col": self.min_col,
+            "max_col": self.max_col,
+            "avg_col": self.avg_col,
+            "trips_col": self.trips_col,
+        }
+
+    @property
     def default_name_df(self) -> pd.DataFrame:
         """Get the internal pandas dataframe using the default col names."""
         naming_dict = {
@@ -339,13 +349,7 @@ class TestCostDistributionClassConstructors:
     def test_correct_init(self, io_str: str, request):
         """Test the class constructor creates the correct DF internally."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
-        cost_dist = cost_utils.CostDistribution(
-            df=input_and_results.df,
-            min_col=input_and_results.min_col,
-            max_col=input_and_results.max_col,
-            avg_col=input_and_results.avg_col,
-            trips_col=input_and_results.trips_col,
-        )
+        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
 
     @pytest.mark.parametrize(
@@ -454,6 +458,47 @@ class TestCostDistributionClassConstructors:
             input_and_results.df,
             check_dtype=False,
         )
+
+
+@pytest.mark.usefixtures("cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols")
+@pytest.mark.parametrize(
+    "io_str",
+    ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+)
+class TestCostDistributionClassMethods:
+    """Tests for the methods of CostDistribution class."""
+
+    def test_length(self, io_str: str, request):
+        """Test the class __len__ method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
+        assert len(cost_dist) == len(input_and_results.bin_edges) - 1
+
+    def test_equals(self, io_str: str, request):
+        """Test the class __eq__ method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
+        assert cost_dist == cost_dist
+
+    def test_copy(self, io_str: str, request):
+        """Test the class copy method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
+        assert cost_dist.copy() == cost_dist
+
+    # Test create_similar
+    # Test residuals
+    # Test convergence
+
+    # Create class to test all these parameters
+    # Test min_vals
+    # Test max_vals
+    # Test bin_edges
+    # Test n_bins
+    # Test avg_vals
+    # Test trip_vals
+    # Test band_share_vals
+    # Test band_share_vals
 
 
 @pytest.mark.usefixtures("cost_dist_1d", "cost_dist_2d")
@@ -619,9 +664,9 @@ class TestCreateLogBins:
     )
     def test_correct_result(self, io_str: str, request):
         """Check that the correct results are returned"""
-        io: LogBinsResults = request.getfixturevalue(io_str)
-        result = cost_utils.create_log_bins(**io.get_kwargs())
-        np.testing.assert_almost_equal(result, io.expected_bins)
+        input_and_results: LogBinsResults = request.getfixturevalue(io_str)
+        result = cost_utils.create_log_bins(**input_and_results.get_kwargs())
+        np.testing.assert_almost_equal(result, input_and_results.expected_bins)
 
     def test_small_final_val(self, small_log_bins: LogBinsResults):
         """Check an error is thrown when the max value is too small."""
