@@ -8,6 +8,7 @@ import dataclasses
 from typing import Any
 
 import pandas as pd
+
 # Third Party
 import pytest
 import numpy as np
@@ -79,18 +80,22 @@ class CostDistClassResults(CostDistFnResults):
         super().__post_init__()
 
         self.avg_bounds = (self.min_bounds + self.max_bounds) / 2
-        self.df = pd.DataFrame({
-            self.min_col: self.min_bounds,
-            self.max_col: self.max_bounds,
-            self.avg_col: self.avg_bounds,
-            self.trips_col: self.distribution,
-        })
-        self.normalised_df = pd.DataFrame({
-            self.min_col: self.min_bounds,
-            self.max_col: self.max_bounds,
-            self.avg_col: self.avg_bounds,
-            self.trips_col: self.normalised_distribution,
-        })
+        self.df = pd.DataFrame(
+            {
+                self.min_col: self.min_bounds,
+                self.max_col: self.max_bounds,
+                self.avg_col: self.avg_bounds,
+                self.trips_col: self.distribution,
+            }
+        )
+        self.normalised_df = pd.DataFrame(
+            {
+                self.min_col: self.min_bounds,
+                self.max_col: self.max_bounds,
+                self.avg_col: self.avg_bounds,
+                self.trips_col: self.normalised_distribution,
+            }
+        )
 
     @property
     def default_name_df(self) -> pd.DataFrame:
@@ -287,6 +292,7 @@ def fixture_cost_dist_2d_class_cols(cost_dist_2d) -> CostDistClassResults:
         trips_col="some random values",
     )
 
+
 @pytest.fixture(name="dynamic_cost_dist_1d_class", scope="class")
 def fixture_dynamic_cost_dist_1d_class(dynamic_cost_dist_1d) -> DynamicCostDistClassResults:
     """Create a 1d dynamic cost distribution and results"""
@@ -316,7 +322,13 @@ def fixture_dynamic_cost_dist_2d_class(dynamic_cost_dist_2d) -> DynamicCostDistC
 
 
 # # # TESTS # # #
-@pytest.mark.usefixtures("cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols", "dynamic_cost_dist_1d_class", "dynamic_cost_dist_2d_class")
+@pytest.mark.usefixtures(
+    "cost_dist_1d_class",
+    "cost_dist_2d_class",
+    "cost_dist_2d_class_cols",
+    "dynamic_cost_dist_1d_class",
+    "dynamic_cost_dist_2d_class",
+)
 class TestCostDistributionClassConstructors:
     """Tests for the construction methods for CostDistribution class."""
 
@@ -379,7 +391,10 @@ class TestCostDistributionClassConstructors:
     def test_bad_bounds(self, cost_dist_2d_class: CostDistFnResults, which_do: str):
         """Check an error is raised when bad bounds given"""
         # Determine the kwargs
-        kwargs = {"matrix": cost_dist_2d_class.matrix, "cost_matrix": cost_dist_2d_class.cost_matrix,}
+        kwargs = {
+            "matrix": cost_dist_2d_class.matrix,
+            "cost_matrix": cost_dist_2d_class.cost_matrix,
+        }
         if which_do == "min":
             kwargs.update({"min_bounds": cost_dist_2d_class.min_bounds})
         elif which_do == "max":
@@ -409,7 +424,10 @@ class TestCostDistributionClassConstructors:
             **input_and_results.get_kwargs()
         )
         pd.testing.assert_frame_equal(
-            cost_dist.df, input_and_results.default_name_df, check_dtype=False,)
+            cost_dist.df,
+            input_and_results.default_name_df,
+            check_dtype=False,
+        )
 
     @pytest.mark.parametrize(
         "io_str",
@@ -431,7 +449,11 @@ class TestCostDistributionClassConstructors:
             avg_col=input_and_results.avg_col,
             trips_col=input_and_results.trips_col,
         )
-        pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df, check_dtype=False,)
+        pd.testing.assert_frame_equal(
+            cost_dist.df,
+            input_and_results.df,
+            check_dtype=False,
+        )
 
 
 @pytest.mark.usefixtures("cost_dist_1d", "cost_dist_2d")
