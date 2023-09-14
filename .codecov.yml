@@ -1,5 +1,12 @@
 coverage:
   status:
+    # Ensure each PR hits at least 80% coverage
     patch:
       default:
         target: 80%
+
+    # Allow some leniency as coverage is currently >90%
+    project:
+      default:
+        target: auto
+        threshold: 5%
