@@ -36,7 +36,7 @@ LOG = logging.getLogger(__name__)
 class CostDistribution:
     """Distribution of cost values between variable bounds.
 
-    Parameters
+    Attributes
     ----------
     df:
         The raw Pandas DataFrame containing the cost distribution data.
