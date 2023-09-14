@@ -315,7 +315,10 @@ class CostDistribution:
         ValueError:
             When self and other do not have similar enough bin_edges.
         """
-        if not np.allclose(self.bin_edges, other.bin_edges):
+        if (
+            self.bin_edges.shape != other.bin_edges.shape
+            or not np.allclose(self.bin_edges, other.bin_edges)
+        ):  # fmt: skip
             raise ValueError(
                 "Bin edges are not similar enough.\n"
                 f"{self.bin_edges=}\n"
@@ -346,8 +349,27 @@ class CostDistribution:
         new_distribution.df[new_distribution.trips_col] = trip_vals
         return new_distribution
 
-    def residuals(self, other: CostDistribution) -> np.ndarray:
-        """Calculate the residuals between this and other.
+    def trip_residuals(self, other: CostDistribution) -> np.ndarray:
+        """Calculate the trip residuals between this and other.
+
+        Residuals are calculated as:
+        `self.trip_vals - other.trip_vals`
+
+        Parameters
+        ----------
+        other:
+            Another instance of CostDistribution using the same bins.
+
+        Returns
+        -------
+        residuals:
+            The residual difference between this and other.
+        """
+        self.__validate_similar_bin_edges(other)
+        return self.trip_vals - other.trip_vals
+
+    def band_share_residuals(self, other: CostDistribution) -> np.ndarray:
+        """Calculate the band share residuals between this and other.
 
         Residuals are calculated as:
         `self.band_share_vals - other.band_share_vals`
@@ -365,7 +387,7 @@ class CostDistribution:
         self.__validate_similar_bin_edges(other)
         return self.band_share_vals - other.band_share_vals
 
-    def convergence(self, other: CostDistribution) -> float:
+    def band_share_convergence(self, other: CostDistribution) -> float:
         """Calculate the convergence between this and other.
 
         Residuals are calculated as:

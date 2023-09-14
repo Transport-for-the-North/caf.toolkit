@@ -17,6 +17,7 @@ import numpy as np
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import cost_utils
+from caf.toolkit import math_utils
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -97,8 +98,11 @@ class CostDistClassResults(CostDistFnResults):
             }
         )
 
+        self.cost_dist_instance = cost_utils.CostDistribution(**self.constructor_kwargs)
+
     @property
     def constructor_kwargs(self) -> dict[str, Any]:
+        """A kwarg dictionary for calling CostDistribution constructor."""
         return {
             "df": self.df,
             "min_col": self.min_col,
@@ -266,7 +270,7 @@ def fixture_large_log_bins():
     )
 
 
-@pytest.fixture(name="cost_dist_1d_class", scope="class")
+@pytest.fixture(name="cost_dist_1d_class", scope="function")
 def fixture_cost_dist_1d_class(cost_dist_1d) -> CostDistClassResults:
     """Create a 1D array of values to pass to CostDistribution."""
     return CostDistClassResults(
@@ -277,7 +281,7 @@ def fixture_cost_dist_1d_class(cost_dist_1d) -> CostDistClassResults:
     )
 
 
-@pytest.fixture(name="cost_dist_2d_class", scope="class")
+@pytest.fixture(name="cost_dist_2d_class", scope="function")
 def fixture_cost_dist_2d_class(cost_dist_2d) -> CostDistClassResults:
     """Create a 1D array of values to pass to CostDistribution."""
     return CostDistClassResults(
@@ -288,7 +292,7 @@ def fixture_cost_dist_2d_class(cost_dist_2d) -> CostDistClassResults:
     )
 
 
-@pytest.fixture(name="cost_dist_2d_class_cols", scope="class")
+@pytest.fixture(name="cost_dist_2d_class_cols", scope="function")
 def fixture_cost_dist_2d_class_cols(cost_dist_2d) -> CostDistClassResults:
     """Create a 1D array of values to pass to CostDistribution."""
     return CostDistClassResults(
@@ -471,24 +475,135 @@ class TestCostDistributionClassMethods:
     def test_length(self, io_str: str, request):
         """Test the class __len__ method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
-        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
+        cost_dist = input_and_results.cost_dist_instance
         assert len(cost_dist) == len(input_and_results.bin_edges) - 1
 
-    def test_equals(self, io_str: str, request):
-        """Test the class __eq__ method works correctly."""
+    def test_copy_equals(self, io_str: str, request):
+        """Test the class copy and equal methods work correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
-        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
-        assert cost_dist == cost_dist
-
-    def test_copy(self, io_str: str, request):
-        """Test the class copy method works correctly."""
-        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
-        cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
+        cost_dist = input_and_results.cost_dist_instance
         assert cost_dist.copy() == cost_dist
 
-    # Test create_similar
-    # Test residuals
-    # Test convergence
+    def test_create_similar(self, io_str: str, request):
+        """Test the class create_similar method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        # Create the expected output
+        new_trip_vals = np.random.rand(*input_and_results.distribution.shape)
+        expected_df = cost_dist.df.copy()
+        expected_df[input_and_results.trips_col] = new_trip_vals
+
+        # Create with function and assert
+        got_df = cost_dist.create_similar(trip_vals=new_trip_vals).df
+        pd.testing.assert_frame_equal(got_df, expected_df)
+
+    def test_bad_shape_create_similar(self, io_str: str, request):
+        """Test the class create_similar method correctly throws an error."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        # Create the expected output
+        new_trip_vals = np.random.rand(*input_and_results.distribution.shape)
+        new_trip_vals = new_trip_vals[:-1]
+
+        with pytest.raises(ValueError, match="not the correct shape"):
+            cost_dist.create_similar(trip_vals=new_trip_vals)
+
+    @pytest.mark.parametrize(
+        "io_str2",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_trip_residuals(self, io_str: str, io_str2: str, request):
+        """Test the class residuals method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist1 = input_and_results.cost_dist_instance
+        input_and_results2: CostDistClassResults = request.getfixturevalue(io_str2)
+        cost_dist2 = input_and_results2.cost_dist_instance
+
+        desired = input_and_results.distribution - input_and_results2.distribution
+        actual = cost_dist1.trip_residuals(cost_dist2)
+        np.testing.assert_almost_equal(actual, desired)
+
+    @pytest.mark.parametrize(
+        "io_str2",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_band_share_residuals(self, io_str: str, io_str2: str, request):
+        """Test the class residuals method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        input_and_results2: CostDistClassResults = request.getfixturevalue(io_str2)
+
+        # Calc desired
+        band_share1 = input_and_results.distribution / input_and_results.distribution.sum()
+        band_share2 = input_and_results2.distribution / input_and_results2.distribution.sum()
+        desired = band_share1 - band_share2
+
+        # Calc actual
+        cost_dist1 = input_and_results.cost_dist_instance
+        cost_dist2 = input_and_results2.cost_dist_instance
+        actual = cost_dist1.band_share_residuals(cost_dist2)
+
+        np.testing.assert_almost_equal(actual, desired)
+
+    @pytest.mark.parametrize(
+        "io_str2",
+        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+    )
+    def test_band_share_convergence(self, io_str: str, io_str2: str, request):
+        """Test the class convergence method works correctly."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        input_and_results2: CostDistClassResults = request.getfixturevalue(io_str2)
+
+        # Calc desired
+        band_share1 = input_and_results.distribution / input_and_results.distribution.sum()
+        band_share2 = input_and_results2.distribution / input_and_results2.distribution.sum()
+        desired = math_utils.curve_convergence(band_share1, band_share2)
+
+        # Calc actual
+        cost_dist1 = input_and_results.cost_dist_instance
+        cost_dist2 = input_and_results2.cost_dist_instance
+        actual = cost_dist1.band_share_convergence(cost_dist2)
+
+        np.testing.assert_almost_equal(actual, desired)
+
+    @pytest.mark.parametrize(
+        "fn_str",
+        ["trip_residuals", "band_share_residuals", "band_share_convergence"],
+    )
+    @pytest.mark.parametrize("bin_str", ["values", "shape"])
+    def test_bad_bin_edges(self, io_str: str, fn_str: str, bin_str: str, request):
+        """Test the class correctly throws an error with bad band edges."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        # Decide which function to use
+        if fn_str == "trip_residuals":
+            fn = cost_dist.trip_residuals
+        elif fn_str == "band_share_residuals":
+            fn = cost_dist.band_share_residuals
+        elif fn_str == "band_share_convergence":
+            fn = cost_dist.band_share_convergence
+        else:
+            raise ValueError
+
+        # Decide which bad_bin edges to use
+        if bin_str == "values":
+            bad_bin_edges = input_and_results.bin_edges * 1.5
+        elif bin_str == "shape":
+            bad_bin_edges = input_and_results.bin_edges[:-1]
+        else:
+            raise ValueError
+
+        # Create a bad class to call function with
+        other = cost_utils.CostDistribution.from_data(
+            matrix=input_and_results.matrix,
+            cost_matrix=input_and_results.cost_matrix,
+            bin_edges=bad_bin_edges,
+        )
+
+        with pytest.raises(ValueError, match="are not similar enough"):
+            fn(other)
 
     # Create class to test all these parameters
     # Test min_vals
