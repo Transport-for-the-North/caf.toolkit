@@ -65,7 +65,7 @@ class CostDistribution:
     # Default arguments
     min_col: str = "min"
     max_col: str = "max"
-    avg_col: str = "ave_km"
+    avg_col: str = "ave"
     trips_col: str = "trips"
 
     # Ideas
@@ -147,8 +147,9 @@ class CostDistribution:
         trip_vals = self.trip_vals
         return trip_vals / np.sum(trip_vals)
 
-    @staticmethod
+    @classmethod
     def from_data(
+        cls,
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
         min_bounds: Optional[list[float] | np.ndarray] = None,
@@ -189,12 +190,6 @@ class CostDistribution:
         --------
         `cost_distribution`
         """
-        # Define columns names
-        min_col = "min"
-        max_col = "max"
-        avg_col = "ave"
-        trips_col = "trips"
-
         # Calculate the cost distribution
         bin_edges = _validate_bin_edges(
             bin_edges=bin_edges,
@@ -208,20 +203,13 @@ class CostDistribution:
         # Covert data into instance of this class
         df = pd.DataFrame(
             {
-                min_col: bin_edges[:-1],
-                max_col: bin_edges[1:],
-                avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
-                trips_col: distribution,
+                cls.min_col: bin_edges[:-1],
+                cls.max_col: bin_edges[1:],
+                cls.avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
+                cls.trips_col: distribution,
             }
         )
-
-        return CostDistribution(
-            df=df,
-            min_col=min_col,
-            max_col=max_col,
-            avg_col=avg_col,
-            trips_col=trips_col,
-        )
+        return CostDistribution(df=df)
 
     @staticmethod
     def from_data_no_bins(
@@ -268,7 +256,7 @@ class CostDistribution:
         filepath: os.PathLike,
         min_col: str = "min",
         max_col: str = "max",
-        avg_col: str = "ave_km",
+        avg_col: str = "ave",
         trips_col: str = "trips",
     ) -> CostDistribution:
         """Build an instance from a file on disk.
