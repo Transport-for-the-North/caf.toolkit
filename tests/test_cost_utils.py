@@ -469,6 +469,64 @@ class TestCostDistributionClassConstructors:
     "io_str",
     ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
 )
+class TestCostDistributionClassProperties:
+    """Tests for the properties of CostDistribution class."""
+
+    def test_min_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+        np.testing.assert_almost_equal(cost_dist.min_vals, input_and_results.min_bounds)
+
+    def test_max_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+        np.testing.assert_almost_equal(cost_dist.max_vals, input_and_results.max_bounds)
+
+    def test_bin_edges(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+        np.testing.assert_almost_equal(cost_dist.bin_edges, input_and_results.bin_edges)
+
+    def test_n_bins(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+        n_bins = len(input_and_results.bin_edges) - 1
+        np.testing.assert_almost_equal(cost_dist.n_bins, n_bins)
+
+    def test_avg_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        bin_edges = input_and_results.bin_edges
+        avg_vals = (bin_edges[:-1] + bin_edges[1:]) / 2
+        np.testing.assert_almost_equal(cost_dist.avg_vals, avg_vals)
+
+    def test_trip_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+        np.testing.assert_almost_equal(cost_dist.trip_vals, input_and_results.distribution)
+
+    def test_band_share_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        distribution = input_and_results.distribution
+        band_share_vals = distribution / np.sum(distribution)
+        np.testing.assert_almost_equal(cost_dist.band_share_vals, band_share_vals)
+
+
+@pytest.mark.usefixtures("cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols")
+@pytest.mark.parametrize(
+    "io_str",
+    ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+)
 class TestCostDistributionClassMethods:
     """Tests for the methods of CostDistribution class."""
 
@@ -604,16 +662,6 @@ class TestCostDistributionClassMethods:
 
         with pytest.raises(ValueError, match="are not similar enough"):
             fn(other)
-
-    # Create class to test all these parameters
-    # Test min_vals
-    # Test max_vals
-    # Test bin_edges
-    # Test n_bins
-    # Test avg_vals
-    # Test trip_vals
-    # Test band_share_vals
-    # Test band_share_vals
 
 
 @pytest.mark.usefixtures("cost_dist_1d", "cost_dist_2d")
