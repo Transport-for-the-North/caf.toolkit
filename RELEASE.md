@@ -29,3 +29,6 @@ Below, a brief summary of patches made since the previous version can be found.
  - BaseConfig comments when saving config to YAML file
    - Added automatic datetime comment to the top of saved configs (parameter in method to disable)
    - Added optional comment parameter for adding custom comments to the top of the config file
+- Added a `CostDistribution` class
+   - An easy interface for viewing and handling cost distributions - similar to weighted histograms
+   - Methods to create dynamic bins
