@@ -61,12 +61,6 @@ where = ["src"]
 [tool.black]
 line-length = 95
 target-version = ['py39']
-extend-exclude = '''
-(
-  _version\.py
-  | versioneer\.py
-)
-'''
 
 [tool.pylint.messages_control]
 disable = [
@@ -91,7 +85,6 @@ max-statements = 100
 
 [tool.mypy]
 packages = ["caf.toolkit"]
-namespace_packages = true
 ignore_missing_imports = true
 allow_redefinition = true
 
