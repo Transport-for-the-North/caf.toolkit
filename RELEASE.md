@@ -19,16 +19,6 @@ there.
 
 Below, a brief summary of patches made since the previous version can be found.
 
-### v0.1.4
- - Packaging system has been updated
-   - Moved versioning to [verisoningit](https://github.com/jwodder/versioningit)
-   - Updates to the packaging infrastructure to become compliant with [PEP-517](https://peps.python.org/pep-0517/) and [PEP-518](https://peps.python.org/pep-0518/)
-   - Removed explicit references to namespace package CAF ([PEP-420](https://peps.python.org/pep-0420/))
-   - Dependencies have been updated where necessary to meet new needs
-   - (Nearly) All project config and data is stored in `pyproject.toml`
- - BaseConfig comments when saving config to YAML file
-   - Added automatic datetime comment to the top of saved configs (parameter in method to disable)
-   - Added optional comment parameter for adding custom comments to the top of the config file
-- Added a `CostDistribution` class
-   - An easy interface for viewing and handling cost distributions - similar to weighted histograms
-   - Methods to create dynamic bins
+### Next Release Notes
+ - Item
+  
