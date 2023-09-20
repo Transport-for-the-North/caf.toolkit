@@ -35,8 +35,7 @@ lint = [
     "black>=22.6.0",
     "mypy>=1.0.0, <2.0.0",
     "mypy_extensions>=1.0.0, <2.0.0",
-    "pydocstyle>=6.1.1",
-    "pydocstyle[toml]",
+    "pydocstyle[toml]>=6.1.1",
     "pylint>=2.14.5",
 ]
 
@@ -97,12 +96,6 @@ namespace_packages = true
 ignore_missing_imports = true
 allow_redefinition = true
 
-[[tool.mypy.overrides]]
-module = [
-  "caf.toolkit._version",
-]
-ignore_errors = true
-
 [tool.pydocstyle]
 convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__).*\.py'
@@ -118,9 +111,6 @@ doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = [
     "serial: marks tests to not run in parallel",
 ]
-
-[tool.coverage.run]
-omit = ["*/_version.py"]
 
 [tool.coverage.report]
 include_namespace_packages = true
