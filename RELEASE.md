@@ -26,3 +26,6 @@ Below, a brief summary of patches made since the previous version can be found.
    - Removed explicit references to namespace package CAF ([PEP-420](https://peps.python.org/pep-0420/))
    - Dependencies have been updated where necessary to meet new needs
    - (Nearly) All project config and data is stored in `pyproject.toml`
+ - BaseConfig comments when saving config to YAML file
+   - Added automatic datetime comment to the top of saved configs (parameter in method to disable)
+   - Added optional comment parameter for adding custom comments to the top of the config file
