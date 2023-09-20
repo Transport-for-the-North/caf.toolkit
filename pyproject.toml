@@ -13,8 +13,11 @@ authors = [
     { name = "Transport for the North" },
 ]
 classifiers = [
+    "Programming Language :: Python3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
     "numpy>=1.19.0, <1.25.0",
@@ -32,8 +35,7 @@ lint = [
     "black>=22.6.0",
     "mypy>=1.0.0, <2.0.0",
     "mypy_extensions>=1.0.0, <2.0.0",
-    "pydocstyle>=6.1.1",
-    "pydocstyle[toml]",
+    "pydocstyle[toml]>=6.1.1",
     "pylint>=2.14.5",
 ]
 
@@ -94,12 +96,6 @@ namespace_packages = true
 ignore_missing_imports = true
 allow_redefinition = true
 
-[[tool.mypy.overrides]]
-module = [
-  "caf.toolkit._version",
-]
-ignore_errors = true
-
 [tool.pydocstyle]
 convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__).*\.py'
@@ -110,14 +106,14 @@ add-ignore = [
 # Tests
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = '--cov=caf.toolkit --cov-report=xml --doctest-modules -n auto'
+addopts = '--cov=caf --cov-report=xml --doctest-modules -n auto'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = [
     "serial: marks tests to not run in parallel",
 ]
 
-[tool.coverage.run]
-omit = ["*/_version.py"]
+[tool.coverage.report]
+include_namespace_packages = true
 
 # Versioning
 [tool.versioningit.vcs]
