@@ -7,3 +7,4 @@ numba>=0.56.4
 pydantic==1.10.*
 strictyaml==1.6.*
 psutil>=5.9.0
+pyodbc
