@@ -251,6 +251,7 @@ class TestSystemInformation:
         assert info.python_version == python_version, "incorrect Python version"
         assert info.operating_system == os_label, "incorrect OS"
         assert info.architecture == uname.machine, "incorrect architecture"
+        assert info.processor == uname.processor, "incorrect processor name"
         assert info.cpu_count == cpu_count, "incorrect CPU count"
         assert info.total_ram == total_ram[0], "incorrect total RAM"
 
@@ -260,6 +261,7 @@ class TestSystemInformation:
         pc_name = "Test PC"
         python_version = "3.0.0"
         operating_system = "Test 10 (10.0.1)"
+        processor = "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"
         architecture = "AMD64"
         cpu_count = 16
         ram, ram_readable = total_ram
@@ -271,13 +273,14 @@ class TestSystemInformation:
             f"pc_name          : {pc_name}\n"
             f"python_version   : {python_version}\n"
             f"operating_system : {operating_system}\n"
+            f"processor        : {processor}\n"
             f"architecture     : {architecture}\n"
             f"cpu_count        : {cpu_count}\n"
             f"total_ram        : {ram_readable}"
         )
 
         info = SystemInformation(
-            user, pc_name, python_version, operating_system, architecture, cpu_count, ram
+            user, pc_name, python_version, operating_system, processor, architecture, cpu_count, ram
         )
 
         assert str(info) == correct, "incorrect string format"
