@@ -852,6 +852,13 @@ def pandas_vector_zone_translation(
         name=vector.name,
     )
 
+def pandas_multi_column_translation(vector, translation, from_col, to_col, factors_col):
+    translation.set_index(from_col, inplace=True)
+    joined = vector.join(translation[[factors_col, to_col]])
+    out = joined[vector.columns].multiply(joined[factors_col], axis='index')
+    out[to_col] = joined[to_col]
+    return out.groupby(to_col).sum()
+
 
 # TODO(BT): Bring over from normits_demand (once we have zoning systems):
 #  translate_vector_zoning
