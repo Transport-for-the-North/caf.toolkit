@@ -42,6 +42,7 @@ class UnameResult(NamedTuple):
     release: str
     version: str
     machine: str
+    processor: str
 
 
 @dataclasses.dataclass
@@ -58,7 +59,7 @@ class LogInitDetails:
 @pytest.fixture(name="uname")
 def fixture_monkeypatch_uname(monkeypatch: pytest.MonkeyPatch) -> UnameResult:
     """Monkeypatch `platform.uname()` to return constant."""
-    result = UnameResult("Test System", "Test PC", "10", "10.0.1", "AMD64")
+    result = UnameResult("Test System", "Test PC", "10", "10.0.1", "AMD64", "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel")
     monkeypatch.setattr(platform, "uname", lambda: result)
     return result
 
