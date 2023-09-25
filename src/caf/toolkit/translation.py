@@ -852,7 +852,21 @@ def pandas_vector_zone_translation(
         name=vector.name,
     )
 
-def pandas_multi_column_translation(vector, translation, from_col, to_col, factors_col):
+def pandas_multi_column_translation(vector: pd.DataFrame, translation: pd.DataFrame, from_col: str, to_col: str, factors_col: str):
+    """
+    Translate a multicolumn dataframe between zone systems using a caf.space
+    generated translation.
+
+    Parameters
+    ----------
+    vector: The data you want to be translated. The zone system must form the index.
+    translation: Translation from caf.space. Data should be in columns (not index).
+    from_col: Column containing zone index of vector's zone system. Name must
+    match vector index name
+    to_col: Column containing zone index to be translated to.
+    factors_col: Column containning relevant factors (i.e. factors to translate
+    from 'from_col' to 'to_col'
+    """
     translation.set_index([from_col, to_col], inplace=True)
     # Multiply by translation factor, implicitly joining on 'from_col' then
     # groupby 'to_col' and sum.
