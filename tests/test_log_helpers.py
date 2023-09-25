@@ -281,7 +281,7 @@ class TestSystemInformation:
         )
 
         info = SystemInformation(
-            user, pc_name, python_version, operating_system, processor, architecture, cpu_count, ram
+            user, pc_name, python_version, operating_system, architecture, processor, cpu_count, ram
         )
 
         assert str(info) == correct, "incorrect string format"
