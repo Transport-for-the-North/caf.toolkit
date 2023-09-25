@@ -853,11 +853,10 @@ def pandas_vector_zone_translation(
     )
 
 def pandas_multi_column_translation(vector, translation, from_col, to_col, factors_col):
-    translation.set_index(from_col, inplace=True)
-    joined = vector.join(translation[[factors_col, to_col]])
-    out = joined[vector.columns].multiply(joined[factors_col], axis='index')
-    out[to_col] = joined[to_col]
-    return out.groupby(to_col).sum()
+    translation.set_index([from_col, to_col], inplace=True)
+    # Multiply by translation factor, implicitly joining on 'from_col' then
+    # groupby 'to_col' and sum.
+    return vector.mul(translation[factors_col].squeeze(), axis='index').groupby(level=to_col).sum()
 
 
 # TODO(BT): Bring over from normits_demand (once we have zoning systems):
