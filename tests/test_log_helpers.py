@@ -60,11 +60,11 @@ class LogInitDetails:
 def fixture_monkeypatch_uname(monkeypatch: pytest.MonkeyPatch) -> UnameResult:
     """Monkeypatch `platform.uname()` to return constant."""
     result = UnameResult(
-        "Test System", 
-        "Test PC", 
-        "10", 
-        "10.0.1", 
-        "AMD64", 
+        "Test System",
+        "Test PC",
+        "10",
+        "10.0.1",
+        "AMD64",
         "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel",
     )
     monkeypatch.setattr(platform, "uname", lambda: result)
@@ -288,13 +288,13 @@ class TestSystemInformation:
         )
 
         info = SystemInformation(
-            user, 
+            user,
             pc_name,
-            python_version, 
-            operating_system, 
-            architecture, 
-            processor, 
-            cpu_count, 
+            python_version,
+            operating_system,
+            architecture,
+            processor,
+            cpu_count,
             ram,
         )
 
