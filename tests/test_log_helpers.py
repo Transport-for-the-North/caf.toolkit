@@ -65,7 +65,8 @@ def fixture_monkeypatch_uname(monkeypatch: pytest.MonkeyPatch) -> UnameResult:
         "10", 
         "10.0.1", 
         "AMD64", 
-        "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel")
+        "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel",
+    )
     monkeypatch.setattr(platform, "uname", lambda: result)
     return result
 
@@ -294,7 +295,7 @@ class TestSystemInformation:
             architecture, 
             processor, 
             cpu_count, 
-            ram
+            ram,
         )
 
         assert str(info) == correct, "incorrect string format"
