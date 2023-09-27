@@ -193,6 +193,7 @@ def is_unique_list(unique_vals: list[Any]) -> bool:
     """
     return len(unique_vals) == len(set(unique_vals))
 
+
 def combine_dict_list(
     dict_list: list[dict[Any, Any]],
     operation: callable,
@@ -215,6 +216,7 @@ def combine_dict_list(
     summed_dict:
         A single dictionary of all the dicts in dict_list summed together.
     """
+
     # Define the accumulator function to call in functools.reduce
     def reducer(accumulator, item):
         for key, value in item.items():
