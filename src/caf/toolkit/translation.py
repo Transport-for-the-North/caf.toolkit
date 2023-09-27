@@ -852,7 +852,14 @@ def pandas_vector_zone_translation(
         name=vector.name,
     )
 
-def pandas_multi_column_translation(vector: pd.DataFrame, translation: pd.DataFrame, from_col: str, to_col: str, factors_col: str):
+
+def pandas_multi_column_translation(
+    vector: pd.DataFrame,
+    translation: pd.DataFrame,
+    from_col: str,
+    to_col: str,
+    factors_col: str,
+):
     """
     Translate a multicolumn dataframe between zone systems using a caf.space
     generated translation.
@@ -870,7 +877,11 @@ def pandas_multi_column_translation(vector: pd.DataFrame, translation: pd.DataFr
     translation.set_index([from_col, to_col], inplace=True)
     # Multiply by translation factor, implicitly joining on 'from_col' then
     # groupby 'to_col' and sum.
-    return vector.mul(translation[factors_col].squeeze(), axis='index').groupby(level=to_col).sum()
+    return (
+        vector.mul(translation[factors_col].squeeze(), axis="index")
+        .groupby(level=to_col)
+        .sum()
+    )
 
 
 # TODO(BT): Bring over from normits_demand (once we have zoning systems):

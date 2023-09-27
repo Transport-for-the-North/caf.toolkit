@@ -6,7 +6,7 @@ import datetime as dt
 import json
 from pathlib import Path
 import textwrap
-from typing import Optional
+from typing import Optional, Union
 
 # pylint: disable=import-error
 import pydantic
@@ -220,6 +220,39 @@ class BaseConfig(pydantic.BaseModel):
 
 
 # # # FUNCTIONS # # #
+def _is_collection(object: any):
+    """
+    Check if an object is any type of non-dict collection.
+
+    Currently only checks for list, tuple or set,
+    """
+    if isinstance(object, list):
+        return True
+    elif isinstance(object, tuple):
+        return True
+    elif isinstance(object, set):
+        return True
+    elif isinstance(object, dict):
+        return True
+    return False
+
+
+def _remove_none_collection(data: Union[list, set, tuple]):
+    """Remove items recursively from collections which are None"""
+    # empty list, type set later
+    filtered = []
+    for item in data:
+        if item is None:
+            continue
+        elif isinstance(item, dict):
+            item = _remove_none_dict(item)
+        elif _is_collection(item):
+            item = _remove_none_collection(item)
+        filtered.append(item)
+    # return same type as input
+    return type(data)(filtered)
+
+
 def _remove_none_dict(data: dict) -> dict:
     """Remove items recursively from dictionary which are None."""
     filtered = {}
@@ -230,6 +263,9 @@ def _remove_none_dict(data: dict) -> dict:
 
         if isinstance(value, dict):
             value = _remove_none_dict(value)
+
+        elif _is_collection(value):
+            value = _remove_none_collection(value)
 
         filtered[key] = value
 
