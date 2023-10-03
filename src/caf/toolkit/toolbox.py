@@ -7,6 +7,9 @@ Most of these tools will be used elsewhere in the codebase too
 from typing import Any
 from typing import TypeVar
 from typing import Iterable
+from typing import Callable
+
+import functools
 
 # Third Party
 
@@ -196,7 +199,7 @@ def is_unique_list(unique_vals: list[Any]) -> bool:
 
 def combine_dict_list(
     dict_list: list[dict[Any, Any]],
-    operation: callable,
+    operation: Callable,
 ) -> dict[Any, Any]:
     """
     Sums all dictionaries in dict_list together.
