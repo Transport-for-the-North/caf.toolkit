@@ -852,7 +852,9 @@ def pandas_vector_zone_translation(
     )
     if isinstance(translated, pd.DataFrame):
         if len(translated.columns) == 1:
-            translated = pd.Series(data=translated[translated.columns[0]], index=translated.index)
+            translated = pd.Series(
+                data=translated[translated.columns[0]], index=translated.index
+            )
 
     # threshold higher than zero to not catch rounding errors, need to check
     if check_totals:
