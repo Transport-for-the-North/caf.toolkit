@@ -9,7 +9,7 @@ from __future__ import annotations
 # Built-Ins
 import logging
 import warnings
-
+from os import PathLike
 from typing import Any
 from typing import TypeVar
 from typing import Optional
@@ -713,8 +713,8 @@ def pandas_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
+    from_unique_index: list[Any] = [],
+    to_unique_index: list[Any] = [],
     translation_dtype: Optional[np.dtype] = None,
     vector_infill: float = 0.0,
     translate_infill: float = 0.0,
@@ -783,14 +783,10 @@ def pandas_vector_zone_translation(
     --------
     .numpy_vector_zone_translation()
     """
-    # If dataframe given, try coerce
-    if isinstance(vector, pd.DataFrame):
-        if vector.shape[1] != 1:
-            raise ValueError(
-                "`vector` must be a pandas.Series, or a pandas.DataFrame with "
-                f"one column. Got a DataFrame of shape {vector.shape} instead"
-            )
-        vector = vector[vector.columns[0]]
+    if from_unique_index == []:
+        from_unique_index = translation[translation_from_col].unique()
+    if to_unique_index == []:
+        to_unique_index = translation[translation_to_col].unique()
 
     # Set the dtypes to match
     vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
@@ -822,66 +818,49 @@ def pandas_vector_zone_translation(
         )
 
     # ## PREP AND TRANSLATE ## #
-    # Square the translation
-    translation = pd_utils.long_to_wide_infill(
-        df=translation,
-        index_col=translation_from_col,
-        columns_col=translation_to_col,
-        values_col=translation_factors_col,
-        index_vals=from_unique_index,
-        column_vals=to_unique_index,
-        infill=translate_infill,
-    )
+    # Set correct index for translation
+    indexed_translation = translation.set_index([translation_from_col, translation_to_col])
 
-    # Sort vector and infill 0s
-    vector = vector.reindex(
-        index=from_unique_index,
-        fill_value=vector_infill,
-    )
+    # Correct index for vector
+    trans_vector = vector.copy()
+    if len(trans_vector.index.names) > 1:
+        if translation_from_col in trans_vector.index.names:
+            warnings.warn(
+                "The input vector is MultiIndexed. The translation "
+                f"will be done using the {translation_from_col} level "
+                "of the index. If this is unexpected, check your "
+                "inputs."
+            )
 
-    # Translate and return
-    translated = numpy_vector_zone_translation(
-        vector=vector.values,
-        translation=translation.values,
-        translation_dtype=translation_dtype,
-        check_totals=check_totals,
-    )
-    return pd.Series(
-        data=translated,
-        index=to_unique_index,
-        name=vector.name,
-    )
+        else:
+            raise ValueError(
+                "The input vector is MultiIndexed and does not "
+                f"contain the expected column, {translation_from_col}."
+                "Either rename the correct index level, or input "
+                "a vector with a single index to use."
+            )
+    else:
+        # Doesn't matter if it already equals this, quicker than checking.
+        trans_vector.index.names = [translation_from_col]
 
-
-def pandas_multi_column_translation(
-    vector: pd.DataFrame,
-    translation: pd.DataFrame,
-    from_col: str,
-    to_col: str,
-    factors_col: str,
-):
-    """
-    Translate a multicolumn dataframe between zone systems using a caf.space
-    generated translation.
-
-    Parameters
-    ----------
-    vector: The data you want to be translated. The zone system must form the index.
-    translation: Translation from caf.space. Data should be in columns (not index).
-    from_col: Column containing zone index of vector's zone system. Name must
-    match vector index name
-    to_col: Column containing zone index to be translated to.
-    factors_col: Column containning relevant factors (i.e. factors to translate
-    from 'from_col' to 'to_col'
-    """
-    translation.set_index([from_col, to_col], inplace=True)
-    # Multiply by translation factor, implicitly joining on 'from_col' then
-    # groupby 'to_col' and sum.
-    return (
-        vector.mul(translation[factors_col].squeeze(), axis="index")
-        .groupby(level=to_col)
+    # trans_vector should now contain the correct index level if an error hasn't
+    # been raised
+    translated = (
+        trans_vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
+        .groupby(level=translation_to_col)
         .sum()
     )
+
+    # threshold higher than zero to not catch rounding errors, need to check
+    if check_totals:
+        overall_diff = translated.sum().sum() - vector.sum().sum()
+        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
+            raise ValueError(
+                "Some values seem to have been dropped. The difference "
+                f"total is {overall_diff} (translated - original)."
+            )
+
+    return translated
 
 
 # TODO(BT): Bring over from normits_demand (once we have zoning systems):
