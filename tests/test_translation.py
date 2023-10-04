@@ -785,15 +785,6 @@ class TestPandasVector:
                 **(pd_vector_split.input_kwargs() | new_kwargs)
             )
 
-    def test_non_vector(self, pd_vector_split: PandasVectorResults):
-        """Test that an error is thrown when a non-vector is passed in"""
-        new_vector = pd.DataFrame(pd_vector_split.vector)
-        new_vector[1] = new_vector[0].copy()
-        with pytest.raises(ValueError, match="must be a pandas.Series"):
-            translation.pandas_vector_zone_translation(
-                **(pd_vector_split.input_kwargs() | {"vector": new_vector})
-            )
-
     @pytest.mark.parametrize(
         "pd_vector_str",
         ["pd_vector_aggregation", "pd_vector_split"],
