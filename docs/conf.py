@@ -29,15 +29,15 @@ sys.path.insert(
     os.path.abspath(r"C:\Users\IsaacScott\anaconda3\envs\toolkit\Lib\site-packages"),
 )
 
-project = 'caf.toolkit'
-copyright = '2023, Benjamin Taylor'
-author = 'Benjamin Taylor'
+project = "caf.toolkit"
+copyright = "2023, Benjamin Taylor"
+author = "Benjamin Taylor"
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
 # The full version, including alpha/beta/rc tags
-release = '0.2.1'
+release = "0.2.1"
 
 
 # -- General configuration ---------------------------------------------------
@@ -51,13 +51,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
-    "sphinx_automodapi.automodapi"
+    "sphinx_automodapi.automodapi",
 ]
 
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -77,7 +77,7 @@ master_doc = "index"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 autodoc_mock_imports = ["caf"]
 autodoc_typehints = "description"
