@@ -51,7 +51,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
-    "sphinx_automodapi.automodapi",
+    "sphinx_automodapi.automodapi"
 ]
 
 numpydoc_show_class_members = False
