@@ -6,19 +6,24 @@
 Welcome to caf.toolkit's documentation!
 =======================================
 
-Common Analytical Framework (CAF) Toolkit contains general tools useful for transport
-professionals. Some of this is ported from NorMITs-demand
+The Common Analytical Framework (CAF) Toolkit is a toolkit of transport
+planning and appraisal functionalities. It's the beginning of a project to make
+a lot of the useful stuff from
+`NorMITs Demand <https://github.com/Transport-for-the-North/NorMITs-Demand>`_
+more widely available and easily accessible.
 
 Tool info
 ---------
+
+{Add any necessary tool info here Ben}
 
 Installation
 ------------
 caf.toolkit can be installed either from pip or conda forge:
 
-pip install caf.toolkit
+``pip install caf.toolkit``
 
-conda install caf.toolkit -c conda-forge
+``conda install caf.toolkit -c conda-forge``
 
 .. toctree::
    :maxdepth: 4
