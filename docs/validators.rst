@@ -1,5 +1,3 @@
-Toolbox validators module
--------------------------
 
-.. automodule:: validators
-   :members:
+
+.. automodapi:: caf.toolkit.validators

@@ -1,5 +1,3 @@
-Toolkit BaseConfig class
-------------------------
 
-.. autoclass:: BaseConfig
-   :members:
+
+.. autoclass:: caf.toolkit.config_base.BaseConfig

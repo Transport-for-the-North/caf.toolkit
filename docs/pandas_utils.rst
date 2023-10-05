@@ -1,5 +1,8 @@
-Toolkit pandas_utils module
----------------------------
+pandas_utils sub package
+------------------------
 
-.. automodule:: pandas_utils
-   :members:
+.. toctree::
+
+    df_handling
+    numpy_conversions
+    utility

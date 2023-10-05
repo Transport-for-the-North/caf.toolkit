@@ -1,5 +1,3 @@
-Toolkit toolbox module
-----------------------
 
-.. automodule:: toolbox
-   :members:
+
+.. automodapi:: caf.toolkit.toolbox

@@ -1,5 +1,3 @@
-Toolkit math_utils module
--------------------------
 
-.. automodule:: math_utils
-   :members:
+
+.. automodapi:: caf.toolkit.math_utils

@@ -1,5 +1,3 @@
-Toolkit timing module
----------------------
 
-.. automodule:: timing
-   :members:
+
+.. automodapi:: caf.toolkit.timing

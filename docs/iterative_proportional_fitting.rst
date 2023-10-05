@@ -1,5 +1,4 @@
 Toolkit iterative_proportional_fitting module
 ---------------------------------------------
 
-.. automodule:: iterative_proportional_fitting
-   :members:
+.. automodapi:: caf.toolkit.iterative_proportional_fitting

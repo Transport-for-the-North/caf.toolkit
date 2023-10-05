@@ -1,5 +1,3 @@
-Toolkit io module
------------------
 
-.. automodule:: io
-   :members:
+
+.. automodapi:: caf.toolkit.io

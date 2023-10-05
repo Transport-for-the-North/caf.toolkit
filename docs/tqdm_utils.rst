@@ -1,5 +1,2 @@
-Toolbox tqdm_utils module
--------------------------
 
-.. automodule:: tqdm_utils
-   :members:
+.. automodapi:: caf.toolkit.tqdm_utils

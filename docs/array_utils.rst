@@ -1,6 +1,4 @@
-Toolkit array_utils module
---------------------------
 
-.. automodule:: array_utils
-   :members:
+
+.. automodapi:: caf.toolkit.array_utils
 

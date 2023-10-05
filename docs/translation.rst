@@ -1,5 +1,3 @@
-Toolkit translation module
---------------------------
 
-.. automodule:: translation
-   :members:
+
+.. automodapi:: caf.toolkit.translation
