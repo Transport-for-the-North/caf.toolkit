@@ -707,6 +707,114 @@ def pandas_matrix_zone_translation(
     )
 
 
+def _single_col_vector_trans_internal(
+    translation: pd.DataFrame,
+    vector: pd.DataFrame | pd.Series,
+    vector_infill: float,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    from_unique_index: list[Any],
+    to_unique_index: list[Any],
+    translate_infill: float,
+    translation_dtype: np.dtype,
+    check_totals: bool,
+):
+    """
+    Internal function for performing translation for single column pandas vectors.
+
+    For info on the arguments see the documentation for pandas_vector_zone_translation.
+    """
+    # ## PREP AND TRANSLATE ## #
+    # Square the translation
+    translation = pd_utils.long_to_wide_infill(
+        df=translation,
+        index_col=translation_from_col,
+        columns_col=translation_to_col,
+        values_col=translation_factors_col,
+        index_vals=from_unique_index,
+        column_vals=to_unique_index,
+        infill=translate_infill,
+    )
+
+    # Sort vector and infill 0s
+    vector = vector.reindex(
+        index=from_unique_index,
+        fill_value=vector_infill,
+    )
+
+    # Translate and return
+    translated = numpy_vector_zone_translation(
+        vector=vector.values,
+        translation=translation.values,
+        translation_dtype=translation_dtype,
+        check_totals=check_totals,
+    )
+    return pd.Series(
+        data=translated,
+        index=to_unique_index,
+        name=vector.name,
+    )
+
+
+def _multi_column_vector_trans_internal(
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    vector: pd.DataFrame,
+    translation_factors_col: str,
+    check_totals: bool,
+):
+    """
+    Internal function for performing a multi-column vector translation.
+
+    For info on arguments see pandas_vector_zone_translation.
+    """
+    # set index for translation
+    indexed_translation = translation.set_index([translation_from_col, translation_to_col])
+
+    # Correct index for vector
+    trans_vector = vector.copy()
+    if len(trans_vector.index.names) > 1:
+        if translation_from_col in trans_vector.index.names:
+            warnings.warn(
+                "The input vector is MultiIndexed. The translation "
+                f"will be done using the {translation_from_col} level "
+                "of the index. If this is unexpected, check your "
+                "inputs."
+            )
+
+        else:
+            raise ValueError(
+                "The input vector is MultiIndexed and does not "
+                f"contain the expected column, {translation_from_col}."
+                "Either rename the correct index level, or input "
+                "a vector with a single index to use."
+            )
+    else:
+        # Doesn't matter if it already equals this, quicker than checking.
+        trans_vector.index.names = [translation_from_col]
+
+    # trans_vector should now contain the correct index level if an error hasn't
+    # been raised
+    translated = (
+        trans_vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
+        .groupby(level=translation_to_col)
+        .sum()
+    )
+
+    # threshold higher than zero to not catch rounding errors, need to check
+    if check_totals:
+        overall_diff = translated.sum().sum() - vector.sum().sum()
+        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
+            raise ValueError(
+                "Some values seem to have been dropped. The difference "
+                f"total is {overall_diff} (translated - original)."
+            )
+
+    return translated
+
+
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,
@@ -817,55 +925,33 @@ def pandas_vector_zone_translation(
             f"Missing zones count: {len(missing_zones)}"
         )
 
-    # ## PREP AND TRANSLATE ## #
-    # Set correct index for translation
-    indexed_translation = translation.set_index([translation_from_col, translation_to_col])
-
-    # Correct index for vector
-    trans_vector = vector.copy()
-    if len(trans_vector.index.names) > 1:
-        if translation_from_col in trans_vector.index.names:
-            warnings.warn(
-                "The input vector is MultiIndexed. The translation "
-                f"will be done using the {translation_from_col} level "
-                "of the index. If this is unexpected, check your "
-                "inputs."
+    if isinstance(vector, pd.DataFrame):
+        if len(vector.columns) > 1:
+            return _multi_column_vector_trans_internal(
+                translation,
+                translation_from_col,
+                translation_to_col,
+                vector,
+                translation_factors_col,
+                check_totals,
             )
-
         else:
-            raise ValueError(
-                "The input vector is MultiIndexed and does not "
-                f"contain the expected column, {translation_from_col}."
-                "Either rename the correct index level, or input "
-                "a vector with a single index to use."
-            )
-    else:
-        # Doesn't matter if it already equals this, quicker than checking.
-        trans_vector.index.names = [translation_from_col]
+            # convert to series
+            vector = vector.squeeze()
 
-    # trans_vector should now contain the correct index level if an error hasn't
-    # been raised
-    translated = (
-        trans_vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
-        .groupby(level=translation_to_col)
-        .sum()
+    return _single_col_vector_trans_internal(
+        translation,
+        vector,
+        vector_infill,
+        translation_from_col,
+        translation_to_col,
+        translation_factors_col,
+        from_unique_index,
+        to_unique_index,
+        translate_infill,
+        translation_dtype,
+        check_totals,
     )
-    if isinstance(translated, pd.DataFrame):
-        if len(translated.columns) == 1:
-            translated = pd.Series(
-                data=translated[translated.columns[0]], index=translated.index
-            )
-
-    # threshold higher than zero to not catch rounding errors, need to check
-    if check_totals:
-        overall_diff = translated.sum().sum() - vector.sum().sum()
-        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
-            raise ValueError(
-                "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original)."
-            )
-
-    return translated
 
 
 # TODO(BT): Bring over from normits_demand (once we have zoning systems):
