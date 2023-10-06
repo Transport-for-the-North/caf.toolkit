@@ -2,8 +2,11 @@
 """Base config class for storing and reading parameters for any NorMITs demand script."""
 
 # # # IMPORTS # # #
+import datetime as dt
 import json
 from pathlib import Path
+import textwrap
+from typing import Optional
 
 # pylint: disable=import-error
 import pydantic
@@ -112,7 +115,6 @@ class BaseConfig(pydantic.BaseModel):
         with open(path, "rt") as file:
             text = file.read()
         return cls.from_yaml(text)
-        # pylint: enable = unspecified-encoding
 
     def to_yaml(self) -> str:
         """Convert attributes from self to YAML string.
@@ -132,27 +134,68 @@ class BaseConfig(pydantic.BaseModel):
 
         return strictyaml.as_document(json_dict).as_yaml()
 
-    def save_yaml(self, path: Path) -> None:
+    def save_yaml(
+        self,
+        path: Path,
+        datetime_comment: bool = True,
+        other_comment: Optional[str] = None,
+        format_comment: bool = False,
+    ) -> None:
         """Write data from self to a YAML file.
 
         Parameters
         ----------
         path: Path
             Path to YAML file to output.
+        datetime_comment : bool, default True
+            Whether to include a comment at the top of
+            the config file with the current date and time.
+        other_comment : str, optional
+            Additional comments to add to the top of the
+            config file, "#" will be added to the start of
+            each new line if it isn't already there.
+        format_comment : bool, default False
+            Whether to remove newlines from `other_comment` and
+            format lines to a specific character length.
         """
+        if other_comment is None or other_comment.strip() == "":
+            comment_lines = []
+        elif format_comment:
+            comment_lines = textwrap.wrap(other_comment)
+        else:
+            comment_lines = other_comment.split("\n")
+
+        if datetime_comment:
+            comment_lines.insert(
+                0,
+                f"{self.__class__.__name__} config written "
+                f"on {dt.datetime.now():%Y-%m-%d at %H:%M}",
+            )
+
+        yaml = self.to_yaml()
+
+        if len(comment_lines) > 0:
+            comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
+            yaml = "\n".join(comment_lines + [yaml])
+
         # pylint: disable = unspecified-encoding
         with open(path, "wt") as file:
-            file.write(self.to_yaml())
-        # pylint: enable = unspecified-encoding
+            file.write(yaml)
 
     @classmethod
-    def write_example(cls, path_: Path, /, **examples: str) -> None:
+    def write_example(
+        cls, path_: Path, /, comment_: Optional[str] = None, **examples: str
+    ) -> None:
         """Write examples to a config file.
 
         Parameters
         ----------
         path_ : Path
             Path to the YAML file to write.
+        comment_ : str, optional
+            Comment to add to the top of the example config file,
+            will be formatted to add "#" symbols and split across
+            multiple lines.
         examples : str
             Fields of the config to write, any missing fields
             are filled in with their default value (if they have
@@ -168,7 +211,12 @@ class BaseConfig(pydantic.BaseModel):
             data[name] = examples.get(name, value)
 
         example = cls.construct(_fields_set=None, **data)
-        example.save_yaml(path_)
+        example.save_yaml(
+            path_,
+            datetime_comment=False,
+            other_comment=comment_,
+            format_comment=True,
+        )
 
 
 # # # FUNCTIONS # # #

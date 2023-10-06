@@ -27,8 +27,8 @@ from caf.toolkit.log_helpers import capture_warnings, get_logger
 
 # # # Constants # # #
 _LOG_WARNINGS = [
-    ("testing runtime warning", RuntimeWarning),
-    ("testing user warning", UserWarning),
+    ("testing warning: runtime warning", RuntimeWarning),
+    ("testing warning: user warning", UserWarning),
 ]
 # Note: ImportWarnings aren't logged by default
 
@@ -370,6 +370,7 @@ class TestLogHelper:
 
         assert len(logger.handlers) == 0, "handlers not cleaned up"
 
+    @pytest.mark.filterwarnings("ignore:testing warning")
     def test_setup_warnings_stream_handler(
         self, log_init: LogInitDetails, warnings_logger: logging.Logger
     ) -> None:
@@ -384,6 +385,7 @@ class TestLogHelper:
 
         assert len(warnings_logger.handlers) == 0, "incorrect handler cleanup"
 
+    @pytest.mark.filterwarnings("ignore:testing warning")
     def test_setup_warnings_file_handler(
         self, tmp_path: pathlib.Path, log_init: LogInitDetails, warnings_logger: logging.Logger
     ) -> None:
@@ -501,6 +503,7 @@ class TestCaptureWarnings:
             warnings_logger.handlers[0], logging.StreamHandler
         ), "error with stream handler"
 
+    @pytest.mark.filterwarnings("ignore:testing warning")
     def test_file_handler_logger(
         self, tmp_path: pathlib.Path, warnings_logger: logging.Logger
     ) -> None:
@@ -519,6 +522,7 @@ class TestCaptureWarnings:
             warnings_logger.handlers[0], logging.FileHandler
         ), "error with file handler"
 
+    @pytest.mark.filterwarnings("ignore:testing warning")
     @pytest.mark.skip(
         reason="fails when running all tests, I think due to warnings be captured by pytest"
     )

@@ -5,7 +5,9 @@ Tests for the config_base module in caf.toolkit
 # Built-Ins
 from pathlib import Path
 import dataclasses
+import datetime
 import pathlib
+from typing import Optional
 
 # Third Party
 import pytest
@@ -64,6 +66,22 @@ def fixture_basic(path):
         option=conf_opt,
     )
     return conf
+
+
+class DummyDatetime(datetime.datetime):
+    """Dummy sub-class to return constant value for now."""
+
+    @classmethod
+    def now(cls, tz=None):
+        "Constant time of 0."
+        return cls.fromtimestamp(0, tz)
+
+
+@pytest.fixture(name="datetime_now")
+def fixture_monkeypatch_datetime_now(monkeypatch: pytest.MonkeyPatch) -> DummyDatetime:
+    """Monkeypatch datetime.datetime to return a constant value for now method."""
+    monkeypatch.setattr(datetime, "datetime", DummyDatetime)
+    return DummyDatetime.now()
 
 
 # # # CLASSES # # #
@@ -235,17 +253,18 @@ class TestYaml:
 class TestExample:
     """Test writing the example file is correct."""
 
-    def write_example(self, path_: pathlib.Path, /, **kwargs) -> str:
+    def write_example(self, path_: pathlib.Path, comment_: Optional[str], /, **kwargs) -> str:
         """Run `ConfigTestClass.write_example` and read output."""
         example_file = path_ / "test_example.yml"
-        ConfigTestClass.write_example(example_file, **kwargs)
+        ConfigTestClass.write_example(example_file, comment_=comment_, **kwargs)
 
         with open(example_file, "rt", encoding="utf-8") as file:
             return file.read()
 
-    def test_default_example(self, path: pathlib.Path) -> None:
+    @pytest.mark.parametrize("comment", [None, "# config example comment"])
+    def test_default_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
         """Write example without descriptions."""
-        example = self.write_example(path)
+        example = self.write_example(path, comment)
 
         expected = (
             "dictionary: REQUIRED\n"
@@ -258,9 +277,13 @@ class TestExample:
             "option: OPTIONAL\n"
         )
 
+        if comment is not None:
+            expected = comment + "\n" + expected
+
         assert example == expected, "Write example without descriptions"
 
-    def test_example(self, path: pathlib.Path) -> None:
+    @pytest.mark.parametrize("comment", [None, "# config example comment"])
+    def test_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
         """Write example with descriptions."""
         example_values = dict(
             dictionary="This is a dictionary",
@@ -272,7 +295,7 @@ class TestExample:
             default="This value defaults to true",
             option="This value is optional",
         )
-        example = self.write_example(path, **example_values)
+        example = self.write_example(path, comment, **example_values)
 
         expected = (
             "dictionary: {dictionary}\n"
@@ -287,7 +310,84 @@ class TestExample:
             "option: {option}\n"
         ).format(**example_values)
 
+        if comment is not None:
+            expected = comment + "\n" + expected
+
         assert example == expected, "Write example with descriptions"
+
+
+class TestConfigComments:
+    """Test adding datetime and other comments to YAML config."""
+
+    def test_datetime(
+        self, tmp_path: pathlib.Path, basic: ConfigTestClass, datetime_now: datetime.datetime
+    ) -> None:
+        """Test the automatic datetime comment."""
+        path = tmp_path / "test_datetime_comment.yml"
+        basic.save_yaml(path)
+
+        with open(path, "rt", encoding="utf-8") as file:
+            written = file.read()
+
+        yaml = basic.to_yaml()
+
+        datetime_comment = (
+            f"# ConfigTestClass config written on {datetime_now:%Y-%m-%d at %H:%M}"
+        )
+        assert written == datetime_comment + "\n" + yaml, "incorrect datetime comment"
+
+    @pytest.mark.parametrize(
+        ["comment", "formatted"],
+        [
+            (None, None),
+            ("# short comment",) * 2,
+            ("short comment missing #", "# short comment missing #"),
+            (
+                "longer comment missing hash without any formatting already done to "
+                "it, still more comment getting longer and longer on a single line",
+                "# longer comment missing hash without any formatting already done to it,"
+                "\n# still more comment getting longer and longer on a single line",
+            ),
+            (
+                "already\nformatted\ncomment\nwith\nnewlines",
+                "# already formatted comment with newlines",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("format_", [True, False])
+    def test_other_comment(
+        self,
+        basic: ConfigTestClass,
+        tmp_path: pathlib.Path,
+        comment: Optional[str],
+        formatted: Optional[str],
+        format_: bool,
+    ) -> None:
+        """Test the formatted and unformatted custom comments."""
+        path = tmp_path / "test_other_comment.yml"
+        basic.save_yaml(
+            path, datetime_comment=False, other_comment=comment, format_comment=format_
+        )
+
+        with open(path, "rt", encoding="utf-8") as file:
+            written = file.read()
+
+        yaml = basic.to_yaml()
+
+        if comment is None:
+            assert written == yaml, "incorrect no comment"
+
+        elif formatted is None:
+            raise ValueError("formatted should not be None if comment is not None")
+
+        elif format_:
+            assert written == formatted + "\n" + yaml, "comment formatting error"
+
+        else:
+            comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment.split("\n")]
+            comment = "\n".join(comment_lines)
+
+            assert written == comment + "\n" + yaml, "comment no formatting error"
 
 
 # # # FUNCTIONS # # #
