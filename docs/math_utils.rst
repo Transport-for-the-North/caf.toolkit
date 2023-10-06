@@ -1,3 +1,1 @@
-
-
 .. automodapi:: caf.toolkit.math_utils

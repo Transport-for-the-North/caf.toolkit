@@ -1,4 +1,1 @@
-
-
 .. automodapi:: caf.toolkit.array_utils
-
