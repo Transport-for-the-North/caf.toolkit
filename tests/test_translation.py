@@ -170,7 +170,6 @@ class PandasVectorResults:
         self.vector = pd.Series(data=np_vector)
         self.vector.index += 1
         self.expected_result = pd.Series(data=np_expected_result)
-        self.expected_result.index.names = ["to_zone_id"]
         self.expected_result.index += 1
 
         # Base from / to zones on translation
