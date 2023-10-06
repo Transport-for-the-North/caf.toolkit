@@ -58,7 +58,7 @@ extensions = [
 
 numpydoc_show_class_members = False
 
-automodapi_inheritance_diagram=False
+automodapi_inheritance_diagram = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
