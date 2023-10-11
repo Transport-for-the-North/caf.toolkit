@@ -1,1 +1,1 @@
-.. autoclass:: caf.toolkit.config_base.BaseConfig
+.. automodapi:: caf.toolkit.config_base

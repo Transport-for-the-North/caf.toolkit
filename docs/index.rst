@@ -12,11 +12,6 @@ a lot of the useful stuff from
 `NorMITs Demand <https://github.com/Transport-for-the-North/NorMITs-Demand>`_
 more widely available and easily accessible.
 
-Tool info
----------
-
-{Add any necessary tool info here Ben}
-
 Installation
 ------------
 caf.toolkit can be installed either from pip or conda forge:
@@ -24,10 +19,6 @@ caf.toolkit can be installed either from pip or conda forge:
 ``pip install caf.toolkit``
 
 ``conda install caf.toolkit -c conda-forge``
-
-.. toctree::
-   :maxdepth: 4
-   :caption: Contents:
 
 
 
@@ -42,6 +33,7 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
 
    array_utils
    concurrency
