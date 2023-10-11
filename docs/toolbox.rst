@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.toolbox
+toolbox
+=======
+
+.. automodapi:: toolbox
+    :no-heading:

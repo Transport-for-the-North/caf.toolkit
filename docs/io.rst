@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.io
+io
+==
+
+.. automodapi:: io
+    :no-heading:

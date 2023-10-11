@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.timing
+timing
+======
+
+.. automodapi:: timing
+    :no-heading:

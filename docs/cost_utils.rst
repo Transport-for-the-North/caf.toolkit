@@ -1,3 +1,5 @@
+cost_utils
+==========
 
-
-.. automodapi:: caf.toolkit.cost_utils
+.. automodapi:: cost_utils
+    :no-heading:

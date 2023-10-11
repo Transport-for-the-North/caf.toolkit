@@ -1,2 +1,5 @@
+tqdm_utils
+==========
 
-.. automodapi:: caf.toolkit.tqdm_utils
+.. automodapi:: tqdm_utils
+    :no-heading:

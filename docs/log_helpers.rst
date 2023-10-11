@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.log_helpers
+log_helpers
+===========
+
+.. automodapi:: log_helpers
+    :no-heading:

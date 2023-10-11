@@ -1,3 +1,5 @@
+translation
+===========
 
-
-.. automodapi:: caf.toolkit.translation
+.. automodapi:: translation
+    :no-heading:

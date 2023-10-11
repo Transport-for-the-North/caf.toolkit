@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.math_utils
+math_utils
+==========
+
+.. automodapi:: math_utils
+    :no-titles:

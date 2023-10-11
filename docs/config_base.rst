@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.config_base
+config_base
+===========
+
+.. automodapi:: config_base
+    :no-heading:

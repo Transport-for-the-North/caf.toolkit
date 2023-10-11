@@ -1,3 +1,5 @@
+validators
+==========
 
-
-.. automodapi:: caf.toolkit.validators
+.. automodapi:: validators
+    :no-heading:

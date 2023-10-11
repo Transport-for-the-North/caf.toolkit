@@ -1,1 +1,5 @@
-.. automodapi:: caf.toolkit.array_utils
+array_utils
+===========
+
+.. automodapi:: array_utils
+    :no-heading:

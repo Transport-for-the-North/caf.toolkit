@@ -29,24 +29,30 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-Contents
+Modules
 --------
 
 .. toctree::
    :maxdepth: 1
 
    array_utils
-   concurrency
    config_base
    cost_utils
    io
    iterative_proportional_fitting
    log_helpers
    math_utils
-   pandas_utils
    timing
    toolbox
    tqdm_utils
    translation
    validators
 
+Sub-packages
+------------
+
+.. toctree::
+   :maxdepth: 1
+
+   concurrency
+   pandas_utils
