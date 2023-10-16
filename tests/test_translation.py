@@ -718,20 +718,20 @@ class TestNumpyVector:
     "pd_incomplete",
 )
 class TestPandasVector:
-    """Tests for caf.toolkit.translation.pandas_vector_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_single_vector_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(self, pd_incomplete: PandasVectorResults, check_totals: bool):
         """Test for total checking with dropped demand"""
         kwargs = pd_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
-            result = translation.pandas_vector_zone_translation(**kwargs)
+            result = translation.pandas_single_vector_zone_translation(**kwargs)
             pd.testing.assert_series_equal(
                 result, pd_incomplete.expected_result, check_dtype=False
             )
         else:
             with pytest.raises(ValueError, match="Some values seem to have been dropped"):
-                translation.pandas_vector_zone_translation(**kwargs)
+                translation.pandas_single_vector_zone_translation(**kwargs)
 
     def test_missing_translation_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised with missing translation from values"""
@@ -745,14 +745,14 @@ class TestPandasVector:
         kwargs = pd_vector_split.input_kwargs(check_totals=False)
         msg = "Some zones in `vector.index` are missing in `translation`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_vector_zone_translation(**(kwargs | {"translation": new_trans}))
+            translation.pandas_single_vector_zone_translation(**(kwargs | {"translation": new_trans}))
 
     def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised if from_unique_zones and the vector disagree"""
         new_from_unq = pd_vector_split.from_unique_index[:-1]
         msg = "zones in `vector.index` have not been defined in `from_unique_zones`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | {"from_unique_index": new_from_unq})
             )
 
@@ -780,7 +780,7 @@ class TestPandasVector:
 
         # Run with errors
         with pytest.raises(ValueError, match=msg):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | new_kwargs)
             )
 
@@ -789,7 +789,7 @@ class TestPandasVector:
         new_vector = pd.DataFrame(pd_vector_split.vector)
         new_vector[1] = new_vector[0].copy()
         with pytest.raises(ValueError, match="must be a pandas.Series"):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | {"vector": new_vector})
             )
 
@@ -801,7 +801,7 @@ class TestPandasVector:
         """Test vector-like arrays (empty in 2nd dim)"""
         pd_vector = request.getfixturevalue(pd_vector_str)
         new_vector = pd.DataFrame(pd_vector.vector)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"vector": new_vector})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result, check_names=False)
@@ -822,7 +822,7 @@ class TestPandasVector:
         Also checks that totals are correctly checked.
         """
         pd_vector = request.getfixturevalue(pd_vector_str)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
@@ -840,7 +840,7 @@ class TestPandasVector:
         pd_vector = request.getfixturevalue(pd_vector_str)
         new_trans = pd_vector.translation.copy()
         new_trans.from_col = new_trans.from_col.astype(np.int32)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans.df})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
