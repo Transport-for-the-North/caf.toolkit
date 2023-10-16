@@ -36,6 +36,7 @@ lint = [
     "mypy_extensions>=1.0.0, <2.0.0",
     "pydocstyle[toml]>=6.1.1",
     "pylint>=2.14.5",
+    "pandas-stubs>=1.4.0, <2.0.0",
 ]
 
 test = [
