@@ -238,7 +238,7 @@ def _is_collection(object: any):
 
 
 def _remove_none_collection(data: Union[list, set, tuple]):
-    """Remove items recursively from collections which are None"""
+    """Remove items recursively from collections which are None."""
     # empty list, type set later
     filtered = []
     for item in data:

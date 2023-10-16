@@ -201,8 +201,7 @@ def combine_dict_list(
     dict_list: list[dict[Any, Any]],
     operation: Callable,
 ) -> dict[Any, Any]:
-    """
-    Sums all dictionaries in dict_list together.
+    """Combine a list of dictionaries.
 
     Parameters
     ----------
