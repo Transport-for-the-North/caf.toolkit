@@ -518,7 +518,7 @@ def pandas_matrix_zone_translation(
     from_unique_index: list[Any],
     to_unique_index: list[Any],
     translation: pd.DataFrame,
-    col_translation: pd.DataFrame = None,
+    col_translation: Optional[pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
     matrix_infill: float = 0.0,
     translate_infill: float = 0.0,
@@ -841,7 +841,7 @@ def pandas_vector_zone_translation(
 
     # Translate and return
     translated = numpy_vector_zone_translation(
-        vector=vector.values,
+        vector=vector.to_numpy(),
         translation=translation.values,
         translation_dtype=translation_dtype,
         check_totals=check_totals,
