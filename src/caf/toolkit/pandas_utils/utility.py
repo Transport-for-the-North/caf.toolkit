@@ -24,9 +24,9 @@ class CastProtocol(Protocol):
     # pylint: disable=too-few-public-methods
     """Type that as the `dtype` property and `astype` method."""
 
-    dtype: Any
+    dtype: np.dtype
 
-    def astype(self: _T, dtype: Any) -> _T:
+    def astype(self: _T, dtype: np.dtype) -> _T:
         """Cast this object to a new type."""
 
 
