@@ -264,6 +264,7 @@ def _pandas_vector_validation(
             f"Missing zones count: {len(missing_zones)}"
         )
 
+
 # ## PUBLIC FUNCTIONS ## #
 def numpy_matrix_zone_translation(
     matrix: np.ndarray,
