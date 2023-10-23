@@ -1040,8 +1040,8 @@ def pandas_multi_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any] = [],
-    to_unique_index: list[Any] = [],
+    from_unique_index: list[Any] = None,
+    to_unique_index: list[Any] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     """Efficiently translate a multi-column pandas vector between index systems.
@@ -1076,10 +1076,14 @@ def pandas_multi_vector_zone_translation(
         `translate_infill`.
 
     from_unique_index:
-        A list of all the unique IDs in the input indexing system.
+        A list of all the unique IDs in the input indexing system. If none
+        provided this defaults to translation's to_col, effectively removing a
+        check.
 
     to_unique_index:
-        A list of all the unique IDs in the output indexing system.
+        A list of all the unique IDs in the output indexing system. If none
+        provided this defaults to translation's to_col, effectively removing a
+        check.
 
     check_totals:
         Whether to check that the input and output matrices sum to the same
@@ -1094,9 +1098,9 @@ def pandas_multi_vector_zone_translation(
     --------
     .numpy_vector_zone_translation()
     """
-    if from_unique_index == []:
+    if from_unique_index is None:
         from_unique_index = translation[translation_from_col].unique()
-    if to_unique_index == []:
+    if to_unique_index is None:
         to_unique_index = translation[translation_to_col].unique()
 
     # Set the dtypes to match
