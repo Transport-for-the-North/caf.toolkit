@@ -4,54 +4,71 @@ from typing import Union
 import pyodbc
 import pandas as pd
 from pydantic import validator
+import enum
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
-aggregate_functions = (
-    "COUNT",
-    "SUM",
-    "AVG",
-    "MIN",
-    "MAX",
-    "FIRST",
-    "LAST",
-    "STDDEV",
-    "STDEV_POP",
-    "VARIANCE",
-    "VAR_POP",
-    "MEDIAN",
-    "GROUP_CONCAT",
-    "STRING_AGG",
-    "ANY",
-    "SOME",
-    "ALL",
-    "EVERY",
-    "RANK",
-    "DENSE_RANK",
-    "PERCENT_RANK",
-    "CUME_DIST",
-    "ROW_NUMBER",
-)
+class AggregateFunctions(enum.Enum):
+    """
+    Enumeration of valid aggregate function strings for a sql statement.
+    """
+
+    COUNT = "COUNT"
+    SUM = "SUM"
+    AVG = "AVG"
+    MIN = "MIN"
+    MAX = "MAX"
+    FIRST = "FIRST"
+    LAST = "LAST"
+    STDDEV = "STDDEV"
+    STDEV_POP = "STDEV_POP"
+    VARIANCE = "VARIANCE"
+    VAR_POP = "VAR_POP"
+    MEDIAN = "MEDIAN"
+    GROUP_CONCAT = "GROUP_CONCAT"
+    STRING_AGG = "STRING_AGG"
+    ANY = "ANY"
+    SOME = "SOME"
+    ALL = "ALL"
+    EVERY = "EVERY"
+    RANK = "RANK"
+    DENSE_RANK = "DENSE_RANK"
+    PERCENT_RANK = "PERCENT_RANK"
+    CUME_DIST = "CUME_DIST"
+    ROW_NUMBER = "ROW_NUMBER"
 
 
 class Column(BaseConfig):
     """
     Info about a column of a table, for use in TableColumns.
+
+    Parameters
+    ----------
+
+    column_name (str): The name of the column
+    groupby_fn: If grouping, the function to groupby for this column.
     """
 
     column_name: str
-    groupby_fn: str = None
+    groupby_fn: AggregateFunctions = None
 
-    @validator("groupby_fn")
-    def valid_aggregate(cls, val):
-        if val.upper() not in aggregate_functions:
-            raise ValueError(f"{val} is not a valid aggregate function")
-        return  val
+    @property
+    def _groupby_fn(self):
+        if self.groupby_fn is None:
+            return self.groupby_fn
+        return  self.groupby_fn.value
+
 
 
 class TableColumns(BaseConfig):
     """
     A table and list of columns to get from that table.
+
+    Parameters
+    ----------
+
+    table_name (str): The name of the table
+    columns(list[Column]): A list of columns to extract from that table.
     """
 
     table_name: str
@@ -61,6 +78,15 @@ class TableColumns(BaseConfig):
 class JoinInfo(BaseConfig):
     """
     Info to form a join in a sql statement.
+
+    Parameters
+    ----------
+
+    left_table: The name of the left table in the join
+    right_table: The name of the right table in the join
+    left_column: The join column in the left table
+    right_column: The join column in the right table
+    how: The join type. Defaults to "inner".
     """
 
     left_table: str
@@ -73,6 +99,20 @@ class JoinInfo(BaseConfig):
 class WhereInfo(BaseConfig):
     """
     Info to form a WHERE statement in a query.
+
+    Parameters
+    ----------
+
+    table: The table the column is in
+    column: The column being filtered on
+    operator: The operator for the where statement (between the column and the
+    match)
+    match: The match for the column
+
+    Example
+    -------
+        >>> "WHERE TABLE.COLUMN IN ['FOO','BAR','BAZ']"
+        >>> #operator is "IN", match is ['FOO','BAR','BAZ']
     """
 
     table: str
@@ -82,12 +122,65 @@ class WhereInfo(BaseConfig):
 
 
 class MainSqlConf(BaseConfig):
+    """
+    Main config class for SQL queries.
+
+    Parameters
+    ----------
+
+    file: Path to the database file. Only tested on MDB
+    tables: List of TableColumns, all of the columns you want data from
+    joins: List of JoinInfo instances, all of the joins needed. Number of joins
+    must be at least number of tables minus 1. Defaults to None.
+    wheres: List of WhereInfo instances for all filters needed. Defaults to
+    None.
+    groups: List of TableColumns for all groups. This should be columns to
+    groupby. These should not contain groupby_fn. Defaults to None. If groups
+    is not None, then all of the columns in tables which are not grouped on
+    MUST have groupby_fn included, or an error will occur.
+    """
     file: Path
     tables: list[TableColumns]
     joins: list[JoinInfo]  = None
     wheres: list[WhereInfo] = None
     groups: list[TableColumns] = None
 
+
+    @property
+    def group_pairs(self):
+        pairs = []
+        for table in self.groups:
+            for column in table.columns:
+                pairs.append((table.table_name,  column.column_name))
+        return pairs
+
+
+    @validator("tables")
+    def groupbys(cls, v, values):
+        """
+        
+        """
+        if values['groups'] is not None:
+            # Pairs is a list of tuples of table and column name in groups
+            pairs = []
+            for table in values['groups']:
+                for column in table.columns:
+                    pairs.append((table.table_name, column.column_name))
+            # Iterate through all of the columns in tables
+            for table in v:
+                # All shouldn't be used if grouping
+                if table.columns == "All":
+                    raise ValueError("All is not a valid option for a table"
+                                     "when grouping.")
+                for column in table.columns:
+                    # Check that the column isn't being grouped by, and no groupby_fn, raise error
+                    if ((table.table_name, column.column_name) not in pairs) and (column.groupby_fn is None):
+                        raise ValueError("groups is not None but not all of the"
+                                         "columns in tables have groupby_fn. "
+                                         f"{column.column_name} is missing. "
+                                         "This is the first missing, but not"
+                                         "necessarily the only one.")
+        return  v
 
     @property
     def conn(self):
@@ -135,8 +228,8 @@ class QueryBuilder:
             else:
                 string = ", ".join(
                     [
-                        f"{column.groupby_fn}([{table.table_name}].[{column.column_name}])"
-                        if column.groupby_fn is not None
+                        f"{column._groupby_fn}([{table.table_name}].[{column.column_name}])"
+                        if column._groupby_fn is not None
                         else f"[{table.table_name}].[{column.column_name}]"
                         for column in table.columns
                     ]
@@ -206,6 +299,7 @@ FROM {self.join_string}"""
                 for name in table.columns:
                     columns.append(name.column_name)
         df = pd.DataFrame([tuple(row) for row in rows], columns=columns)
+
         if self.group is not None:
             index_cols = []
             for table in self.group:
