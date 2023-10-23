@@ -21,4 +21,5 @@ Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
  - Processor added to SystemInformation
+ - Updated the license
   
