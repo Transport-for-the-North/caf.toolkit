@@ -16,6 +16,7 @@ from unittest.mock import patch
 # Third Party
 from caf.toolkit.pandas_utils import sql_handling
 import pandas as pd
+import pyodbc
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -31,10 +32,34 @@ import pandas as pd
 #     with patch('pyodbc.connect') as mock_connect, patch('pyodbc.Cursor') as mock_cursor:
 #         yield mock_connect, mock_cursor
 
+
+@pytest.fixture(name="main_dir", scope="session")
+def fixture_main_dir(tmp_path_factory):
+    """
+    Temporary path for I/O.
+
+    Parameters
+    ----------
+    tmp_path_factory
+
+    Returns
+    -------
+    Path: file path used for all saving and loading of files within the tests
+    """
+    path = tmp_path_factory.mktemp("main")
+    return path
+
 @pytest.fixture(name="testing_db", scope="session")
-def fixture_testing_db():
-    # Connect to an in-memory SQLite database
-    connection = sqlite3.connect(":memory:")
+def fixture_testing_db(main_dir):
+    mdb_file = main_dir / 'testing_db.mdb'
+    # Define a System DSN (Data Source Name) to create the MDB file
+    dsn_name = 'NewAccessDSN'
+    mdb_driver = '{Microsoft Access Driver (*.mdb)}'
+
+    # Create the system DSN
+    pyodbc.win_create_mdb(dsn_name, mdb_file, mdb_driver)
+
+    connection = pyodbc.connect(f'DRIVER={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={mdb_file}')
     cursor = connection.cursor()
 
     # Create table1 with columns: id, name, age, and email
@@ -97,9 +122,9 @@ def fixture_testing_db():
 
     # Commit the changes and close the connection
     connection.commit()
-    # connection.close()
+    connection.close()
 
-    return connection
+    return mdb_file
 
 
 @pytest.fixture(name="tables", scope="session")
@@ -123,7 +148,8 @@ def fixture_joins():
 
 @pytest.fixture(name="query_test", scope="session")
 def fixture_build_query_class(testing_db, tables, joins, group):
-    return sql_handling.QueryBuilder(testing_db, tables, joins, group=group)
+    conf = sql_handling.MainSqlConf(file=testing_db, tables=tables, joins=joins, groups=group)
+    return sql_handling.QueryBuilder(conf)
 
 
 @pytest.fixture(name="expected_out", scope="session")

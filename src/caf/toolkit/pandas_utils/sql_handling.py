@@ -95,6 +95,10 @@ class JoinInfo(BaseConfig):
     right_column: str
     how: str = "inner"
 
+    @property
+    def join_tuple_tuple(self):
+        return ((self.left_table, self.left_column),(self.right_table, self.right_column))
+
 
 class WhereInfo(BaseConfig):
     """
@@ -146,40 +150,41 @@ class MainSqlConf(BaseConfig):
     groups: list[TableColumns] = None
 
 
-    @property
-    def group_pairs(self):
-        pairs = []
-        for table in self.groups:
-            for column in table.columns:
-                pairs.append((table.table_name,  column.column_name))
-        return pairs
-
-
-    @validator("tables")
+    @validator("groups")
     def groupbys(cls, v, values):
         """
         
         """
-        if values['groups'] is not None:
-            # Pairs is a list of tuples of table and column name in groups
-            pairs = []
-            for table in values['groups']:
-                for column in table.columns:
-                    pairs.append((table.table_name, column.column_name))
-            # Iterate through all of the columns in tables
-            for table in v:
-                # All shouldn't be used if grouping
-                if table.columns == "All":
-                    raise ValueError("All is not a valid option for a table"
-                                     "when grouping.")
-                for column in table.columns:
-                    # Check that the column isn't being grouped by, and no groupby_fn, raise error
-                    if ((table.table_name, column.column_name) not in pairs) and (column.groupby_fn is None):
-                        raise ValueError("groups is not None but not all of the"
-                                         "columns in tables have groupby_fn. "
-                                         f"{column.column_name} is missing. "
-                                         "This is the first missing, but not"
-                                         "necessarily the only one.")
+        # Pairs is a list of tuples of table and column name in groups
+
+        pairs = []
+        for table in v:
+            for column in table.columns:
+                pairs.append((table.table_name, column.column_name))
+        # Check joins to add to pairs
+        if 'joins' in values.keys():
+            # For join pairs, if left or right is grouped on, add its partner
+            for join in values['joins']:
+                if join.join_tuple_tuple[0] in pairs:
+                    pairs.append(join.join_tuple_tuple[1])
+                elif join.join_tuple_tuple[1] in pairs:
+                    pairs.append(join.join_tuple_tuple[0])
+
+
+        # Iterate through all of the columns in tables
+        for table in values['tables']:
+            # All shouldn't be used if grouping
+            if table.columns == "All":
+                raise ValueError("All is not a valid option for a table"
+                                 "when grouping.")
+            for column in table.columns:
+                # Check that the column isn't being grouped by, and no groupby_fn, raise error
+                if ((table.table_name, column.column_name) not in pairs) and (column.groupby_fn is None):
+                    raise ValueError("groups is not None but not all of the "
+                                     "columns in tables have groupby_fn. "
+                                     f"{column.column_name} is missing. "
+                                     "This is the first missing, but not "
+                                     "necessarily the only one.")
         return  v
 
     @property
