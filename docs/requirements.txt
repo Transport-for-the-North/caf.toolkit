@@ -8,7 +8,6 @@ pydantic>=1.10, <2.0.0
 strictyaml>=1.6, <2.0.0
 psutil>=5.9.0
 sphinx>=7.1.2
-caf.space
 caf.toolkit>=0.2.1
 sphinx-automodapi>=0.16.0
 pydata-sphinx-theme>=0.14.1
