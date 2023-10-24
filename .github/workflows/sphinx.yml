@@ -12,11 +12,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: ammaraskar/sphinx-problem-matcher@master
-    - name: "Build docs"
-      run: |
-        cd docs
-        make html
 
     - uses: actions/checkout@v1
 
