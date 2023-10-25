@@ -54,7 +54,7 @@ def fixture_main_dir(tmp_path_factory):
 
 @pytest.fixture(name="testing_db", scope="session")
 def fixture_testing_db():
-    connection = pyodbc.connect(":memory:")
+    connection = sqlite3.connect(":memory:")
     cursor = connection.cursor()
 
     # Create table1 with columns: id, name, age, and email
