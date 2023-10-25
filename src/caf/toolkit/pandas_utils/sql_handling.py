@@ -1,3 +1,11 @@
+
+"""
+Used for reading sql databases into dataframes.
+
+Currently this is written aimed at NTEM databases. For that reason it only
+works with access databases. This could be extended to work with other databases
+in future, and it is likely that this will be done.
+"""
 from caf.toolkit import BaseConfig
 from pathlib import Path
 from typing import Union
@@ -100,6 +108,9 @@ class JoinInfo(BaseConfig):
 
     @property
     def join_tuple_tuple(self):
+        """
+        Converts to a tuple for use in some other methods.
+        """
         return ((self.left_table, self.left_column), (self.right_table, self.right_column))
 
 
