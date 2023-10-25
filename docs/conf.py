@@ -31,7 +31,7 @@ sys.path.insert(
 )
 
 project = "caf.toolkit"
-copyright = "2023, Benjamin Taylor"
+copyright = "2023, Transport for the North"
 author = "Benjamin Taylor"
 
 napoleon_google_docstring = False
