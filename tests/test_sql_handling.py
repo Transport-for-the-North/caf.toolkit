@@ -51,7 +51,7 @@ def fixture_main_dir(tmp_path_factory):
 
 @pytest.fixture(name="testing_db", scope="session")
 def fixture_testing_db():
-    connection = sqlite3.connect(':memory:')
+    connection = pyodbc.connect(':memory:')
     cursor = connection.cursor()
 
     # Create table1 with columns: id, name, age, and email
@@ -132,6 +132,7 @@ def fixture_tables():
 def fixture_group():
     group_col = [sql_handling.Column(column_name="id")]
     return [sql_handling.TableColumns(table_name="table1", columns=group_col)]
+
 @pytest.fixture(name="joins", scope="session")
 def fixture_joins():
     return [sql_handling.JoinInfo(left_table="table1", right_table="table2",
@@ -149,13 +150,28 @@ def fixture_expected_out():
     return pd.DataFrame({'age': {1: 30, 2: 25, 3: 35},
                          'address': {1: 1, 2: 1, 3: 1}})
 
+@pytest.fixture(name="where", scope="session")
+def fixture_where():
+    return [sql_handling.WhereInfo(table="table1", column="age", operator=">", match=25)]
+
+@pytest.fixture(name="where_table", scope="session")
+def fixture_where_table():
+    return [sql_handling.TableColumns(table_name="table1", columns=[sql_handling.Column(column_name="age"),
+                                                                    sql_handling.Column(column_name="email")])]
+@pytest.fixture(name="expected_where", scope="session")
+def fixture_expected_where():
+    return pd.DataFrame({'age': {1: 30, 3: 35},
+                         'address': {1: 1, 3: 1}})
+
+@pytest.fixture(name="where_conf", scope="session")
+def fixture_where_conf(where, where_table, testing_db):
+    return sql_handling.MainSqlConf(file=testing_db, tables=where_table, wheres=where)
+
 
 class TestBroad:
     def test_connection(self, query_test, expected_out):
         assert query_test.load_db().equals(expected_out)
 
-    def test_build_query(self, query_test, expected_out):
-        assert query_test.build_query().equals(expected_out)
+    def test_where(self, where_conf, expected_where):
+        assert sql_handling.QueryBuilder(where_conf).load_db().equals(expected_where)
 
-    def test_build_query_with_group(self, query_test, expected_out):
-        
