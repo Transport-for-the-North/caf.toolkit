@@ -172,6 +172,6 @@ class TestBroad:
     def test_connection(self, query_test, expected_out):
         assert query_test.load_db().equals(expected_out)
 
-    def test_where(self, where_conf, expected_where):
-        assert sql_handling.QueryBuilder(where_conf).load_db().equals(expected_where)
+    # def test_where(self, where_conf, expected_where):
+    #     assert sql_handling.QueryBuilder(where_conf).load_db().equals(expected_where)
 

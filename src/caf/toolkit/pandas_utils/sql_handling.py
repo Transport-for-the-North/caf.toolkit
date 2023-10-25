@@ -9,6 +9,7 @@ import sqlite3
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
+
 class AggregateFunctions(enum.Enum):
     """
     Enumeration of valid aggregate function strings for a sql statement.
@@ -57,8 +58,7 @@ class Column(BaseConfig):
     def _groupby_fn(self):
         if self.groupby_fn is None:
             return self.groupby_fn
-        return  self.groupby_fn.value
-
+        return self.groupby_fn.value
 
 
 class TableColumns(BaseConfig):
@@ -100,7 +100,7 @@ class JoinInfo(BaseConfig):
 
     @property
     def join_tuple_tuple(self):
-        return ((self.left_table, self.left_column),(self.right_table, self.right_column))
+        return ((self.left_table, self.left_column), (self.right_table, self.right_column))
 
 
 class WhereInfo(BaseConfig):
@@ -148,21 +148,19 @@ class MainSqlConf(BaseConfig):
     is not None, then all of the columns in tables which are not grouped on
     MUST have groupby_fn included, or an error will occur.
     """
+
     file: Union[Path, sqlite3.Connection, pyodbc.Connection]
     tables: list[TableColumns]
-    joins: list[JoinInfo]  = None
+    joins: list[JoinInfo] = None
     wheres: list[WhereInfo] = None
     groups: list[TableColumns] = None
 
     class Config:
         arbitrary_types_allowed = True
 
-
     @validator("groups")
     def groupbys(cls, v, values):
-        """
-        
-        """
+        """ """
         # Pairs is a list of tuples of table and column name in groups
 
         pairs = []
@@ -170,36 +168,40 @@ class MainSqlConf(BaseConfig):
             for column in table.columns:
                 pairs.append((table.table_name, column.column_name))
         # Check joins to add to pairs
-        if 'joins' in values.keys():
+        if "joins" in values.keys():
             # For join pairs, if left or right is grouped on, add its partner
-            for join in values['joins']:
+            for join in values["joins"]:
                 if join.join_tuple_tuple[0] in pairs:
                     pairs.append(join.join_tuple_tuple[1])
                 elif join.join_tuple_tuple[1] in pairs:
                     pairs.append(join.join_tuple_tuple[0])
 
-
         # Iterate through all of the columns in tables
-        for table in values['tables']:
+        for table in values["tables"]:
             # All shouldn't be used if grouping
             if table.columns == "All":
-                raise ValueError("All is not a valid option for a table"
-                                 "when grouping.")
+                raise ValueError("All is not a valid option for a table" "when grouping.")
             for column in table.columns:
                 # Check that the column isn't being grouped by, and no groupby_fn, raise error
-                if ((table.table_name, column.column_name) not in pairs) and (column.groupby_fn is None):
-                    raise ValueError("groups is not None but not all of the "
-                                     "columns in tables have groupby_fn. "
-                                     f"{column.column_name} is missing. "
-                                     "This is the first missing, but not "
-                                     "necessarily the only one.")
-        return  v
+                if ((table.table_name, column.column_name) not in pairs) and (
+                    column.groupby_fn is None
+                ):
+                    raise ValueError(
+                        "groups is not None but not all of the "
+                        "columns in tables have groupby_fn. "
+                        f"{column.column_name} is missing. "
+                        "This is the first missing, but not "
+                        "necessarily the only one."
+                    )
+        return v
 
     @property
     def conn(self):
         if isinstance(self.file, (pyodbc.Connection, sqlite3.Connection)):
             return self.file
-        return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={self.file}")
+        return pyodbc.connect(
+            f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={self.file}"
+        )
 
 
 def connection(file):
@@ -262,7 +264,7 @@ class QueryBuilder:
             join_strings.insert(0, self.joins[0].left_table)
             return "(" * len(self.joins) + " ".join(join_strings)
         else:
-            return  self.tables[0].table_name
+            return self.tables[0].table_name
 
     @property
     def where_string(self):
@@ -292,7 +294,7 @@ class QueryBuilder:
                 f"[{table.table_name}].[{column.column_name}]" for column in table.columns
             )
             table_strings.append(string)
-        return ", ".join(table_strings) + ';'
+        return ", ".join(table_strings) + ";"
 
     def load_db(self):
         query = f"""SELECT {self.select_string}
@@ -318,9 +320,9 @@ FROM {self.join_string}"""
         if self.joins is not None:
             join_dropper = []
             for join in self.joins:
-                if (join.how == 'inner') or (join.how == 'left'):
+                if (join.how == "inner") or (join.how == "left"):
                     join_dropper.append(join.right_column)
-                if join.how == 'right':
+                if join.how == "right":
                     join_dropper.append(join.left_column)
             df.drop(join_dropper, axis=1, inplace=True)
         if self.group is not None:
@@ -330,4 +332,3 @@ FROM {self.join_string}"""
                     index_cols.append(name.column_name)
             df.set_index(index_cols, inplace=True)
         return df
-
