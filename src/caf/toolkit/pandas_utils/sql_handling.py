@@ -5,6 +5,7 @@ import pyodbc
 import pandas as pd
 from pydantic import validator
 import enum
+import sqlite3
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
@@ -85,7 +86,9 @@ class JoinInfo(BaseConfig):
     left_table: The name of the left table in the join
     right_table: The name of the right table in the join
     left_column: The join column in the left table
-    right_column: The join column in the right table
+    right_column: The join column in the right table. This column will be
+    dropped post join for inner joins, so do not explicitly use this to group
+    on
     how: The join type. Defaults to "inner".
     """
 
@@ -132,7 +135,9 @@ class MainSqlConf(BaseConfig):
     Parameters
     ----------
 
-    file: Path to the database file. Only tested on MDB
+    file: Path to the database file. This can also be a connection to a sqlite
+    or access database, but it is expected to receive a path. If a path is
+    provided it must be to an access database.
     tables: List of TableColumns, all of the columns you want data from
     joins: List of JoinInfo instances, all of the joins needed. Number of joins
     must be at least number of tables minus 1. Defaults to None.
@@ -143,11 +148,14 @@ class MainSqlConf(BaseConfig):
     is not None, then all of the columns in tables which are not grouped on
     MUST have groupby_fn included, or an error will occur.
     """
-    file: Path
+    file: Union[Path, sqlite3.Connection, pyodbc.Connection]
     tables: list[TableColumns]
     joins: list[JoinInfo]  = None
     wheres: list[WhereInfo] = None
     groups: list[TableColumns] = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
     @validator("groups")
@@ -189,6 +197,8 @@ class MainSqlConf(BaseConfig):
 
     @property
     def conn(self):
+        if isinstance(self.file, (pyodbc.Connection, sqlite3.Connection)):
+            return self.file
         return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={self.file}")
 
 
@@ -304,7 +314,14 @@ FROM {self.join_string}"""
                 for name in table.columns:
                     columns.append(name.column_name)
         df = pd.DataFrame([tuple(row) for row in rows], columns=columns)
-
+        # Remove duplicated columns from inner joins
+        join_dropper = []
+        for join in self.joins:
+            if (join.how == 'inner') or (join.how == 'left'):
+                join_dropper.append(join.right_column)
+            if join.how == 'right':
+                join_dropper.append(join.left_column)
+        df.drop(join_dropper, axis=1, inplace=True)
         if self.group is not None:
             index_cols = []
             for table in self.group:

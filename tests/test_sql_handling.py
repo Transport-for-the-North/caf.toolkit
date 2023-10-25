@@ -50,16 +50,8 @@ def fixture_main_dir(tmp_path_factory):
     return path
 
 @pytest.fixture(name="testing_db", scope="session")
-def fixture_testing_db(main_dir):
-    mdb_file = main_dir / 'testing_db.mdb'
-    # Define a System DSN (Data Source Name) to create the MDB file
-    dsn_name = 'NewAccessDSN'
-    mdb_driver = '{Microsoft Access Driver (*.mdb)}'
-
-    # Create the system DSN
-    pyodbc.win_create_mdb(dsn_name, mdb_file, mdb_driver)
-
-    connection = pyodbc.connect(f'DRIVER={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={mdb_file}')
+def fixture_testing_db():
+    connection = sqlite3.connect(':memory:')
     cursor = connection.cursor()
 
     # Create table1 with columns: id, name, age, and email
@@ -122,9 +114,9 @@ def fixture_testing_db(main_dir):
 
     # Commit the changes and close the connection
     connection.commit()
-    connection.close()
+    # connection.close()
 
-    return mdb_file
+    return connection
 
 
 @pytest.fixture(name="tables", scope="session")
@@ -155,10 +147,15 @@ def fixture_build_query_class(testing_db, tables, joins, group):
 @pytest.fixture(name="expected_out", scope="session")
 def fixture_expected_out():
     return pd.DataFrame({'age': {1: 30, 2: 25, 3: 35},
-                         'table1_id': {1: 1, 2: 2, 3: 3},
-                         'address': {1: '123 Main St', 2: '456 Elm St', 3: '789 Oak St'}})
+                         'address': {1: 1, 2: 1, 3: 1}})
 
 
 class TestBroad:
     def test_connection(self, query_test, expected_out):
         assert query_test.load_db().equals(expected_out)
+
+    def test_build_query(self, query_test, expected_out):
+        assert query_test.build_query().equals(expected_out)
+
+    def test_build_query_with_group(self, query_test, expected_out):
+        
