@@ -32,7 +32,7 @@ sys.path.insert(
 
 project = "caf.toolkit"
 copyright = "2023, Transport for the North"
-author = "Benjamin Taylor"
+author = "Transport for the North"
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
