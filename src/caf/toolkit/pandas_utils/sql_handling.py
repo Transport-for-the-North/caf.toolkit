@@ -115,11 +115,6 @@ class WhereInfo(BaseConfig):
     operator: The operator for the where statement (between the column and the
     match)
     match: The match for the column
-
-    Example
-    -------
-        >>> "WHERE TABLE.COLUMN IN ['FOO','BAR','BAZ']"
-        >>> #operator is "IN", match is ['FOO','BAR','BAZ']
     """
 
     table: str
