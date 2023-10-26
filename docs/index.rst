@@ -6,11 +6,11 @@
 Welcome to caf.toolkit's documentation!
 =======================================
 
-The Common Analytical Framework (CAF) Toolkit is a toolkit of transport
-planning and appraisal functionalities. It's the beginning of a project to make
-a lot of the useful stuff from
-`NorMITs Demand <https://github.com/Transport-for-the-North/NorMITs-Demand>`_
-more widely available and easily accessible.
+The Common Analytical Framework (CAF) is a collection of transport planning and appraisal functionalities. It’s part of a project to make useful transport related functionality more widely available and easily accessible.
+
+Tool Info
+---------
+CAF.Toolkit focusses on generic tools and functions that are utilised across the CAF Framework. Over time, alongside adding extras functionality to enhance other CAF packages, CAF.Toolkit will be populated with much of the generic functionality found in `NorMITs Demand <https://github.com/Transport-for-the-North/NorMITs-Demand>`_.
 
 Installation
 ------------
