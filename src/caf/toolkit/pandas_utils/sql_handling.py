@@ -168,7 +168,8 @@ class MainSqlConf(BaseConfig):
     def groupbys(cls, v, values):
         """ """
         # Pairs is a list of tuples of table and column name in groups
-
+        if v is None:
+            return v
         pairs = []
         for table in v:
             for column in table.columns:
