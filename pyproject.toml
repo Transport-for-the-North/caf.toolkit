@@ -49,6 +49,7 @@ test = [
 "Bug Tracker" = "https://github.com/Transport-for-the-North/caf.toolkit/issues"
 Homepage = "https://github.com/Transport-for-the-North/caf.toolkit"
 Source = "https://github.com/Transport-for-the-North/caf.toolkit"
+Documentation = "http://caftoolkit.rtfd.io/"
 
 # Packaging options
 [tool.setuptools.packages.find]
