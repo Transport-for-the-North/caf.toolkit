@@ -18,9 +18,4 @@ tox>=3.24.3, <4.0.0
 # edit_install
 versioningit>=2.2.0, < 3.0.0
 
-# documentation
-
-sphinx >=7.2.6, <8.0.0
-sphinx-automodapi>=0.16.0
-pydata-sphinx-theme>=0.14.1
-graphviz>=0.20.1
+# For documentation requirements - see docs.requirements.txt
