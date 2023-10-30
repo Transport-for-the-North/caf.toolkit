@@ -14,17 +14,15 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
-# -- Project information -----------------------------------------------------
 import sys
 import os
 from pathlib import Path
-import caf.toolkit
 
 dir_path = Path(__file__).parents[1]
 source = dir_path / "src" / "caf" / "toolkit"
-
 sys.path.insert(0, os.path.abspath(str(source)))
+
+# -- Project information -----------------------------------------------------
 
 project = "caf.toolkit"
 copyright = "2023, Transport for the North"
@@ -33,8 +31,12 @@ author = "Transport for the North"
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
-# The full version, including alpha/beta/rc tags
-release = str(caf.toolkit.__version__)
+# The short X.Y version.
+import caf.toolkit
+version = str(caf.toolkit.__version__)
+
+# The full version, including alpha/beta/rc tags.
+release = version
 
 
 # -- General configuration ---------------------------------------------------
