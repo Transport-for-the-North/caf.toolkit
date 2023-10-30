@@ -33,6 +33,7 @@ napoleon_numpy_docstring = True
 
 # The short X.Y version.
 import caf.toolkit
+
 version = str(caf.toolkit.__version__)
 
 # The full version, including alpha/beta/rc tags.
