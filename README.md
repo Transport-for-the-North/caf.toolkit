@@ -8,6 +8,7 @@
 <a href="https://pypi.org/project/caf.toolkit/"><img alt="Latest release" src="https://img.shields.io/github/release/transport-for-the-north/caf.toolkit.svg?style=flat-square&maxAge=86400"></a>
 <a href="https://app.codecov.io/gh/Transport-for-the-North/caf.toolkit"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/transport-for-the-north/caf.toolkit.svg?branch=master&style=flat-square&logo=CodeCov"></a>
 <a href="https://github.com/Transport-for-the-North/caf.toolkit/actions?query=event%3Apush"><img alt="Testing Badge" src="https://img.shields.io/github/actions/workflow/status/transport-for-the-north/caf.toolkit/tests.yml?style=flat-square&logo=GitHub&label=Tests"></a>
+<a href='https://caftoolkit.readthedocs.io/en/stable/?badge=stable'><img alt='Documentation Status' src="https://img.shields.io/readthedocs/caftoolkit?style=flat-square&logo=readthedocs"></a>
 <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img alt="License: GNU GPL v3.0" src="https://img.shields.io/badge/license-GPLv3-blueviolet.svg?style=flat-square"></a>
 <a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg?style=flat-square"></a>
 </p>
