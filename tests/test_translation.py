@@ -962,14 +962,8 @@ class TestNumpyMatrix:
         np.testing.assert_allclose(result, np_mat.expected_result)
 
 
-@pytest.mark.usefixtures(
-    "pd_matrix_aggregation",
-    "pd_matrix_aggregation2",
-    "pd_matrix_split",
-    "pd_matrix_dtype",
-    "pd_matrix_incomplete",
-)
-class TestPandasMatrix:
+@pytest.mark.usefixtures("pd_matrix_incomplete")
+class TestPandasMatrixEdges:
     """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
@@ -1024,16 +1018,21 @@ class TestPandasMatrix:
                 **(pd_matrix_split.input_kwargs() | new_kwargs)
             )
 
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("check_totals", [True, False])
+
+@pytest.mark.parametrize(
+    "pd_matrix_str, check_totals",
+    [
+        ("pd_matrix_aggregation", True),
+        ("pd_matrix_aggregation", False),
+        ("pd_matrix_aggregation2", True),
+        ("pd_matrix_aggregation2", False),
+        ("pd_matrix_split", True),
+        ("pd_matrix_split", False),
+        ("pd_matrix_dtype", False),
+    ],
+)
+class TestPandasMatrixParams:
+    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
     def test_translation_correct(
         self,
         pd_matrix_str: str,
@@ -1051,20 +1050,12 @@ class TestPandasMatrix:
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
     @pytest.mark.parametrize("row", [True, False])
     def test_check_allow_similar_types(
         self,
         pd_matrix_str: str,
         row: bool,
+        check_totals: bool,
         request,
     ):
         """Test that similar types are allowed in translation and data."""
@@ -1081,19 +1072,10 @@ class TestPandasMatrix:
         # Run the translation
         new_trans.from_col = new_trans.from_col.astype(np.int32)
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
     @pytest.mark.parametrize("row", [True, False])
     @pytest.mark.parametrize("trans_dtype", [str, int, float])
     @pytest.mark.parametrize("matrix_dtype", [str, int, float])
@@ -1103,6 +1085,7 @@ class TestPandasMatrix:
         row: bool,
         trans_dtype: type,
         matrix_dtype: type,
+        check_totals: bool,
         request,
     ):
         """Test that similar types are allowed in translation and data."""
@@ -1122,6 +1105,6 @@ class TestPandasMatrix:
         # Run the translation
         new_trans.from_col = new_trans.from_col.astype(trans_dtype)
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
