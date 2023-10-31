@@ -654,7 +654,11 @@ def pandas_matrix_zone_translation(
         col_translation = translation.copy()
     assert col_translation is not None
 
-    # Validate the inputs
+    # Set the index dtypes to match and validate
+    matrix.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+        matrix.index,
+        translation[translation_from_col],
+    )
     _pandas_vector_validation(
         vector=matrix,
         translation=translation,
@@ -680,11 +684,26 @@ def pandas_matrix_zone_translation(
         translation=row_translation,
         **common_kwargs,
     )
-    return pandas_multi_vector_zone_translation(
+    translated = pandas_multi_vector_zone_translation(
         vector=half_done.transpose(),
         translation=col_translation,
         **common_kwargs,
     ).transpose()
+
+    if not check_totals:
+        return translated
+
+    if not math_utils.is_almost_equal(matrix.to_numpy().sum(), translated.to_numpy().sum()):
+        raise ValueError(
+            f"Some values seem to have been dropped during the translation. "
+            f"Check the given translation matrix isn't unintentionally "
+            f"dropping values. If the difference is small, it's likely a "
+            f"rounding error.\n"
+            f"Before: {matrix.to_numpy().sum()}\n"
+            f"After: {translated.to_numpy().sum()}"
+        )
+
+    return translated
 
 
 @overload
@@ -829,7 +848,7 @@ def pandas_vector_zone_translation(
 
 
 def pandas_single_vector_zone_translation(
-    vector: pd.Series,
+    vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
@@ -1040,6 +1059,11 @@ def pandas_multi_vector_zone_translation(
         to_unique_index = translation[translation_to_col].unique()
     assert to_unique_index is not None
 
+    # Set the index dtypes to match and validate
+    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+        vector.index,
+        translation[translation_from_col],
+    )
     _pandas_vector_validation(
         vector=vector,
         translation=translation,
@@ -1050,12 +1074,6 @@ def pandas_multi_vector_zone_translation(
     )
 
     # ## CONVERT DTYPES ## #
-    # Set the index dtypes to match
-    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        vector.index,
-        translation[translation_from_col],
-    )
-
     # Convert data dtypes if needed
     if translation_dtype is None:
         translation_dtype = np.promote_types(translation[translation_factors_col].dtype, vector.to_numpy().dtype)
@@ -1072,6 +1090,8 @@ def pandas_multi_vector_zone_translation(
         to_type=translation_dtype,
         arr_name="row_translation",
     )
+
+
 
     # ## PREP AND TRANSLATE ## #
     # set index for translation
@@ -1107,7 +1127,6 @@ def pandas_multi_vector_zone_translation(
         .sum()
     )
 
-    # threshold higher than zero to not catch rounding errors, need to check
     if check_totals:
         overall_diff = translated.sum().sum() - vector.sum().sum()
         if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
