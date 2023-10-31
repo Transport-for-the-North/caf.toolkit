@@ -228,8 +228,6 @@ class PandasMatrixResults:
 
     def input_kwargs(
         self,
-        matrix_infill: float = 0.0,
-        translate_infill: float = 0.0,
         check_totals: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
@@ -240,8 +238,6 @@ class PandasMatrixResults:
                 "translation_dtype": self.translation_dtype,
                 "from_unique_index": self.from_unique_index,
                 "to_unique_index": self.to_unique_index,
-                "matrix_infill": matrix_infill,
-                "translate_infill": translate_infill,
                 "check_totals": check_totals,
             }
             | self.translation.to_kwargs()
@@ -1027,34 +1023,6 @@ class TestPandasMatrix:
             translation.pandas_matrix_zone_translation(
                 **(pd_matrix_split.input_kwargs() | new_kwargs)
             )
-
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("force_slow", [True, False])
-    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    def test_slow_translation(
-        self,
-        pd_matrix_str: str,
-        force_slow: bool,
-        request,
-    ):
-        """Test translation works as expected
-
-        Tests the matrix aggregation, using 2 different translations, and
-        translation splitting.
-        """
-        pd_mat = request.getfixturevalue(pd_matrix_str)
-        result = translation.pandas_matrix_zone_translation(
-            **pd_mat.input_kwargs(_force_slow=force_slow, chunk_size=3)
-        )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     @pytest.mark.parametrize(
         "pd_matrix_str",
