@@ -745,7 +745,9 @@ class TestPandasVector:
         kwargs = pd_vector_split.input_kwargs(check_totals=False)
         msg = "Some zones in `vector.index` are missing in `translation`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_single_vector_zone_translation(**(kwargs | {"translation": new_trans}))
+            translation.pandas_single_vector_zone_translation(
+                **(kwargs | {"translation": new_trans})
+            )
 
     def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised if from_unique_zones and the vector disagree"""
