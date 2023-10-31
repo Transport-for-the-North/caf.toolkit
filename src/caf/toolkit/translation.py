@@ -577,7 +577,7 @@ def pandas_matrix_zone_translation(
     from_unique_index: list[Any],
     to_unique_index: list[Any],
     translation: pd.DataFrame,
-    col_translation: pd.DataFrame = None,
+    col_translation: Optional[pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
     matrix_infill: float = 0.0,
     translate_infill: float = 0.0,
@@ -669,6 +669,7 @@ def pandas_matrix_zone_translation(
     row_translation = translation
     if col_translation is None:
         col_translation = translation.copy()
+    assert col_translation is not None
 
     # Make sure columns exist in the translations
     columns = [translation_from_col, translation_to_col, translation_factors_col]
@@ -780,6 +781,7 @@ def pandas_vector_zone_translation(
     translate_infill: float = 0.0,
     check_totals: bool = True,
 ) -> pd.Series:
+    # pylint: disable=too-many-arguments
     ...  # pragma: no cover
 
 
@@ -797,6 +799,7 @@ def pandas_vector_zone_translation(
     translate_infill: float = 0.0,
     check_totals: bool = True,
 ) -> pd.DataFrame:
+    # pylint: disable=too-many-arguments
     ...  # pragma: no cover
 
 
@@ -1041,8 +1044,8 @@ def pandas_multi_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any] = None,
-    to_unique_index: list[Any] = None,
+    from_unique_index: Optional[list[Any]] = None,
+    to_unique_index: Optional[list[Any]] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     """Efficiently translate a multi-column pandas vector between index systems.
@@ -1101,8 +1104,10 @@ def pandas_multi_vector_zone_translation(
     """
     if from_unique_index is None:
         from_unique_index = translation[translation_from_col].unique()
+    assert from_unique_index is not None
     if to_unique_index is None:
         to_unique_index = translation[translation_to_col].unique()
+    assert to_unique_index is not None
 
     # Set the dtypes to match
     vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
