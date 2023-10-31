@@ -213,6 +213,7 @@ def _pandas_vector_validation(
     translation_from_col: str,
     from_unique_index: list[Any],
     to_unique_index: list[Any],
+    name: str = "vector",
 ) -> None:
     """Validate the given parameters for a vector zone translation.
 
@@ -237,6 +238,9 @@ def _pandas_vector_validation(
     to_unique_index:
         A list of all the unique IDs in the output indexing system.
 
+    name:
+        The name to use in any warnings messages when they are raised.
+
     Returns
     -------
     None
@@ -248,7 +252,7 @@ def _pandas_vector_validation(
     missing_rows = set(vector.index.to_list()) - set(from_unique_index)
     if len(missing_rows) > 0:
         warnings.warn(
-            f"Some zones in `vector.index` have not been defined in "
+            f"Some zones in `{name}.index` have not been defined in "
             f"`from_unique_zones`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_rows)}"
@@ -259,7 +263,7 @@ def _pandas_vector_validation(
     missing_zones = set(from_unique_index) - trans_from_zones
     if len(missing_zones) != 0:
         warnings.warn(
-            f"Some zones in `vector.index` are missing in `translation`. "
+            f"Some zones in `{name}.index` are missing in `translation`. "
             f"Infilling missing zones with `translation_infill`.\n"
             f"Missing zones count: {len(missing_zones)}"
         )
@@ -579,12 +583,7 @@ def pandas_matrix_zone_translation(
     translation: pd.DataFrame,
     col_translation: Optional[pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
-    matrix_infill: float = 0.0,
-    translate_infill: float = 0.0,
     check_totals: bool = True,
-    slow_fallback: bool = True,
-    chunk_size: int = 100,
-    _force_slow: bool = False,
 ) -> pd.DataFrame:
     """Efficiently translates a pandas matrix between index systems.
 
@@ -634,24 +633,9 @@ def pandas_matrix_zone_translation(
         dtype of `vector` is used. Where such high precision
         isn't needed, a more memory and time efficient data type can be used.
 
-    matrix_infill:
-        The value to use to infill any missing matrix values.
-
-    translate_infill:
-        The value to use to infill any missing translation factors.
-
     check_totals:
         Whether to check that the input and output matrices sum to the same
         total.
-
-    slow_fallback:
-        Whether to fall back to a slower, more memory efficient method if a
-        `MemoryError` is raised during faster translation.
-
-    chunk_size:
-        The size of the chunks to use if falling back on a slower, more memory
-        efficient method. Most of the time this can be ignored unless
-        translating between two massive zoning systems.
 
     Returns
     -------
@@ -664,107 +648,43 @@ def pandas_matrix_zone_translation(
         If matrix is not a square array, or if translation any inputs are not
         the correct format.
     """
-    # pylint: disable=too-many-arguments, too-many-locals
     # Init
     row_translation = translation
     if col_translation is None:
         col_translation = translation.copy()
     assert col_translation is not None
 
-    # Make sure columns exist in the translations
-    columns = [translation_from_col, translation_to_col, translation_factors_col]
-    row_translation = pd_utils.reindex_cols(
-        df=row_translation,
-        columns=columns,
-        throw_error=True,
-        dataframe_name="row_translation",
-    )
-    col_translation = pd_utils.reindex_cols(
-        df=col_translation,
-        columns=columns,
-        throw_error=True,
-        dataframe_name="col_translation",
+    # Validate the inputs
+    _pandas_vector_validation(
+        vector=matrix,
+        translation=translation,
+        translation_from_col=translation_from_col,
+        from_unique_index=from_unique_index,
+        to_unique_index=to_unique_index,
+        name="matrix"
     )
 
-    # Set the dtypes to match
-    matrix.index, row_translation[translation_from_col] = pd_utils.cast_to_common_type(
-        matrix.index,
-        row_translation[translation_from_col],
+    # Build dictionary of repeated kwargs
+    common_kwargs = {
+        "translation_from_col": translation_from_col,
+        "translation_to_col": translation_to_col,
+        "translation_factors_col": translation_factors_col,
+        "from_unique_index": from_unique_index,
+        "to_unique_index": to_unique_index,
+        "translation_dtype": translation_dtype,
+        "check_totals": check_totals,
+    }
+
+    half_done = pandas_multi_vector_zone_translation(
+        vector=matrix,
+        translation=row_translation,
+        **common_kwargs,
     )
-    matrix.columns, col_translation[translation_from_col] = pd_utils.cast_to_common_type(
-        matrix.columns,
-        col_translation[translation_from_col],
-    )
-
-    validators.unique_list(from_unique_index, name="from_unique_index")
-    validators.unique_list(to_unique_index, name="to_unique_index")
-
-    # Make sure the matrix only has the zones defined in from_unique_zones
-    missing_rows = set(matrix.index.to_list()) - set(from_unique_index)
-    if len(missing_rows) > 0:
-        warnings.warn(
-            f"Some zones in `matrix.index` have not been defined in "
-            f"`from_unique_zones`. These zones will be dropped "
-            f"before the translation!\n"
-            f"Additional rows count: {len(missing_rows)}"
-        )
-
-    missing_cols = set(matrix.columns.to_list()) - set(from_unique_index)
-    if len(missing_cols) > 0:
-        warnings.warn(
-            f"Some zones in `matrix.columns` have not been defined in "
-            f"`from_unique_zones`. These zones will be dropped "
-            f"before the translation!\n"
-            f"Additional cols count: {len(missing_cols)}"
-        )
-
-    # ## PREP AND TRANSLATE ## #
-    # Square the translation
-    row_translation = pd_utils.long_to_wide_infill(
-        df=row_translation,
-        index_col=translation_from_col,
-        columns_col=translation_to_col,
-        values_col=translation_factors_col,
-        index_vals=from_unique_index,
-        column_vals=to_unique_index,
-        infill=translate_infill,
-    )
-
-    col_translation = pd_utils.long_to_wide_infill(
-        df=col_translation,
-        index_col=translation_from_col,
-        columns_col=translation_to_col,
-        values_col=translation_factors_col,
-        index_vals=from_unique_index,
-        column_vals=to_unique_index,
-        infill=translate_infill,
-    )
-
-    # Make sure all zones are in the matrix and infill 0s
-    matrix = matrix.reindex(
-        index=from_unique_index,
-        columns=from_unique_index,
-        fill_value=matrix_infill,
-    )
-
-    # Translate
-    translated = numpy_matrix_zone_translation(
-        matrix=matrix.values,
-        translation=row_translation.values,
-        col_translation=col_translation.values,
-        translation_dtype=translation_dtype,
-        check_totals=check_totals,
-        slow_fallback=slow_fallback,
-        chunk_size=chunk_size,
-        _force_slow=_force_slow,
-    )
-
-    # Stick into pandas
-    return pd.DataFrame(
-        data=translated,
-        index=to_unique_index,
-        columns=to_unique_index,
-    )
+    return pandas_multi_vector_zone_translation(
+        vector=half_done.transpose(),
+        translation=col_translation,
+        **common_kwargs,
+    ).transpose()
 
 
 @overload
@@ -1004,6 +924,7 @@ def pandas_single_vector_zone_translation(
         translation_from_col=translation_from_col,
         from_unique_index=from_unique_index,
         to_unique_index=to_unique_index,
+        name="vector"
     )
 
     # ## PREP AND TRANSLATE ## #
@@ -1046,6 +967,7 @@ def pandas_multi_vector_zone_translation(
     translation_factors_col: str,
     from_unique_index: Optional[list[Any]] = None,
     to_unique_index: Optional[list[Any]] = None,
+    translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     """Efficiently translate a multi-column pandas vector between index systems.
@@ -1089,6 +1011,11 @@ def pandas_multi_vector_zone_translation(
         provided this defaults to translation's to_col, effectively removing a
         check.
 
+    translation_dtype:
+        The numpy datatype to use to do the translation. If None, then the
+        dtype of the vector is used. Where such high precision
+        isn't needed, a more memory and time efficient data type can be used.
+
     check_totals:
         Whether to check that the input and output matrices sum to the same
         total.
@@ -1102,6 +1029,10 @@ def pandas_multi_vector_zone_translation(
     --------
     .numpy_vector_zone_translation()
     """
+    vector = vector.copy()
+    translation = translation.copy()
+
+    # If not given, just assume the unique values from the translation given
     if from_unique_index is None:
         from_unique_index = translation[translation_from_col].unique()
     assert from_unique_index is not None
@@ -1109,18 +1040,37 @@ def pandas_multi_vector_zone_translation(
         to_unique_index = translation[translation_to_col].unique()
     assert to_unique_index is not None
 
-    # Set the dtypes to match
-    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        vector.index,
-        translation[translation_from_col],
-    )
-
     _pandas_vector_validation(
         vector=vector,
         translation=translation,
         translation_from_col=translation_from_col,
         from_unique_index=from_unique_index,
         to_unique_index=to_unique_index,
+        name="vector"
+    )
+
+    # ## CONVERT DTYPES ## #
+    # Set the index dtypes to match
+    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+        vector.index,
+        translation[translation_from_col],
+    )
+
+    # Convert data dtypes if needed
+    if translation_dtype is None:
+        translation_dtype = np.promote_types(translation[translation_factors_col].dtype, vector.to_numpy().dtype)
+    assert translation_dtype is not None
+
+    new_values = _convert_dtypes(
+        arr=vector.to_numpy(),
+        to_type=translation_dtype,
+        arr_name="vector",
+    )
+    vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
+    translation[translation_from_col] = _convert_dtypes(
+        arr=translation[translation_from_col].to_numpy(),
+        to_type=translation_dtype,
+        arr_name="row_translation",
     )
 
     # ## PREP AND TRANSLATE ## #
@@ -1165,6 +1115,11 @@ def pandas_multi_vector_zone_translation(
                 "Some values seem to have been dropped. The difference "
                 f"total is {overall_diff} (translated - original)."
             )
+
+    # Sometimes we need to remove the index name to make sure the same style of
+    # dataframe is returned as that which came in
+    if vector.index.name is None:
+        translated.index.name = None
 
     return translated
 
