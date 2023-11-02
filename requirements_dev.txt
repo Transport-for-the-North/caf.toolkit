@@ -1,21 +1,20 @@
 # # Packaging controls
 setuptools>=64.0.0
-versioningit>=2.2.0, < 3.0.0
 
 # package linters
 black>=22.6.0
-mypy>=1.0.0, <2.0.0
-mypy_extensions>=1.0.0, <2.0.0
+mypy>=1.0.0
+mypy_extensions>=1.0.0
 pydocstyle[toml]>=6.1.1
 pylint>=2.14.5
 
 # Testing
-pytest>=7.4.0, <8.0.0
-pytest-cov>=4.1.0, < 5.0.0
-pytest-xdist>=3.3.1, <4.0.0
-tox>=3.24.3, <4.0.0
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.1
+tox>=3.24.3
 
 # edit_install
-versioningit>=2.2.0, < 3.0.0
+versioningit>=2.2.0
 
 # For documentation requirements - see docs.requirements.txt
