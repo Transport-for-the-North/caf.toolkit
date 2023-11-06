@@ -665,7 +665,7 @@ def pandas_matrix_zone_translation(
         translation_from_col=translation_from_col,
         from_unique_index=from_unique_index,
         to_unique_index=to_unique_index,
-        name="matrix"
+        name="matrix",
     )
 
     # Build dictionary of repeated kwargs
@@ -941,7 +941,7 @@ def pandas_single_vector_zone_translation(
         translation_from_col=translation_from_col,
         from_unique_index=from_unique_index,
         to_unique_index=to_unique_index,
-        name="vector"
+        name="vector",
     )
 
     # ## PREP AND TRANSLATE ## #
@@ -1060,7 +1060,9 @@ def pandas_multi_vector_zone_translation(
     # ## CONVERT DTYPES ## #
     # Convert data dtypes if needed
     if translation_dtype is None:
-        translation_dtype = np.promote_types(translation[translation_factors_col].dtype, vector.to_numpy().dtype)
+        translation_dtype = np.promote_types(
+            translation[translation_factors_col].dtype, vector.to_numpy().dtype
+        )
     assert translation_dtype is not None
 
     new_values = _convert_dtypes(

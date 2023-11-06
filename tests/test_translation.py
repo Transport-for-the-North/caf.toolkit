@@ -161,11 +161,13 @@ class PandasTranslation:
         ret_val[self.translation_from_col] = self.from_col.max() + 1
         ret_val[self.translation_factors_col] = 0
         ret_val[self.translation_factors_col][0] = 1
-        return ret_val.reindex(columns=[
-            self.translation_from_col,
-            self.translation_to_col,
-            self.translation_factors_col,
-        ])
+        return ret_val.reindex(
+            columns=[
+                self.translation_from_col,
+                self.translation_to_col,
+                self.translation_factors_col,
+            ]
+        )
 
 
 @dataclasses.dataclass
@@ -960,7 +962,9 @@ class TestPandasMultiVector:
     """Tests for caf.toolkit.translation.pandas_multi_vector_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
-    def test_dropped_totals(self, pd_multi_incomplete: PandasMultiVectorResults, check_totals: bool):
+    def test_dropped_totals(
+        self, pd_multi_incomplete: PandasMultiVectorResults, check_totals: bool
+    ):
         """Test for total checking with dropped demand"""
         kwargs = pd_multi_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
@@ -1243,6 +1247,7 @@ class TestPandasMatrixEdges:
 )
 class TestPandasMatrixParams:
     """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
+
     def test_translation_correct(
         self,
         pd_matrix_str: str,
