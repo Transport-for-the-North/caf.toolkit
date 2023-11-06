@@ -824,8 +824,6 @@ def pandas_vector_zone_translation(
                 translation_from_col=translation_from_col,
                 translation_to_col=translation_to_col,
                 translation_factors_col=translation_factors_col,
-                from_unique_index=from_unique_index,
-                to_unique_index=to_unique_index,
                 check_totals=check_totals,
             )
         vector = vector.squeeze()
