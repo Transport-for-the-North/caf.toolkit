@@ -673,8 +673,6 @@ def pandas_matrix_zone_translation(
         "translation_from_col": translation_from_col,
         "translation_to_col": translation_to_col,
         "translation_factors_col": translation_factors_col,
-        "from_unique_index": from_unique_index,
-        "to_unique_index": to_unique_index,
         "translation_dtype": translation_dtype,
         "check_totals": check_totals,
     }
