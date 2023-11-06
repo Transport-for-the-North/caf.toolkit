@@ -984,8 +984,6 @@ def pandas_multi_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: Optional[list[Any]] = None,
-    to_unique_index: Optional[list[Any]] = None,
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
@@ -1020,16 +1018,6 @@ def pandas_multi_vector_zone_translation(
         Where zone pairs do not exist, they will be infilled with
         `translate_infill`.
 
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system. If none
-        provided this defaults to translation's to_col, effectively removing a
-        check.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system. If none
-        provided this defaults to translation's to_col, effectively removing a
-        check.
-
     translation_dtype:
         The numpy datatype to use to do the translation. If None, then the
         dtype of the vector is used. Where such high precision
@@ -1051,27 +1039,25 @@ def pandas_multi_vector_zone_translation(
     vector = vector.copy()
     translation = translation.copy()
 
-    # If not given, just assume the unique values from the translation given
-    if from_unique_index is None:
-        from_unique_index = translation[translation_from_col].unique()
-    assert from_unique_index is not None
-    if to_unique_index is None:
-        to_unique_index = translation[translation_to_col].unique()
-    assert to_unique_index is not None
-
     # Set the index dtypes to match and validate
     vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
         vector.index,
         translation[translation_from_col],
     )
-    _pandas_vector_validation(
-        vector=vector,
-        translation=translation,
-        translation_from_col=translation_from_col,
-        from_unique_index=from_unique_index,
-        to_unique_index=to_unique_index,
-        name="vector"
-    )
+
+    # Throw a warning if any index values are in the vector, but not in the
+    # translation. These values will just be dropped.
+    translation_from = translation[translation_from_col].unique()
+    missing_rows = set(vector.index.to_list()) - set(translation_from)
+    if len(missing_rows) > 0:
+        total_value_dropped = vector.loc[missing_rows].to_numpy().sum()
+        warnings.warn(
+            f"Some zones in `vector.index` have not been defined in "
+            f"`translation`. These zones will be dropped before "
+            f"translating.\n"
+            f"Additional rows count: {len(missing_rows)}\n"
+            f"Total value dropped: {total_value_dropped}"
+        )
 
     # ## CONVERT DTYPES ## #
     # Convert data dtypes if needed
@@ -1090,8 +1076,6 @@ def pandas_multi_vector_zone_translation(
         to_type=translation_dtype,
         arr_name="row_translation",
     )
-
-
 
     # ## PREP AND TRANSLATE ## #
     # set index for translation
