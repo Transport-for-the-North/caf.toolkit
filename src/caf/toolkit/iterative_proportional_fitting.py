@@ -240,7 +240,7 @@ def _infill_invalid_combos(
     fill_val: float = 0,
 ) -> np.ndarray:
     """Infill invalid combinations of dimension values of a marginal."""
-    valid_zeros = valid_dimension_combos[dimension_order.keys()].drop_duplicates()
+    valid_zeros = valid_dimension_combos[list(dimension_order.keys())].drop_duplicates()
     valid_zeros["val"] = 0
     invalid_ones, _ = pd_utils.dataframe_to_n_dimensional_array(
         df=valid_zeros,
@@ -308,7 +308,7 @@ def _ipf_sparse_mat_result_to_df(
     df_ph = dict(zip(dimension_col_names, results_array.coords))
     df_ph[value_col] = results_array.data
     fit_df = pd.DataFrame(df_ph)
-    pre_convert_total = fit_df[value_col].values.sum()
+    pre_convert_total = fit_df[value_col].to_numpy().sum()
 
     # Map back to original values
     rev_value_maps = dict()
@@ -504,7 +504,7 @@ def pd_marginals_to_np(
                 index=full_idx,
                 columns=["Value"],
             )
-            err_df = err_df[np.isnan(err_df["Value"].values)]
+            err_df = err_df[np.isnan(err_df["Value"].to_numpy())]
             raise ValueError(
                 "Not all seed matrix dimensions were given in a marginal. See "
                 f"np.NaN below for missing values:\n{err_df}"

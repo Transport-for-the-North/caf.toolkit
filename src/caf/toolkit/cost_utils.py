@@ -114,12 +114,12 @@ class CostDistribution:
     @property
     def min_vals(self) -> np.ndarray:
         """Minimum values of the cost distribution bin edges."""
-        return self.df[self.min_col].values
+        return self.df[self.min_col].to_numpy()
 
     @property
     def max_vals(self) -> np.ndarray:
         """Maximum values of the cost distribution in edges."""
-        return self.df[self.max_col].values
+        return self.df[self.max_col].to_numpy()
 
     @property
     def bin_edges(self) -> np.ndarray:
@@ -134,12 +134,12 @@ class CostDistribution:
     @property
     def avg_vals(self) -> np.ndarray:
         """Average values for each of the cost distribution bins."""
-        return self.df[self.avg_col].values
+        return self.df[self.avg_col].to_numpy()
 
     @property
     def trip_vals(self) -> np.ndarray:
         """Trip values for each of the cost distribution bins."""
-        return self.df[self.trips_col].values
+        return self.df[self.trips_col].to_numpy()
 
     @property
     def band_share_vals(self) -> np.ndarray:

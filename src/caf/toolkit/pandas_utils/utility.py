@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
+import typing
+
 # Built-Ins
+from typing import Any
 from typing import TypeVar
 from typing import Protocol
 
@@ -35,6 +38,7 @@ _V = TypeVar("_V", bound=CastProtocol)
 
 
 # # # FUNCTIONS # # #
+@typing.no_type_check
 def cast_to_common_type(
     x1: _U,
     x2: _V,
@@ -61,6 +65,7 @@ def cast_to_common_type(
     cast_x2:
         `x2` cast to a common type, as defined by `np.promote_types(x1.dtype, x2.dtype)`
     """
+    # TODO(BT): Figure out how to do these type hints properly
     # Simple case
     if x1.dtype == x2.dtype:
         return x1, x2
