@@ -38,94 +38,6 @@ LOG = logging.getLogger(__name__)
 
 # # # FUNCTIONS # # #
 # ## PRIVATE FUNCTIONS ## #
-def _lower_memory_row_translation(
-    vector_chunk: np.ndarray,
-    row_translation: np.ndarray,
-) -> np.ndarray:
-    """Run internal functionality of _lower_memory_matrix_zone_translation()."""
-    # Translate the rows
-    row_translated = list()
-    for vector in np.hsplit(vector_chunk, vector_chunk.shape[1]):
-        vector = vector.flatten()
-        vector = np.broadcast_to(np.expand_dims(vector, axis=1), row_translation.shape)
-        vector = vector * row_translation
-        vector = vector.sum(axis=0)
-        row_translated.append(vector)
-
-    return np.array(row_translated)
-
-
-def _lower_memory_col_translation(
-    vector_chunk: np.ndarray,
-    col_translation: np.ndarray,
-) -> np.ndarray:
-    """Run internal functionality of _lower_memory_matrix_zone_translation()."""
-    # Translate the columns
-    col_translated = list()
-    for vector in np.vsplit(vector_chunk, vector_chunk.shape[0]):
-        vector = vector.flatten()
-        vector = np.broadcast_to(np.expand_dims(vector, axis=1), col_translation.shape)
-        vector = vector * col_translation
-        vector = vector.sum(axis=0)
-        col_translated.append(vector)
-
-    return np.array(col_translated)
-
-
-def _lower_memory_matrix_zone_translation(
-    matrix: np.ndarray,
-    row_translation: np.ndarray,
-    col_translation: np.ndarray,
-    chunk_size: int,
-    process_count: int = -2,
-) -> np.ndarray:
-    # TODO(BT): Can numba be used here to speed this
-    #  up instead of multiprocessing??
-    # Translate the rows
-    kwargs = list()
-    n_splits = matrix.shape[1] / chunk_size
-    n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(matrix, n_splits, axis=1):  # type: ignore
-        kwargs.append(
-            {
-                "vector_chunk": vector_chunk,
-                "row_translation": row_translation,
-            }
-        )
-
-    row_translated = concurrency.multiprocess(
-        fn=_lower_memory_row_translation,
-        kwarg_list=kwargs,
-        process_count=process_count,
-        in_order=True,
-        pbar_kwargs={"desc": "Translating rows"},
-    )
-
-    row_translated = np.vstack(row_translated).T
-
-    # Translate the rows
-    kwargs = list()
-    n_splits = row_translated.shape[0] / chunk_size
-    n_splits = 1 if n_splits <= 0 else n_splits
-    for vector_chunk in np.array_split(row_translated, n_splits, axis=0):  # type: ignore
-        kwargs.append(
-            {
-                "vector_chunk": vector_chunk,
-                "col_translation": col_translation,
-            }
-        )
-
-    full_translated = concurrency.multiprocess(
-        fn=_lower_memory_col_translation,
-        kwarg_list=kwargs,
-        process_count=process_count,
-        in_order=True,
-        pbar_kwargs={"desc": "Translating columns"},
-    )
-
-    return np.vstack(full_translated)
-
-
 def _check_matrix_translation_shapes(
     matrix: np.ndarray,
     row_translation: np.ndarray,
@@ -264,8 +176,74 @@ def _pandas_vector_validation(
     if len(missing_zones) != 0:
         warnings.warn(
             f"Some zones in `{name}.index` are missing in `translation`. "
-            f"Infilling missing zones with `translation_infill`.\n"
             f"Missing zones count: {len(missing_zones)}"
+        )
+
+
+def _pandas_matrix_validation(
+    matrix: pd.DataFrame,
+    row_translation: pd.DataFrame,
+    col_translation: pd.DataFrame,
+    translation_from_col: str,
+    name: str = "matrix",
+) -> None:
+    """Validate the given parameters for a matrix zone translation.
+
+    Parameters
+    ----------
+    matrix:
+        The matrix to translate. The index and columns must be the values
+        to be translated.
+
+    row_translation:
+        A pandas DataFrame defining the weights to translate use when
+        translating.
+        Needs to contain columns:
+        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
+
+    col_translation:
+        A pandas DataFrame defining the weights to translate use when
+        translating.
+        Needs to contain columns:
+        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
+
+    translation_from_col:
+        The name of the column in `translation` containing the current index
+        values of `vector`.
+
+    name:
+        The name to use in any warnings messages when they are raised.
+
+    Returns
+    -------
+    None
+    """
+    # Throw a warning if any index values are in the matrix, but not in the
+    # row_translation. These values will just be dropped.
+    translation_from = row_translation[translation_from_col].unique()
+    missing_rows = set(matrix.index.to_list()) - set(translation_from)
+    if len(missing_rows) > 0:
+        total_value_dropped = matrix.loc[missing_rows].to_numpy().sum()
+        warnings.warn(
+            f"Some zones in `{name}.index` have not been defined in "
+            f"`row_translation`. These zones will be dropped before "
+            f"translating.\n"
+            f"Additional rows count: {len(missing_rows)}\n"
+            f"Total value dropped: {total_value_dropped}"
+        )
+
+    # Throw a warning if any index values are in the matrix, but not in the
+    # col_translation. These values will just be dropped.
+    translation_from = col_translation[translation_from_col].unique()
+    missing_cols = set(matrix.index.to_list()) - set(translation_from)
+    if len(missing_cols) > 0:
+        total_value_dropped = matrix[missing_cols].to_numpy().sum()
+        warnings.warn(
+            f"Some zones in `{name}.index` have not been defined in "
+            f"`col_translation`. These zones will be dropped before "
+            f"translating.\n"
+            f"Additional rows count: {len(missing_cols)}\n"
+            f"Total value dropped: {total_value_dropped}"
         )
 
 
@@ -277,9 +255,6 @@ def numpy_matrix_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
     check_shapes: bool = True,
     check_totals: bool = True,
-    slow_fallback: bool = True,
-    chunk_size: int = 100,
-    _force_slow: bool = False,
 ) -> np.ndarray:
     """Efficiently translates a matrix between index systems.
 
@@ -329,15 +304,6 @@ def numpy_matrix_zone_translation(
         Whether to check that the input and output matrices sum to the same
         total.
 
-    slow_fallback:
-        Whether to fall back to a slower, more memory efficient method if a
-        `MemoryError` is raised during faster translation.
-
-    chunk_size:
-        The size of the chunks to use if falling back on a slower, more memory
-        efficient method. Most of the time this can be ignored unless
-        translating between two massive zoning systems.
-
     Returns
     -------
     translated_matrix:
@@ -349,15 +315,16 @@ def numpy_matrix_zone_translation(
         Will raise an error if matrix is not a square array, or if translation
         does not have the same number of rows as matrix.
     """
-    # pylint: disable=too-many-locals
     # Init
+    translation_from_col = "from_id"
+    translation_to_col = "to_id"
+    translation_factors_col = "factors"
+
+    # ## OPTIONALLY CHECK INPUT SHAPES ## #
     row_translation = translation
     if col_translation is None:
         col_translation = translation.copy()
 
-    slow_fallback = True if _force_slow else slow_fallback
-
-    # ## OPTIONALLY CHECK INPUT SHAPES ## #
     if check_shapes:
         _check_matrix_translation_shapes(
             matrix=matrix,
@@ -365,90 +332,29 @@ def numpy_matrix_zone_translation(
             col_translation=col_translation,
         )
 
-    # ## CONVERT DTYPES ## #
-    if translation_dtype is None:
-        translation_dtype = np.promote_types(row_translation.dtype, col_translation.dtype)
-        translation_dtype = np.promote_types(translation_dtype, matrix.dtype)
-    assert translation_dtype is not None
-    matrix = _convert_dtypes(
-        arr=matrix,
-        to_type=translation_dtype,
-        arr_name="matrix",
-    )
-    row_translation = _convert_dtypes(
-        arr=row_translation,
-        to_type=translation_dtype,
-        arr_name="row_translation",
-    )
-    col_translation = _convert_dtypes(
-        arr=col_translation,
-        to_type=translation_dtype,
-        arr_name="col_translation",
-    )
+    # Set the id vals
+    from_id_vals = list(range(translation.shape[0]))
+    to_id_vals = list(range(translation.shape[1]))
 
-    # ## DO THE TRANSLATION ## #
-    not_enough_memory = False
-    translated_matrix = None
-    n_in, n_out = row_translation.shape
+    # Convert numpy arrays into pandas arrays
+    dimension_cols = {translation_from_col: from_id_vals, translation_to_col: to_id_vals}
+    pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
+        mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+    ).reset_index()
+    pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
+        mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+    ).reset_index()
 
-    # If matrix is big enough, we might run out of memory
-    try:
-        # Force except
-        if _force_slow:
-            raise MemoryError
-
-        # Translate rows
-        mult_shape = (n_in, n_in, n_out)
-        expanded_rows = np.broadcast_to(np.expand_dims(matrix, axis=2), mult_shape)
-        row_trans = np.broadcast_to(np.expand_dims(row_translation, axis=1), mult_shape)
-        temp = expanded_rows * row_trans
-
-        # mat is transposed, but we need it this way
-        rows_done = temp.sum(axis=0)
-
-        # Translate cols
-        mult_shape = (n_in, n_out, n_out)
-        expanded_cols = np.broadcast_to(np.expand_dims(rows_done, axis=2), mult_shape)
-        col_trans = np.broadcast_to(np.expand_dims(col_translation, axis=1), mult_shape)
-        temp = expanded_cols * col_trans
-        translated_matrix = temp.sum(axis=0)
-
-    except MemoryError as err:
-        if not slow_fallback:
-            raise err
-        not_enough_memory = True
-
-    # Try translation again, a slower way.
-    if not_enough_memory:
-        warnings.warn(
-            "Ran out of memory during translation. Falling back to a slower, "
-            "more memory efficient method.",
-            category=RuntimeWarning,
-        )
-        translated_matrix = _lower_memory_matrix_zone_translation(
-            matrix=matrix,
-            row_translation=row_translation,
-            col_translation=col_translation,
-            chunk_size=chunk_size,
-        )
-
-    # Ensure value has been set for MyPy
-    assert translated_matrix is not None
-
-    if not check_totals:
-        return translated_matrix
-
-    if not math_utils.is_almost_equal(matrix.sum(), translated_matrix.sum()):
-        raise ValueError(
-            f"Some values seem to have been dropped during the translation. "
-            f"Check the given translation matrix isn't unintentionally "
-            f"dropping values. If the difference is small, it's likely a "
-            f"rounding error.\n"
-            f"Before: {matrix.sum()}\n"
-            f"After: {translated_matrix.sum()}"
-        )
-
-    return translated_matrix
+    return pandas_matrix_zone_translation(
+        matrix=pd.DataFrame(data=matrix, columns=from_id_vals, index=from_id_vals),
+        translation=pd_row_translation,
+        col_translation=pd_col_translation,
+        translation_from_col=translation_from_col,
+        translation_to_col=translation_to_col,
+        translation_factors_col=translation_factors_col,
+        translation_dtype=translation_dtype,
+        check_totals=check_totals,
+    ).to_numpy()
 
 
 def numpy_vector_zone_translation(
@@ -575,12 +481,10 @@ def numpy_vector_zone_translation(
 
 def pandas_matrix_zone_translation(
     matrix: pd.DataFrame,
+    translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
-    translation: pd.DataFrame,
     col_translation: Optional[pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
@@ -655,17 +559,23 @@ def pandas_matrix_zone_translation(
     assert col_translation is not None
 
     # Set the index dtypes to match and validate
-    matrix.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+    (
         matrix.index,
-        translation[translation_from_col],
+        row_translation[translation_from_col],
+        col_translation[translation_from_col],
+    ) = pd_utils.cast_to_common_type(
+        [
+            matrix.index,
+            row_translation[translation_from_col],
+            col_translation[translation_from_col],
+        ]
     )
-    _pandas_vector_validation(
-        vector=matrix,
-        translation=translation,
+
+    _pandas_matrix_validation(
+        matrix=matrix,
+        row_translation=row_translation,
+        col_translation=col_translation,
         translation_from_col=translation_from_col,
-        from_unique_index=from_unique_index,
-        to_unique_index=to_unique_index,
-        name="matrix",
     )
 
     # Build dictionary of repeated kwargs
@@ -929,8 +839,7 @@ def pandas_single_vector_zone_translation(
 
     # Set the dtypes to match
     vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        vector.index,
-        translation[translation_from_col],
+        [vector.index, translation[translation_from_col]],
     )
 
     _pandas_vector_validation(
@@ -1037,8 +946,7 @@ def pandas_multi_vector_zone_translation(
 
     # Set the index dtypes to match and validate
     vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        vector.index,
-        translation[translation_from_col],
+        [vector.index, translation[translation_from_col]],
     )
 
     # Throw a warning if any index values are in the vector, but not in the
@@ -1069,8 +977,8 @@ def pandas_multi_vector_zone_translation(
         arr_name="vector",
     )
     vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
-    translation[translation_from_col] = _convert_dtypes(
-        arr=translation[translation_from_col].to_numpy(),
+    translation[translation_factors_col] = _convert_dtypes(
+        arr=translation[translation_factors_col].to_numpy(),
         to_type=translation_dtype,
         arr_name="row_translation",
     )

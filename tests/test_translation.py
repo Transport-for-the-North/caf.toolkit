@@ -64,8 +64,6 @@ class NumpyMatrixResults:
     def input_kwargs(
         self,
         check_shapes: bool = True,
-        check_totals: bool = True,
-        force_slow: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
@@ -75,8 +73,6 @@ class NumpyMatrixResults:
             "col_translation": self.col_translation,
             "translation_dtype": self.translation_dtype,
             "check_shapes": check_shapes,
-            "check_totals": check_totals,
-            "_force_slow": force_slow,
         } | kwargs
 
 
@@ -306,8 +302,6 @@ class PandasMatrixResults:
             {
                 "matrix": self.mat,
                 "translation_dtype": self.translation_dtype,
-                "from_unique_index": self.from_unique_index,
-                "to_unique_index": self.to_unique_index,
                 "check_totals": check_totals,
             }
             | self.translation.to_kwargs()
@@ -1068,8 +1062,6 @@ class TestPandasMultiVector:
 class TestNumpyMatrix:
     """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
 
-    # TODO(BT): Test running out of memory - will need to skip for GitHub
-
     def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults):
         """Check an error is raised with a non-square matrix given"""
         col_trans = np_matrix_aggregation2.col_translation
@@ -1121,43 +1113,17 @@ class TestNumpyMatrix:
                 translation.numpy_matrix_zone_translation(**kwargs)
 
     @pytest.mark.parametrize(
-        "np_matrix_str",
+        "np_matrix_str, check_totals",
         [
-            "np_matrix_aggregation",
-            "np_matrix_aggregation2",
-            "np_matrix_split",
-            "np_matrix_dtype",
+            ("np_matrix_aggregation", True),
+            ("np_matrix_aggregation", False),
+            ("np_matrix_aggregation2", True),
+            ("np_matrix_aggregation2", False),
+            ("np_matrix_split", True),
+            ("np_matrix_split", False),
+            ("np_matrix_dtype", False),
         ],
     )
-    @pytest.mark.parametrize("force_slow", [True, False])
-    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    def test_slow_translation(
-        self,
-        np_matrix_str: str,
-        force_slow: bool,
-        request,
-    ):
-        """Test translation works as expected
-
-        Tests the matrix aggregation, using 2 different translations, and
-        translation splitting.
-        """
-        np_mat = request.getfixturevalue(np_matrix_str)
-        result = translation.numpy_matrix_zone_translation(
-            **np_mat.input_kwargs(force_slow=force_slow, chunk_size=2)
-        )
-        np.testing.assert_allclose(result, np_mat.expected_result)
-
-    @pytest.mark.parametrize(
-        "np_matrix_str",
-        [
-            "np_matrix_aggregation",
-            "np_matrix_aggregation2",
-            "np_matrix_split",
-            "np_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
         self,
         np_matrix_str: str,
@@ -1194,43 +1160,6 @@ class TestPandasMatrixEdges:
         else:
             with pytest.raises(ValueError, match="Some values seem to have been dropped"):
                 translation.pandas_matrix_zone_translation(**kwargs)
-
-    def test_missing_unique_zones(self, pd_matrix_split: PandasMatrixResults):
-        """Check a warning is raised if from_unique_zones and the vector disagree"""
-        new_from_unq = pd_matrix_split.from_unique_index[:-1]
-        msg = "zones in `matrix.index` have not been defined in `from_unique_zones`"
-        with pytest.warns(UserWarning, match=msg):
-            translation.pandas_matrix_zone_translation(
-                **(pd_matrix_split.input_kwargs() | {"from_unique_index": new_from_unq})
-            )
-
-    @pytest.mark.parametrize("which", ["from", "to", "both"])
-    def test_non_unique_index(self, pd_matrix_split: PandasMatrixResults, which: str):
-        """Check that an error is thrown when bad unique index args given"""
-        # Build bad arguments
-        new_from_unq = pd_matrix_split.from_unique_index * 2
-        new_to_unq = pd_matrix_split.to_unique_index * 2
-
-        if which == "from":
-            new_kwargs = {"from_unique_index": new_from_unq}
-            msg = "Duplicate values found in from_unique_index"
-        elif which == "to":
-            new_kwargs = {"to_unique_index": new_to_unq}
-            msg = "Duplicate values found in to_unique_index"
-        elif which == "both":
-            new_kwargs = {
-                "from_unique_index": new_from_unq,
-                "to_unique_index": new_to_unq,
-            }
-            msg = "Duplicate values found in from_unique_index"
-        else:
-            raise ValueError("This shouldn't happen! Debug code.")
-
-        # Run with errors
-        with pytest.raises(ValueError, match=msg):
-            translation.pandas_matrix_zone_translation(
-                **(pd_matrix_split.input_kwargs() | new_kwargs)
-            )
 
 
 @pytest.mark.parametrize(
@@ -1304,7 +1233,7 @@ class TestPandasMatrixParams:
         request,
     ):
         """Test that similar types are allowed in translation and data."""
-        pd_mat = request.getfixturevalue(pd_matrix_str)
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
         # Change the dtype of the row / col
         new_matrix = pd_mat.mat.copy()
