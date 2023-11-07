@@ -526,12 +526,6 @@ def pandas_matrix_zone_translation(
         `translation_to_col`. Where zone pairs do not exist, they will be
         infilled with `translate_infill`.
 
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system.
-
     translation_dtype:
         The numpy datatype to use to do the translation. If None, then the
         dtype of `vector` is used. Where such high precision

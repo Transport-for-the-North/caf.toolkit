@@ -11,6 +11,7 @@ from typing import Iterable
 # Third Party
 import pytest
 import numpy as np
+
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import toolbox
@@ -220,10 +221,11 @@ class TestSetComparison:
         with pytest.raises(ValueError, match=msg):
             toolbox.get_missing_items(item_results.item1, new_item2)
 
+
 class TestDictList:
     """Tests for caf.toolkit.toolbox.dict_list"""
 
-    @pytest.fixture(name="list_of_dicts", scope="class")
+    @pytest.fixture(name="list_of_dicts", scope="function")
     def fix_list_of_dicts(self) -> list[dict[str, Any]]:
         """List of dicts for testing"""
         return [
@@ -247,11 +249,17 @@ class TestDictList:
         """Expected output from list_of_dicts"""
         return {"a": -10, "b": -11, "c": -12}
 
-
-    @pytest.mark.parametrize("expected_str,op", [("expected_add", operator.add),
-                                                 ("expected_mul", operator.mul),
-                                                 ("expected_sub", operator.sub)])
-    def test_dict_list(self, list_of_dicts: list[dict[str, Any]], expected_str: str, op, request):
+    @pytest.mark.parametrize(
+        "expected_str,op",
+        [
+            ("expected_add", operator.add),
+            ("expected_mul", operator.mul),
+            ("expected_sub", operator.sub),
+        ],
+    )
+    def test_dict_list(
+        self, list_of_dicts: list[dict[str, Any]], expected_str: str, op, request
+    ):
         """Test that dict_list works as expected"""
         expected = request.getfixturevalue(expected_str)
         assert toolbox.combine_dict_list(list_of_dicts, op) == expected
