@@ -223,7 +223,7 @@ def _pandas_matrix_validation(
     translation_from = row_translation[translation_from_col].unique()
     missing_rows = set(matrix.index.to_list()) - set(translation_from)
     if len(missing_rows) > 0:
-        total_value_dropped = matrix.loc[missing_rows].to_numpy().sum()
+        total_value_dropped = matrix.loc[list(missing_rows)].to_numpy().sum()
         warnings.warn(
             f"Some zones in `{name}.index` have not been defined in "
             f"`row_translation`. These zones will be dropped before "
@@ -237,7 +237,7 @@ def _pandas_matrix_validation(
     translation_from = col_translation[translation_from_col].unique()
     missing_cols = set(matrix.index.to_list()) - set(translation_from)
     if len(missing_cols) > 0:
-        total_value_dropped = matrix[missing_cols].to_numpy().sum()
+        total_value_dropped = matrix[list(missing_cols)].to_numpy().sum()
         warnings.warn(
             f"Some zones in `{name}.index` have not been defined in "
             f"`col_translation`. These zones will be dropped before "
@@ -626,32 +626,14 @@ def pandas_vector_zone_translation(
     ...  # pragma: no cover
 
 
-@overload
-def pandas_vector_zone_translation(
-    vector: pd.DataFrame,
-    translation: pd.DataFrame,
-    translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
-    translation_dtype: Optional[np.dtype] = None,
-    vector_infill: float = 0.0,
-    translate_infill: float = 0.0,
-    check_totals: bool = True,
-) -> pd.DataFrame:
-    # pylint: disable=too-many-arguments
-    ...  # pragma: no cover
-
-
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
+    from_unique_index: list[Any] = None,
+    to_unique_index: list[Any] = None,
     translation_dtype: Optional[np.dtype] = None,
     vector_infill: float = 0.0,
     translate_infill: float = 0.0,
@@ -731,6 +713,12 @@ def pandas_vector_zone_translation(
                 check_totals=check_totals,
             )
         vector = vector.squeeze()
+
+    if from_unique_index is None:
+        raise ValueError("from_unique_index must be set for single vector translations")
+
+    if to_unique_index is None:
+        raise ValueError("to_unique_index must be set for single vector translations")
 
     return pandas_single_vector_zone_translation(
         vector=vector,
@@ -948,7 +936,7 @@ def pandas_multi_vector_zone_translation(
     translation_from = translation[translation_from_col].unique()
     missing_rows = set(vector.index.to_list()) - set(translation_from)
     if len(missing_rows) > 0:
-        total_value_dropped = vector.loc[missing_rows].to_numpy().sum()
+        total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
         warnings.warn(
             f"Some zones in `vector.index` have not been defined in "
             f"`translation`. These zones will be dropped before "

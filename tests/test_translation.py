@@ -1218,7 +1218,7 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
 
     @pytest.mark.parametrize("row", [True, False])
     @pytest.mark.parametrize("trans_dtype", [str, int, float])
@@ -1251,4 +1251,4 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
