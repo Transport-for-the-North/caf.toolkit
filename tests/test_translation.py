@@ -1195,7 +1195,7 @@ class TestPandasMatrixParams:
         )
 
         # Need to enforce types so this works in linux
-        if sys.platform.startswith('linux'):
+        if sys.platform.startswith("linux"):
             if any(x in ["int32", "int64"] for x in result.dtypes):
                 result = result.astype(pd_mat.expected_result.dtypes[1])
 
@@ -1225,7 +1225,13 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith("linux"):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     @pytest.mark.parametrize("row", [True, False])
     @pytest.mark.parametrize("trans_dtype", [str, int, float])
@@ -1258,4 +1264,10 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith("linux"):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
