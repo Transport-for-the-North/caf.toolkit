@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import sys
 import copy
 import dataclasses
 
@@ -1192,15 +1193,13 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
-        # Enforce same int type to work in linux
-        expected = pd_mat.expected_result
-        check = True
-        for type_ in result.dtypes:
-            if type_ not in ["int32", "int64"]:
-                check = False
-        if check:
-            result = result.astype(expected.dtypes[1])
-        pd.testing.assert_frame_equal(result, expected)
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith('linux'):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     @pytest.mark.parametrize("row", [True, False])
     def test_check_allow_similar_types(
