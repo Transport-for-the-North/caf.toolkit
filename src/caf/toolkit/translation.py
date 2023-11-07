@@ -23,7 +23,6 @@ import pandas as pd
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import validators
 from caf.toolkit import math_utils
-from caf.toolkit import concurrency
 from caf.toolkit import pandas_utils as pd_utils
 
 # pylint: enable=import-error,wrong-import-position

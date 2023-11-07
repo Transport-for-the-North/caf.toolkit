@@ -109,9 +109,9 @@ def cast_to_common_type(
     # Try to convert objects to numeric types. To be here, some types are
     # already numeric, pandas doesn't cope well if you try to convert integers to
     # strings.
-    for i in range(len(items_to_cast)):
-        if items_to_cast[i].dtype == "object":
-            items_to_cast[i] = pd.to_numeric(items_to_cast[i])
+    for i, itm in enumerate(items_to_cast):
+        if itm.dtype == "object":
+            items_to_cast[i] = pd.to_numeric(itm)
 
     common_dtype = np.result_type(*items_to_cast)
     return [x.astype(common_dtype) for x in items_to_cast]

@@ -1196,11 +1196,11 @@ class TestPandasMatrixParams:
         expected = pd_mat.expected_result
         check = True
         for type_ in result.dtypes:
-            if type_ not in ['int32', 'int64']:
+            if type_ not in ["int32", "int64"]:
                 check = False
         if check:
             result = result.astype(expected.dtypes[1])
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+        pd.testing.assert_frame_equal(result, expected)
 
     @pytest.mark.parametrize("row", [True, False])
     def test_check_allow_similar_types(
