@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
-from __future__ import annotations
 
 # # # IMPORTS # # #
 import datetime as dt
 import json
 from pathlib import Path
 import textwrap
-
-from typing import Any
-from typing import Optional
-from typing import overload
+from typing import Optional, Union
 
 # pylint: disable=import-error
 import pydantic
@@ -224,40 +220,31 @@ class BaseConfig(pydantic.BaseModel):
 
 
 # # # FUNCTIONS # # #
-def _is_collection(obj: Any) -> bool:
+def _is_collection(object: any):
     """
     Check if an object is any type of non-dict collection.
 
     Currently only checks for list, tuple or set,
     """
-    return isinstance(obj, (list, tuple, set, dict))
+    if isinstance(object, list):
+        return True
+    elif isinstance(object, tuple):
+        return True
+    elif isinstance(object, set):
+        return True
+    elif isinstance(object, dict):
+        return True
+    return False
 
 
-@overload
-def _remove_none_collection(data: list) -> list:
-    ...  # pragma: no cover
-
-
-@overload
-def _remove_none_collection(data: set) -> set:
-    ...  # pragma: no cover
-
-
-@overload
-def _remove_none_collection(data: tuple) -> tuple:
-    ...  # pragma: no cover
-
-
-def _remove_none_collection(data: list | set | tuple) -> list | set | tuple:
+def _remove_none_collection(data: Union[list, set, tuple]):
     """Remove items recursively from collections which are None."""
+    # empty list, type set later
     filtered = []
     for item in data:
-        # Skip the None item so it's not included
         if item is None:
             continue
-
-        # Clean and keep any other items
-        if isinstance(item, dict):
+        elif isinstance(item, dict):
             item = _remove_none_dict(item)
         elif _is_collection(item):
             item = _remove_none_collection(item)

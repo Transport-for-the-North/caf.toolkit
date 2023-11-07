@@ -109,8 +109,6 @@ class SystemInformation:
         Information about the name and version of OS.
     architecture: str
         Name of the machine architecture e.g. "AMD64".
-    processor: str
-        Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel".
     cpu_count: int | None
         Number of logical CPU cores on the machine.
     total_ram: int | None
@@ -122,7 +120,6 @@ class SystemInformation:
     python_version: str
     operating_system: str
     architecture: str
-    processor: str
     cpu_count: Optional[int]
     total_ram: Optional[int]
 
@@ -150,7 +147,6 @@ class SystemInformation:
             python_version=platform.python_version(),
             operating_system=f"{info.system} {info.release} ({info.version})",
             architecture=info.machine,
-            processor=info.processor,
             cpu_count=os.cpu_count(),
             total_ram=total_ram,
         )

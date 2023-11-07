@@ -42,7 +42,6 @@ class UnameResult(NamedTuple):
     release: str
     version: str
     machine: str
-    processor: str
 
 
 @dataclasses.dataclass
@@ -59,14 +58,7 @@ class LogInitDetails:
 @pytest.fixture(name="uname")
 def fixture_monkeypatch_uname(monkeypatch: pytest.MonkeyPatch) -> UnameResult:
     """Monkeypatch `platform.uname()` to return constant."""
-    result = UnameResult(
-        "Test System",
-        "Test PC",
-        "10",
-        "10.0.1",
-        "AMD64",
-        "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel",
-    )
+    result = UnameResult("Test System", "Test PC", "10", "10.0.1", "AMD64")
     monkeypatch.setattr(platform, "uname", lambda: result)
     return result
 
@@ -259,7 +251,6 @@ class TestSystemInformation:
         assert info.python_version == python_version, "incorrect Python version"
         assert info.operating_system == os_label, "incorrect OS"
         assert info.architecture == uname.machine, "incorrect architecture"
-        assert info.processor == uname.processor, "incorrect processor name"
         assert info.cpu_count == cpu_count, "incorrect CPU count"
         assert info.total_ram == total_ram[0], "incorrect total RAM"
 
@@ -270,7 +261,6 @@ class TestSystemInformation:
         python_version = "3.0.0"
         operating_system = "Test 10 (10.0.1)"
         architecture = "AMD64"
-        processor = "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"
         cpu_count = 16
         ram, ram_readable = total_ram
 
@@ -282,20 +272,12 @@ class TestSystemInformation:
             f"python_version   : {python_version}\n"
             f"operating_system : {operating_system}\n"
             f"architecture     : {architecture}\n"
-            f"processor        : {processor}\n"
             f"cpu_count        : {cpu_count}\n"
             f"total_ram        : {ram_readable}"
         )
 
         info = SystemInformation(
-            user,
-            pc_name,
-            python_version,
-            operating_system,
-            architecture,
-            processor,
-            cpu_count,
-            ram,
+            user, pc_name, python_version, operating_system, architecture, cpu_count, ram
         )
 
         assert str(info) == correct, "incorrect string format"

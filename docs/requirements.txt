@@ -1,6 +1,0 @@
-# Required libraries
-sphinx>=7.1.2
-caf.toolkit>=0.2.1
-sphinx-automodapi>=0.16.0
-pydata-sphinx-theme>=0.14.1
-graphviz>=0.20.1

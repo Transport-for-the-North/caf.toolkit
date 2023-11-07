@@ -17,5 +17,3 @@ tox>=3.24.3, <4.0.0
 
 # edit_install
 versioningit>=2.2.0, < 3.0.0
-
-# For documentation requirements - see docs.requirements.txt
