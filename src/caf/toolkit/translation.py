@@ -13,7 +13,7 @@ import warnings
 from typing import Any
 from typing import TypeVar
 from typing import Optional
-from typing import overload
+from typing import TypedDict
 
 # Third Party
 import numpy as np
@@ -32,7 +32,15 @@ _T = TypeVar("_T")
 
 LOG = logging.getLogger(__name__)
 
+
 # # # CLASSES # # #
+class _MultiVectorKwargs(TypedDict):
+    """Typed dict for multi_vector_translation kwarg expansion."""
+    translation_from_col: str
+    translation_to_col: str
+    translation_factors_col: str
+    translation_dtype: Optional[np.dtype]
+    check_totals: bool
 
 
 # # # FUNCTIONS # # #
@@ -572,7 +580,7 @@ def pandas_matrix_zone_translation(
     )
 
     # Build dictionary of repeated kwargs
-    common_kwargs = {
+    common_kwargs: _MultiVectorKwargs = {
         "translation_from_col": translation_from_col,
         "translation_to_col": translation_to_col,
         "translation_factors_col": translation_factors_col,
@@ -649,8 +657,8 @@ def pandas_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: list[Any] = None,
-    to_unique_index: list[Any] = None,
+    from_unique_index: Optional[list[Any]] = None,
+    to_unique_index: Optional[list[Any]] = None,
     translation_dtype: Optional[np.dtype] = None,
     vector_infill: float = 0.0,
     translate_infill: float = 0.0,

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
 # Built-Ins
-from typing import Any
 from typing import Sequence
 
 # Third Party
@@ -13,6 +12,7 @@ import pandas as pd
 
 # pylint: enable=import-error,wrong-import-position
 
+
 # # # CONSTANTS # # #
 
 # # # CLASSES # # #
@@ -20,8 +20,8 @@ import pandas as pd
 
 # # # FUNCTIONS # # #
 def cast_to_common_type(
-    items_to_cast: Sequence[Any],
-) -> list[...]:
+    items_to_cast: Sequence[pd.Series],
+) -> list[pd.Series]:
     """Cast N objects to the same datatype.
 
     The passed in objects must have the `dtype` attribute, and a call to
