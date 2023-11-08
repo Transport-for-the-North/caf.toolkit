@@ -36,6 +36,7 @@ LOG = logging.getLogger(__name__)
 # # # CLASSES # # #
 class _MultiVectorKwargs(TypedDict):
     """Typed dict for multi_vector_translation kwarg expansion."""
+
     translation_from_col: str
     translation_to_col: str
     translation_factors_col: str
@@ -613,6 +614,7 @@ def pandas_matrix_zone_translation(
         )
 
     return translated
+
 
 # TODO(BT): Can uncomment once we have pandas stubs
 # @overload
