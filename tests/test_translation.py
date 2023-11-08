@@ -238,7 +238,7 @@ class PandasMultiVectorResults:
         multi_vector_res = np.tile(np_expected_result, (self.n_cols, 1)).T
         self.expected_result = pd.DataFrame(data=multi_vector_res)
         self.expected_result.index += 1
-        self.expected_result.index.names = ['to_zone_id']
+        self.expected_result.index.names = ["to_zone_id"]
 
         # Base from / to zones on translation
         self.from_unique_index = self.translation.unique_from
@@ -294,8 +294,8 @@ class PandasMatrixResults:
             index=self.to_unique_index,
             columns=self.to_unique_index,
         )
-        self.expected_result.index.names = ['to_zone_id']
-        self.expected_result.columns.names = ['to_zone_id']
+        self.expected_result.index.names = ["to_zone_id"]
+        self.expected_result.columns.names = ["to_zone_id"]
 
     def input_kwargs(
         self,
@@ -506,12 +506,13 @@ def fixture_pd_multi_vector_split(
         translation=simple_pd_float_translation,
     )
 
+
 @pytest.fixture(name="pd_multi_vector_multiindex", scope="function")
 def fixture_pd_multi_vector_multiindex(
-        pd_multi_vector_split: PandasMultiVectorResults) -> PandasMultiVectorResults:
+    pd_multi_vector_split: PandasMultiVectorResults,
+) -> PandasMultiVectorResults:
     """Generate a splitting vector, translation, and results"""
     return pd_multi_vector_split
-
 
 
 @pytest.fixture(name="pd_incomplete", scope="class")
