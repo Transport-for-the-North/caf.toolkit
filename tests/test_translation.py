@@ -233,10 +233,12 @@ class PandasMultiVectorResults:
         multi_vector_data = np.tile(np_vector, (self.n_cols, 1)).T
         self.vector = pd.DataFrame(data=multi_vector_data)
         self.vector.index += 1
+        # self.vector.index.names = ['to_zone_id']
 
         multi_vector_res = np.tile(np_expected_result, (self.n_cols, 1)).T
         self.expected_result = pd.DataFrame(data=multi_vector_res)
         self.expected_result.index += 1
+        self.expected_result.index.names = ['to_zone_id']
 
         # Base from / to zones on translation
         self.from_unique_index = self.translation.unique_from
@@ -292,6 +294,8 @@ class PandasMatrixResults:
             index=self.to_unique_index,
             columns=self.to_unique_index,
         )
+        self.expected_result.index.names = ['to_zone_id']
+        self.expected_result.columns.names = ['to_zone_id']
 
     def input_kwargs(
         self,
@@ -501,6 +505,13 @@ def fixture_pd_multi_vector_split(
         np_expected_result=np_vector_split.expected_result,
         translation=simple_pd_float_translation,
     )
+
+@pytest.fixture(name="pd_multi_vector_multiindex", scope="function")
+def fixture_pd_multi_vector_multiindex(
+        pd_multi_vector_split: PandasMultiVectorResults) -> PandasMultiVectorResults:
+    """Generate a splitting vector, translation, and results"""
+    return pd_multi_vector_split
+
 
 
 @pytest.fixture(name="pd_incomplete", scope="class")
@@ -1052,20 +1063,20 @@ class TestPandasMultiVector:
         )
         pd.testing.assert_frame_equal(result, pd_vector.expected_result)
 
-    def test_indexing_error(self, pd_multi_vector_split: PandasMultiVectorResults):
+    def test_indexing_error(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
         """Check that an error is thrown when the index is not unique."""
-        new_vector = pd_multi_vector_split.vector.copy()
+        new_vector = pd_multi_vector_multiindex.vector.copy()
         new_vector["wrong_1"] = new_vector.index
         new_vector["wrong_2"] = new_vector.index
         new_vector.set_index(["wrong_1", "wrong_2"], inplace=True)
         with pytest.raises(ValueError, match="The input vector is MultiIndexed"):
             translation.pandas_multi_vector_zone_translation(
-                **(pd_multi_vector_split.input_kwargs() | {"vector": new_vector})
+                **(pd_multi_vector_multiindex.input_kwargs() | {"vector": new_vector})
             )
 
-    def test_multiindex(self, pd_multi_vector_split: PandasMultiVectorResults):
+    def test_multiindex(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
         """Test that a multiindex is allowed."""
-        new_vector = pd_multi_vector_split.vector.copy()
+        new_vector = pd_multi_vector_multiindex.vector.copy()
         new_vector.index.names = ["from_zone_id"]
         factors = [1, 2, 3, 2, 5, 3, 6, 8, 2, 3]
         multiindex = pd.MultiIndex.from_product(
@@ -1073,7 +1084,7 @@ class TestPandasMultiVector:
         )
         multi_vector = new_vector.mul(pd.Series(data=factors, index=multiindex), axis="index")
         result = translation.pandas_multi_vector_zone_translation(
-            **(pd_multi_vector_split.input_kwargs() | {"vector": multi_vector})
+            **(pd_multi_vector_multiindex.input_kwargs() | {"vector": multi_vector})
         )
         expected = pd.DataFrame(
             {
