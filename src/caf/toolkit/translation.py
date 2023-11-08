@@ -957,7 +957,6 @@ def pandas_multi_vector_zone_translation(
     vector = vector.copy()
     translation = translation.copy()
 
-
     # Throw a warning if any index values are in the vector, but not in the
     # translation. These values will just be dropped.
     translation_from = translation[translation_from_col].unique()
@@ -997,13 +996,18 @@ def pandas_multi_vector_zone_translation(
                 "inputs."
             )
             vector.reset_index(inplace=True)
-            vector[translation_from_col], translation[translation_from_col] = pd_utils.cast_to_common_type(
+            (
+                vector[translation_from_col],
+                translation[translation_from_col],
+            ) = pd_utils.cast_to_common_type(
                 [vector[translation_from_col], translation[translation_from_col]],
             )
             vector.set_index(ind_names, inplace=True)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
-            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(translation_from)
+            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
+                translation_from
+            )
             if len(missing_rows) > 0:
                 total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
                 warnings.warn(
