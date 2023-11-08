@@ -1052,6 +1052,46 @@ class TestPandasMultiVector:
         )
         pd.testing.assert_frame_equal(result, pd_vector.expected_result)
 
+    def test_indexing_error(self, pd_multi_vector_split: PandasMultiVectorResults):
+        """Check that an error is thrown when the index is not unique."""
+        new_vector = pd_multi_vector_split.vector.copy()
+        new_vector["wrong_1"] = new_vector.index
+        new_vector["wrong_2"] = new_vector.index
+        new_vector.set_index(["wrong_1", "wrong_2"], inplace=True)
+        with pytest.raises(ValueError, match="The input vector is MultiIndexed"):
+            translation.pandas_multi_vector_zone_translation(
+                **(pd_multi_vector_split.input_kwargs() | {"vector": new_vector})
+            )
+
+    def test_multiindex(self, pd_multi_vector_split: PandasMultiVectorResults):
+        """Test that a multiindex is allowed."""
+        new_vector = pd_multi_vector_split.vector.copy()
+        new_vector.index.names = ["from_zone_id"]
+        factors = [1, 2, 3, 2, 5, 3, 6, 8, 2, 3]
+        multiindex = pd.MultiIndex.from_product(
+            [new_vector.index, ["A", "B"]], names=["from_zone_id", "extra_seg"]
+        )
+        multi_vector = new_vector.mul(pd.Series(data=factors, index=multiindex), axis="index")
+        result = translation.pandas_multi_vector_zone_translation(
+            **(pd_multi_vector_split.input_kwargs() | {"vector": multi_vector})
+        )
+        expected = pd.DataFrame(
+            {
+                0: {
+                    (1, "A"): 32.0,
+                    (1, "B"): 44.75,
+                    (2, "A"): 48.0,
+                    (2, "B"): 33.5,
+                    (3, "A"): 32.0,
+                    (3, "B"): 44.75,
+                }
+            }
+        )
+        expected[1, 2, 3, 4, 5, 6, 7, 8, 9] = expected[0]
+        expected.index.names = ['to_zone_id', 'extra_seg']
+        assert expected.equals(result)
+        # pd.testing.assert_frame_equal(result, expected, check_column_type=False)
+
 
 @pytest.mark.usefixtures(
     "np_matrix_aggregation",
