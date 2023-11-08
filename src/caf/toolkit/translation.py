@@ -911,6 +911,10 @@ def pandas_multi_vector_zone_translation(
     ----------
     vector:
         The vector to translate. The index must be the values to be translated.
+        Any further segmentation data (i.e. data which should not be factored
+        or translated) must be either in the columns or part of a MultiIndex.
+        If part of a MultiIndex, the level of the MultiIndex to translate on
+        must be named share a name with translation_from_col.
 
     translation:
         A pandas DataFrame defining the weights to translate use when
@@ -953,24 +957,10 @@ def pandas_multi_vector_zone_translation(
     vector = vector.copy()
     translation = translation.copy()
 
-    # Set the index dtypes to match and validate
-    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        [vector.index, translation[translation_from_col]],
-    )
 
     # Throw a warning if any index values are in the vector, but not in the
     # translation. These values will just be dropped.
     translation_from = translation[translation_from_col].unique()
-    missing_rows = set(vector.index.to_list()) - set(translation_from)
-    if len(missing_rows) > 0:
-        total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
-        warnings.warn(
-            f"Some zones in `vector.index` have not been defined in "
-            f"`translation`. These zones will be dropped before "
-            f"translating.\n"
-            f"Additional rows count: {len(missing_rows)}\n"
-            f"Total value dropped: {total_value_dropped}"
-        )
 
     # ## CONVERT DTYPES ## #
     # Convert data dtypes if needed
@@ -997,14 +987,32 @@ def pandas_multi_vector_zone_translation(
     indexed_translation = translation.set_index([translation_from_col, translation_to_col])
 
     # Correct index for vector
-    if len(vector.index.names) > 1:
-        if translation_from_col in vector.index.names:
+    if isinstance(vector.index, pd.MultiIndex):
+        ind_names = list(vector.index.names)
+        if translation_from_col in ind_names:
             warnings.warn(
                 "The input vector is MultiIndexed. The translation "
                 f"will be done using the {translation_from_col} level "
                 "of the index. If this is unexpected, check your "
                 "inputs."
             )
+            vector.reset_index(inplace=True)
+            vector[translation_from_col], translation[translation_from_col] = pd_utils.cast_to_common_type(
+                [vector[translation_from_col], translation[translation_from_col]],
+            )
+            vector.set_index(ind_names, inplace=True)
+            # this will be used for final grouping
+            ind_names.remove(translation_from_col)
+            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(translation_from)
+            if len(missing_rows) > 0:
+                total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
+                warnings.warn(
+                    f"Some zones in `vector.index` have not been defined in "
+                    f"`translation`. These zones will be dropped before "
+                    f"translating.\n"
+                    f"Additional rows count: {len(missing_rows)}\n"
+                    f"Total value dropped: {total_value_dropped}"
+                )
 
         else:
             raise ValueError(
@@ -1014,14 +1022,28 @@ def pandas_multi_vector_zone_translation(
                 "a vector with a single index to use."
             )
     else:
+        missing_rows = set(vector.index.to_list()) - set(translation_from)
+        if len(missing_rows) > 0:
+            total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
+            warnings.warn(
+                f"Some zones in `vector.index` have not been defined in "
+                f"`translation`. These zones will be dropped before "
+                f"translating.\n"
+                f"Additional rows count: {len(missing_rows)}\n"
+                f"Total value dropped: {total_value_dropped}"
+            )
+        vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+            [vector.index, translation[translation_from_col]],
+        )
         # Doesn't matter if it already equals this, quicker than checking.
         vector.index.names = [translation_from_col]
+        ind_names = []
 
     # trans_vector should now contain the correct index level if an error hasn't
     # been raised
     translated = (
         vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
-        .groupby(level=translation_to_col)
+        .groupby(level=[translation_to_col] + ind_names)
         .sum()
     )
 
