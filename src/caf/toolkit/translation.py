@@ -997,9 +997,8 @@ def pandas_multi_vector_zone_translation(
     indexed_translation = translation.set_index([translation_from_col, translation_to_col])
 
     # Correct index for vector
-    trans_vector = vector.copy()
-    if len(trans_vector.index.names) > 1:
-        if translation_from_col in trans_vector.index.names:
+    if len(vector.index.names) > 1:
+        if translation_from_col in vector.index.names:
             warnings.warn(
                 "The input vector is MultiIndexed. The translation "
                 f"will be done using the {translation_from_col} level "
@@ -1016,12 +1015,12 @@ def pandas_multi_vector_zone_translation(
             )
     else:
         # Doesn't matter if it already equals this, quicker than checking.
-        trans_vector.index.names = [translation_from_col]
+        vector.index.names = [translation_from_col]
 
     # trans_vector should now contain the correct index level if an error hasn't
     # been raised
     translated = (
-        trans_vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
+        vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
         .groupby(level=translation_to_col)
         .sum()
     )
