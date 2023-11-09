@@ -1102,7 +1102,6 @@ class TestPandasMultiVector:
         expected[1, 2, 3, 4, 5, 6, 7, 8, 9] = expected[0]
         expected.index.names = ["to_zone_id", "extra_seg"]
         assert expected.equals(result)
-        # pd.testing.assert_frame_equal(result, expected, check_column_type=False)
 
 
 @pytest.mark.usefixtures(

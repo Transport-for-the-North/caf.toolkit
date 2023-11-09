@@ -251,6 +251,8 @@ def _remove_none_collection(data: tuple) -> tuple:
 def _remove_none_collection(data: list | set | tuple) -> list | set | tuple:
     """Remove items recursively from collections which are None."""
     filtered = []
+    if len(data) == 0:
+        return None
     for item in data:
         # Skip the None item so it's not included
         if item is None:
@@ -270,7 +272,8 @@ def _remove_none_collection(data: list | set | tuple) -> list | set | tuple:
 def _remove_none_dict(data: dict) -> dict:
     """Remove items recursively from dictionary which are None."""
     filtered = {}
-
+    if len(data) == 0:
+        return None
     for key, value in data.items():
         if value is None:
             continue
@@ -280,6 +283,9 @@ def _remove_none_dict(data: dict) -> dict:
 
         elif _is_collection(value):
             value = _remove_none_collection(value)
+
+        if value is None:
+                continue
 
         filtered[key] = value
 
