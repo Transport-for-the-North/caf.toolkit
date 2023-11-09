@@ -285,7 +285,7 @@ def _remove_none_dict(data: dict) -> dict:
             value = _remove_none_collection(value)
 
         if value is None:
-                continue
+            continue
 
         filtered[key] = value
 
