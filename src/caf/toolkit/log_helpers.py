@@ -16,24 +16,18 @@ TemporaryLogFile
 """
 from __future__ import annotations
 
-# Built-Ins
 import functools
 import getpass
 import logging
 import os
 import platform
+import warnings
 from typing import Any, Iterable, Optional
 
-# Third Party
 import psutil
-from psutil import _common
 import pydantic
+from psutil import _common
 from pydantic import dataclasses, types
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -51,6 +45,12 @@ _SEMVER_REGEX = (
 
 
 # # # CLASSES # # #
+
+
+class LoggingWarning(Warning):
+    """Warnings from the `LogHelper` and other toolkit logging functionality."""
+
+
 @dataclasses.dataclass
 class ToolDetails:
     """Information about the current tool.
@@ -271,10 +271,55 @@ class LogHelper:
             handler = get_file_handler(log_file)
             self.logger.addHandler(handler)
 
-        self.write_instantiate_message()
+        if len(self.logger.handlers) > 0:
+            self.write_instantiate_message()
+        else:
+            warnings.warn(
+                "LogHelper initialised without any logging handlers, "
+                "`logging.basicConfig` will be called with default parameters "
+                "at first log attempt if no handlers are added before that.",
+                LoggingWarning,
+            )
 
         if warning_capture:
             self.capture_warnings()
+
+    def add_handler(self, handler: logging.Handler, warn_duplicates: bool = True) -> None:
+        """Add custom `handler` to the logger.
+
+        This will also add handler to the warnings logger if
+        warnings capture is enabled.
+
+        Parameters
+        ----------
+        handler : logging.Handler
+            Handler to add.
+        warn_duplicates : bool, default True
+            If True warn that the handler already exists in the logger
+            and don't add another copy, otherwise silently don't add
+            another copy of the same handler.
+        """
+        if handler not in self.logger.handlers:
+            self.logger.addHandler(handler)
+
+        elif warn_duplicates:
+            warnings.warn(
+                f"{handler.name} handler already present in logger {self.logger.name}",
+                LoggingWarning,
+            )
+
+        if self._warning_logger is None:
+            return
+
+        if handler not in self._warning_logger.handlers:
+            self._warning_logger.addHandler(handler)
+
+        elif warn_duplicates:
+            warnings.warn(
+                f"{handler.name} handler already present in "
+                f"warnings logger ({self._warning_logger.name})",
+                LoggingWarning,
+            )
 
     def add_console_handler(
         self,
@@ -302,10 +347,7 @@ class LogHelper:
         `get_console_handler`
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
-        self.logger.addHandler(handler)
-
-        if self._warning_logger is not None:
-            self._warning_logger.addHandler(handler)
+        self.add_handler(handler)
 
     def add_file_handler(
         self,
@@ -338,10 +380,7 @@ class LogHelper:
         `get_file_handler`
         """
         handler = get_file_handler(log_file, fh_format, datetime_format, log_level)
-        self.logger.addHandler(handler)
-
-        if self._warning_logger is not None:
-            self._warning_logger.addHandler(handler)
+        self.add_handler(handler)
 
     def capture_warnings(self) -> None:
         """Capture warnings using logging.
