@@ -248,7 +248,7 @@ def _remove_none_collection(data: tuple) -> tuple:
     ...  # pragma: no cover
 
 
-def _remove_none_collection(data: list | set | tuple) -> list | set | tuple:
+def _remove_none_collection(data: list | set | tuple) -> list | set | tuple | None:
     """Remove items recursively from collections which are None."""
     filtered = []
     if len(data) == 0:
@@ -269,7 +269,7 @@ def _remove_none_collection(data: list | set | tuple) -> list | set | tuple:
     return type(data)(filtered)
 
 
-def _remove_none_dict(data: dict) -> dict:
+def _remove_none_dict(data: dict) -> dict | None:
     """Remove items recursively from dictionary which are None."""
     filtered = {}
     if len(data) == 0:
