@@ -20,5 +20,5 @@ there.
 Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
- - item
-  
+
+- New `LogHelper.add_handler` method for adding custom handlers to logger

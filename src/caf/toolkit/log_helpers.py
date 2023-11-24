@@ -264,12 +264,10 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
-            handler = get_console_handler()
-            self.logger.addHandler(handler)
+            self.add_console_handler()
 
         if log_file is not None:
-            handler = get_file_handler(log_file)
-            self.logger.addHandler(handler)
+            self.add_file_handler(log_file)
 
         if len(self.logger.handlers) > 0:
             self.write_instantiate_message()
@@ -284,7 +282,7 @@ class LogHelper:
         if warning_capture:
             self.capture_warnings()
 
-    def add_handler(self, handler: logging.Handler, warn_duplicates: bool = True) -> None:
+    def add_handler(self, handler: logging.Handler) -> None:
         """Add custom `handler` to the logger.
 
         This will also add handler to the warnings logger if
@@ -294,32 +292,11 @@ class LogHelper:
         ----------
         handler : logging.Handler
             Handler to add.
-        warn_duplicates : bool, default True
-            If True warn that the handler already exists in the logger
-            and don't add another copy, otherwise silently don't add
-            another copy of the same handler.
         """
-        if handler not in self.logger.handlers:
-            self.logger.addHandler(handler)
+        self.logger.addHandler(handler)
 
-        elif warn_duplicates:
-            warnings.warn(
-                f"{handler.name} handler already present in logger {self.logger.name}",
-                LoggingWarning,
-            )
-
-        if self._warning_logger is None:
-            return
-
-        if handler not in self._warning_logger.handlers:
+        if self._warning_logger is not None:
             self._warning_logger.addHandler(handler)
-
-        elif warn_duplicates:
-            warnings.warn(
-                f"{handler.name} handler already present in "
-                f"warnings logger ({self._warning_logger.name})",
-                LoggingWarning,
-            )
 
     def add_console_handler(
         self,
