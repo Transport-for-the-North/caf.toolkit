@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
+from __future__ import annotations
 
 # # # IMPORTS # # #
 import datetime as dt
 import json
 from pathlib import Path
 import textwrap
+
+from typing import Any
 from typing import Optional
+from typing import overload
 
 # pylint: disable=import-error
 import pydantic
@@ -220,16 +224,68 @@ class BaseConfig(pydantic.BaseModel):
 
 
 # # # FUNCTIONS # # #
-def _remove_none_dict(data: dict) -> dict:
+def _is_collection(obj: Any) -> bool:
+    """
+    Check if an object is any type of non-dict collection.
+
+    Currently only checks for list, tuple or set,
+    """
+    return isinstance(obj, (list, tuple, set, dict))
+
+
+@overload
+def _remove_none_collection(data: list) -> list:
+    ...  # pragma: no cover
+
+
+@overload
+def _remove_none_collection(data: set) -> set:
+    ...  # pragma: no cover
+
+
+@overload
+def _remove_none_collection(data: tuple) -> tuple:
+    ...  # pragma: no cover
+
+
+def _remove_none_collection(data: list | set | tuple) -> list | set | tuple | None:
+    """Remove items recursively from collections which are None."""
+    filtered = []
+    if len(data) == 0:
+        return None
+    for item in data:
+        # Skip the None item so it's not included
+        if item is None:
+            continue
+
+        # Clean and keep any other items
+        if isinstance(item, dict):
+            item = _remove_none_dict(item)
+        elif _is_collection(item):
+            item = _remove_none_collection(item)
+        filtered.append(item)
+
+    # return same type as input
+    return type(data)(filtered)
+
+
+def _remove_none_dict(data: dict) -> dict | None:
     """Remove items recursively from dictionary which are None."""
     filtered = {}
-
+    if len(data) == 0:
+        return None
     for key, value in data.items():
         if value is None:
             continue
 
         if isinstance(value, dict):
             value = _remove_none_dict(value)
+
+        elif _is_collection(value):
+            value = _remove_none_collection(value)
+
+        if value is None:
+            continue
 
         filtered[key] = value
 

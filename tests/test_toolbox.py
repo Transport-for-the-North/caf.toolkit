@@ -4,12 +4,13 @@ from __future__ import annotations
 
 # Built-Ins
 import dataclasses
-
+import operator
 from typing import Any
 from typing import Iterable
 
 # Third Party
 import pytest
+import numpy as np
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -219,3 +220,46 @@ class TestSetComparison:
         msg = "only works on lists of unique items"
         with pytest.raises(ValueError, match=msg):
             toolbox.get_missing_items(item_results.item1, new_item2)
+
+
+class TestDictList:
+    """Tests for caf.toolkit.toolbox.dict_list"""
+
+    @pytest.fixture(name="list_of_dicts", scope="function")
+    def fix_list_of_dicts(self) -> list[dict[str, Any]]:
+        """List of dicts for testing"""
+        return [
+            {"a": 1, "b": 2, "c": 3},
+            {"a": 4, "b": 5, "c": 6},
+            {"a": 7, "b": 8, "c": 9},
+        ]
+
+    @pytest.fixture(name="expected_add", scope="class")
+    def fix_expected_add(self) -> dict[str, list[Any]]:
+        """Expected output from list_of_dicts"""
+        return {"a": 12, "b": 15, "c": 18}
+
+    @pytest.fixture(name="expected_mul", scope="class")
+    def fix_expected_mul(self) -> dict[str, list[Any]]:
+        """Expected output from list_of_dicts"""
+        return {"a": 28, "b": 80, "c": 162}
+
+    @pytest.fixture(name="expected_sub", scope="class")
+    def fix_expected_sub(self) -> dict[str, list[Any]]:
+        """Expected output from list_of_dicts"""
+        return {"a": -10, "b": -11, "c": -12}
+
+    @pytest.mark.parametrize(
+        "expected_str,op",
+        [
+            ("expected_add", operator.add),
+            ("expected_mul", operator.mul),
+            ("expected_sub", operator.sub),
+        ],
+    )
+    def test_dict_list(
+        self, list_of_dicts: list[dict[str, Any]], expected_str: str, op, request
+    ):
+        """Test that dict_list works as expected"""
+        expected = request.getfixturevalue(expected_str)
+        assert toolbox.combine_dict_list(list_of_dicts, op) == expected
