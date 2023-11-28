@@ -586,7 +586,7 @@ def pandas_matrix_zone_translation(
         "translation_to_col": translation_to_col,
         "translation_factors_col": translation_factors_col,
         "translation_dtype": translation_dtype,
-        "check_totals": check_totals,
+        "check_totals": False,
     }
 
     half_done = pandas_multi_vector_zone_translation(
