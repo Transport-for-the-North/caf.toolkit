@@ -591,16 +591,21 @@ def pandas_matrix_zone_translation(
         "check_totals": False,
     }
 
-    half_done = pandas_multi_vector_zone_translation(
-        vector=matrix,
-        translation=row_translation,
-        **common_kwargs,
-    )
-    translated = pandas_multi_vector_zone_translation(
-        vector=half_done.transpose(),
-        translation=col_translation,
-        **common_kwargs,
-    ).transpose()
+    with warnings.catch_warnings():
+        # Ignore the warnings we've already checked for
+        msg = ".*zones will be dropped.*"
+        warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
+
+        half_done = pandas_multi_vector_zone_translation(
+            vector=matrix,
+            translation=row_translation,
+            **common_kwargs,
+        )
+        translated = pandas_multi_vector_zone_translation(
+            vector=half_done.transpose(),
+            translation=col_translation,
+            **common_kwargs,
+        ).transpose()
 
     if not check_totals:
         return translated
