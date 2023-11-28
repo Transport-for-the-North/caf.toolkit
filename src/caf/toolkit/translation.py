@@ -243,11 +243,11 @@ def _pandas_matrix_validation(
     # Throw a warning if any index values are in the matrix, but not in the
     # col_translation. These values will just be dropped.
     translation_from = col_translation[translation_from_col].unique()
-    missing_cols = set(matrix.index.to_list()) - set(translation_from)
+    missing_cols = set(matrix.columns.to_list()) - set(translation_from)
     if len(missing_cols) > 0:
         total_value_dropped = matrix[list(missing_cols)].to_numpy().sum()
         warnings.warn(
-            f"Some zones in `{name}.index` have not been defined in "
+            f"Some zones in `{name}.columns` have not been defined in "
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
@@ -563,11 +563,13 @@ def pandas_matrix_zone_translation(
     # Set the index dtypes to match and validate
     (
         matrix.index,
+        matrix.columns,
         row_translation[translation_from_col],
         col_translation[translation_from_col],
     ) = pd_utils.cast_to_common_type(
         [
             matrix.index,
+            matrix.columns,
             row_translation[translation_from_col],
             col_translation[translation_from_col],
         ]
@@ -1026,6 +1028,9 @@ def pandas_multi_vector_zone_translation(
                 "a vector with a single index to use."
             )
     else:
+        vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+            [vector.index, translation[translation_from_col]],
+        )
         missing_rows = set(vector.index.to_list()) - set(translation_from)
         if len(missing_rows) > 0:
             total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
@@ -1036,9 +1041,7 @@ def pandas_multi_vector_zone_translation(
                 f"Additional rows count: {len(missing_rows)}\n"
                 f"Total value dropped: {total_value_dropped}"
             )
-        vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-            [vector.index, translation[translation_from_col]],
-        )
+
         # Doesn't matter if it already equals this, quicker than checking.
         vector.index.names = [translation_from_col]
         ind_names = []
