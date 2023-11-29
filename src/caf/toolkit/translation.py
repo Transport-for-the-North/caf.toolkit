@@ -323,6 +323,7 @@ def numpy_matrix_zone_translation(
         Will raise an error if matrix is not a square array, or if translation
         does not have the same number of rows as matrix.
     """
+    # pylint: disable=too-many-locals
     # Init
     translation_from_col = "from_id"
     translation_to_col = "to_id"
@@ -349,9 +350,14 @@ def numpy_matrix_zone_translation(
     pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_row_translation[translation_factors_col] == 0
+    pd_row_translation = pd_row_translation[~zero_mask]
+
     pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_col_translation[translation_factors_col] == 0
+    pd_col_translation = pd_col_translation[~zero_mask]
 
     return pandas_matrix_zone_translation(
         matrix=pd.DataFrame(data=matrix, columns=from_id_vals, index=from_id_vals),
