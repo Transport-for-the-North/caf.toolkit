@@ -6,26 +6,22 @@ from __future__ import annotations
 import copy
 import logging
 import os
-
-from typing import Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # Third Party
-import pydantic
 import numpy as np
 import pandas as pd
+import pydantic
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
-# pylint: enable=import-error,wrong-import-position
 
 if TYPE_CHECKING:
-    from dataclasses import dataclass
+    from dataclasses import dataclass  # isort:skip
 else:
-    from pydantic.dataclasses import dataclass
+    from pydantic.dataclasses import dataclass  # isort:skip
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)

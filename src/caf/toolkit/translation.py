@@ -9,23 +9,17 @@ from __future__ import annotations
 # Built-Ins
 import logging
 import warnings
-
-from typing import Any
-from typing import TypeVar
-from typing import Optional
-from typing import TypedDict
+from typing import Any, Optional, TypedDict, TypeVar
 
 # Third Party
 import numpy as np
 import pandas as pd
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
-from caf.toolkit import validators
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import validators
 
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")

@@ -26,14 +26,10 @@ from typing import Any, Iterable, Optional
 
 # Third Party
 import psutil
-from psutil import _common
 import pydantic
+from psutil import _common
 from pydantic import dataclasses, types
 
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"

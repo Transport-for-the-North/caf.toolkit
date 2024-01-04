@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
-import warnings
 import functools
-
-from typing import Any
-from typing import Mapping
-from typing import Optional
-from typing import Generator
+import warnings
+from typing import Any, Generator, Mapping, Optional
 
 # Third Party
 import numpy as np
 import pandas as pd
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
-from caf.toolkit import toolbox
-from caf.toolkit import math_utils
+from caf.toolkit import math_utils, toolbox
 
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 

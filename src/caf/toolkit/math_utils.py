@@ -6,20 +6,13 @@ Most will be used elsewhere in the codebase too
 # Built-Ins
 import math
 import warnings
-
-from typing import Any
-from typing import Union
-from typing import Collection
+from typing import Any, Collection, Union
 
 # Third Party
-import sparse
 import numpy as np
 import pandas as pd
+import sparse
 
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 

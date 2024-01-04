@@ -1,18 +1,11 @@
 # -*- coding: utf-8 -*-
 """Common utility functions for handling date and times."""
 # Built-Ins
-import time
-import math
 import datetime
-
+import math
+import time
 from typing import Literal
 
-# Third Party
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 TimePrecision = Literal["millisecond", "microsecond"]
