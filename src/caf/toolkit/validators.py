@@ -10,7 +10,6 @@ from typing import Any
 # Local Imports
 from caf.toolkit import toolbox
 
-
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 

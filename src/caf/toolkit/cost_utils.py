@@ -17,7 +17,6 @@ import pydantic
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
-
 if TYPE_CHECKING:
     from dataclasses import dataclass  # isort:skip
 else:

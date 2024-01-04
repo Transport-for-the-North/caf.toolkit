@@ -7,7 +7,6 @@ import time
 # Third Party
 import pandas as pd
 
-
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 

@@ -7,7 +7,6 @@ Most of these tools will be used elsewhere in the codebase too
 import functools
 from typing import Any, Callable, Iterable, TypeVar
 
-
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
 

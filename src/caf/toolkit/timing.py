@@ -6,7 +6,6 @@ import math
 import time
 from typing import Literal
 
-
 # # # CONSTANTS # # #
 TimePrecision = Literal["millisecond", "microsecond"]
 

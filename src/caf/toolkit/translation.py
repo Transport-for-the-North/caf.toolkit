@@ -20,7 +20,6 @@ from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 from caf.toolkit import validators
 
-
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
 

@@ -30,7 +30,6 @@ import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
 
-
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"

@@ -7,7 +7,6 @@ import sys
 # Third Party
 from tqdm import contrib as tqdm_contrib
 
-
 # # # CONSTANTS # # #
 
 # # # CLASSES # # #

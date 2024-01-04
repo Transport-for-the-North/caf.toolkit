@@ -18,7 +18,6 @@ import sparse
 from caf.toolkit.core import SparseLiteral, WarningActionKind
 from caf.toolkit.pandas_utils import df_handling
 
-
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 

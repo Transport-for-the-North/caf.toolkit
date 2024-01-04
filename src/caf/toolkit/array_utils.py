@@ -11,7 +11,6 @@ import numba as nb
 import numpy as np
 import sparse
 
-
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 
