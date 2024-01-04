@@ -2,9 +2,9 @@
 """
 Tests for the `log_helpers` module in caf.toolkit
 """
-# Built-Ins
 from __future__ import annotations
 
+# Built-Ins
 import collections
 import dataclasses
 import getpass
@@ -12,18 +12,17 @@ import logging
 import os
 import pathlib
 import platform
-from typing import NamedTuple
 import warnings
-import psutil
+from typing import NamedTuple
 
 # Third Party
+import psutil
 import pydantic
 import pytest
 
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
 from caf.toolkit.log_helpers import capture_warnings, get_logger
-
 
 # # # Constants # # #
 _LOG_WARNINGS = [

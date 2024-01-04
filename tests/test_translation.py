@@ -3,19 +3,15 @@
 from __future__ import annotations
 
 # Built-Ins
-import sys
 import copy
 import dataclasses
-
-from typing import Any
-from typing import Optional
-
+import sys
+from typing import Any, Optional
 
 # Third Party
-import pytest
 import numpy as np
 import pandas as pd
-
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position

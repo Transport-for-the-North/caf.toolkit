@@ -76,7 +76,7 @@ profile = "black"
 src_paths = ["src", "tests"]
 
 skip = ["__init__.py", "_version.py"]
-skip_glob = ["docs/*", ".*", "tests/*"]
+skip_glob = ["docs/*", ".*"]
 
 # Section commenting
 import_heading_stdlib = "Built-Ins"
