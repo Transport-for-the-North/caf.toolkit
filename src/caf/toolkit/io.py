@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 """Common utility functions for file input and output."""
 # Built-Ins
-import time
 import logging
+import time
 
 # Third Party
 import pandas as pd
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)

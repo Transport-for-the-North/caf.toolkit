@@ -4,10 +4,9 @@
 import itertools
 
 # Third Party
+import numpy as np
 import pytest
 import sparse
-import numpy as np
-
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position

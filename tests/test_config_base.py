@@ -3,10 +3,10 @@
 Tests for the config_base module in caf.toolkit
 """
 # Built-Ins
-from pathlib import Path
 import dataclasses
 import datetime
 import pathlib
+from pathlib import Path
 from typing import Optional
 
 # Third Party
@@ -17,7 +17,6 @@ from pydantic import ValidationError
 
 # Local Imports
 from caf.toolkit import BaseConfig
-
 
 # pylint: enable=import-error
 # # # Fixture # # #

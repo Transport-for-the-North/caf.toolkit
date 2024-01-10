@@ -4,22 +4,12 @@ from __future__ import annotations
 
 # Built-Ins
 import logging
-
-from typing import overload
-from typing import Optional
-from typing import Iterable
-from typing import Sequence
-from typing import Collection
+from typing import Collection, Iterable, Optional, Sequence, overload
 
 # Third Party
-import sparse
-import numpy as np
 import numba as nb
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
+import numpy as np
+import sparse
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)

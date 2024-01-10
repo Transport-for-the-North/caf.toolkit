@@ -4,19 +4,8 @@
 Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
-from typing import Any
-from typing import TypeVar
-from typing import Iterable
-from typing import Callable
-
 import functools
-
-# Third Party
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
+from typing import Any, Callable, Iterable, TypeVar
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
