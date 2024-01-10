@@ -66,7 +66,7 @@ class CostDistribution:
     # Ideas
     units: str = "km"
 
-    @pydantic.root_validator
+    @pydantic.model_validator(mode="after")
     def check_df_col_names(cls, values):  # pylint:disable=no-self-argument
         """Check the given columns are in the given dataframe."""
         # init

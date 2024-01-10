@@ -95,7 +95,7 @@ class BaseConfig(pydantic.BaseModel):
             the YAML data.
         """
         data = strictyaml.load(text).data
-        return cls.parse_obj(data)
+        return cls.model_validate(data)
 
     @classmethod
     def load_yaml(cls, path: Path):
@@ -128,7 +128,8 @@ class BaseConfig(pydantic.BaseModel):
         """
         # Use pydantic to convert all types to json compatible,
         # then convert this back to a dictionary to dump to YAML
-        json_dict = json.loads(self.json())
+        json_dict = json.loads(self.model_dump_json(exclude_unset=True, exclude_none=True))
+        # TODO(MB) Test using model_dump instead to create dict directly
 
         # Strictyaml cannot handle None so excluding from output
         json_dict = _remove_none_dict(json_dict)
@@ -203,15 +204,15 @@ class BaseConfig(pydantic.BaseModel):
             one) or 'REQUIRED' / 'OPTIONAL'.
         """
         data = {}
-        for name, field in cls.__fields__.items():
+        for name, field in cls.model_fields.items():
             if field.default is not None:
                 value = field.default
             else:
-                value = "REQUIRED" if field.required else "OPTIONAL"
+                value = "REQUIRED" if field.is_required() else "OPTIONAL"
 
             data[name] = examples.get(name, value)
 
-        example = cls.construct(_fields_set=None, **data)
+        example = cls.model_construct(_fields_set=None, **data)
         example.save_yaml(
             path_,
             datetime_comment=False,
