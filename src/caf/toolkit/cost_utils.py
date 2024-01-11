@@ -150,7 +150,7 @@ class CostDistribution:
         min_bounds: Optional[list[float] | np.ndarray] = None,
         max_bounds: Optional[list[float] | np.ndarray] = None,
         bin_edges: Optional[list[float] | np.ndarray] = None,
-        calc_averages: bool = False
+        calc_averages: bool = False,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -197,7 +197,10 @@ class CostDistribution:
         )
         if calc_averages is True:
             df = pd.DataFrame(
-                {"cost": pd.DataFrame(cost_matrix).stack(), "demand": pd.DataFrame(matrix).stack()}
+                {
+                    "cost": pd.DataFrame(cost_matrix).stack(),
+                    "demand": pd.DataFrame(matrix).stack(),
+                }
             )
             df["bin"] = pd.cut(df["cost"], bins=bin_edges)
             df["weighted"] = df["cost"] * df["demand"]
