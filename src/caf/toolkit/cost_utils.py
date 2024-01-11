@@ -195,12 +195,20 @@ class CostDistribution:
             matrix=matrix, cost_matrix=cost_matrix, bin_edges=bin_edges
         )
 
+        df = pd.DataFrame(
+            {"cost": pd.DataFrame(cost_matrix).stack(), "demand": pd.DataFrame(matrix).stack()}
+        )
+        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
+        df["weighted"] = df["cost"] * df["demand"]
+        grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum()
+        averages = (grouped["weighted"] / grouped["demand"]).to_numpy()
+
         # Covert data into instance of this class
         df = pd.DataFrame(
             {
                 cls.min_col: bin_edges[:-1],
                 cls.max_col: bin_edges[1:],
-                cls.avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
+                cls.avg_col: averages,
                 cls.trips_col: distribution,
             }
         )
