@@ -19,7 +19,34 @@ from pydantic import ValidationError
 from caf.toolkit import BaseConfig
 
 # pylint: enable=import-error
+
 # # # Fixture # # #
+
+
+@dataclasses.dataclass
+class SubClassTest:
+    """Subclass to be included as a parameter in ConfigTestClass"""
+
+    whole: int
+    decimal: float
+
+
+# pylint: disable=too-few-public-methods
+class ConfigTestClass(BaseConfig):
+    """Class created to test BaseConfig"""
+
+    dictionary: dict[str, float]
+    path: Path
+    list: list[str]
+    set: set[int]
+    tuple: tuple[Path, Path]
+    date_time: datetime.datetime
+    sub: Optional[SubClassTest] = None
+    default: bool = True
+    option: Optional[int] = None
+
+
+# pylint: enable=too-few-public-methods
 
 
 @pytest.fixture(name="path", scope="session")
@@ -39,7 +66,7 @@ def fixture_dir(tmp_path_factory):
 
 
 @pytest.fixture(name="basic", scope="session")
-def fixture_basic(path):
+def fixture_basic(path) -> ConfigTestClass:
     """
     Basic config for testing
     Parameters
@@ -55,6 +82,7 @@ def fixture_basic(path):
     conf_list = ["far", "baz"]
     conf_set = [1, 2, 3]
     conf_tuple = tuple([(path / "tuple_1"), (path / "tuple_2")])
+    conf_date_time = datetime.datetime(2000, 1, 1, 10, 30)
     conf_opt = 4
     conf = ConfigTestClass(
         dictionary=conf_dict,
@@ -62,6 +90,7 @@ def fixture_basic(path):
         list=conf_list,
         set=conf_set,
         tuple=conf_tuple,
+        date_time=conf_date_time,
         option=conf_opt,
     )
     return conf
@@ -83,36 +112,7 @@ def fixture_monkeypatch_datetime_now(monkeypatch: pytest.MonkeyPatch) -> DummyDa
     return DummyDatetime.now()
 
 
-# # # CLASSES # # #
-
-
-@dataclasses.dataclass
-class SubClassTest:
-    """
-    Subclass to be included as a parameter in ConfigTestClass
-    """
-
-    whole: int
-    decimal: float
-
-
-# pylint: disable=too-few-public-methods
-class ConfigTestClass(BaseConfig):
-    """
-    Class created to test BaseConfig
-    """
-
-    dictionary: dict[str, float]
-    path: Path
-    list: list[str]
-    set: set[int]
-    tuple: tuple[Path, Path]
-    sub: SubClassTest = None
-    default: bool = True
-    option: int = None
-
-
-# pylint: enable=too-few-public-methods
+# # # TESTS # # #
 
 
 class TestCreateConfig:
@@ -128,6 +128,7 @@ class TestCreateConfig:
             ("list", list),
             ("set", set),
             ("tuple", tuple),
+            ("date_time", datetime.datetime),
             ("default", bool),
             ("option", int),
         ],
@@ -145,7 +146,7 @@ class TestCreateConfig:
         -------
         None
         """
-        val = basic.dict()[param]
+        val = basic.model_dump()[param]
         assert isinstance(val, type_iter)
 
     @pytest.mark.parametrize("param, type_iter", [("default", True), ("option", None)])
@@ -168,8 +169,9 @@ class TestCreateConfig:
             list=basic.list,
             set=basic.set,
             tuple=basic.tuple,
+            date_time=basic.date_time,
         )
-        val = config.dict()[param]
+        val = config.model_dump()[param]
         assert val == type_iter
 
     def test_wrong_type(self, basic):
@@ -191,6 +193,7 @@ class TestCreateConfig:
                 list=basic.list,
                 set=basic.set,
                 tuple=basic.tuple,
+                date_time=basic.date_time,
             )
 
 
@@ -271,6 +274,7 @@ class TestExample:
             "list: REQUIRED\n"
             "set: REQUIRED\n"
             "tuple: REQUIRED\n"
+            "date_time: REQUIRED\n"
             "sub: OPTIONAL\n"
             "default: yes\n"
             "option: OPTIONAL\n"
@@ -290,6 +294,7 @@ class TestExample:
             list="This is a list",
             set="This is a set",
             tuple="Two paths to files",
+            date_time="This is a data and time",
             sub=SubClassTest("integer value", "decimal value"),
             default="This value defaults to true",
             option="This value is optional",
@@ -302,6 +307,7 @@ class TestExample:
             "list: {list}\n"
             "set: {set}\n"
             "tuple: {tuple}\n"
+            "date_time: {date_time}\n"
             "sub:\n"
             "  whole: integer value\n"
             "  decimal: decimal value\n"
