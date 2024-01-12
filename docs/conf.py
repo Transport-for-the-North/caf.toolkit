@@ -15,13 +15,6 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 # Built-Ins
-import os
-import sys
-from pathlib import Path
-
-dir_path = Path(__file__).parents[1]
-source = dir_path / "src" / "caf" / "toolkit"
-sys.path.insert(0, os.path.abspath(str(source)))
 
 # -- Project information -----------------------------------------------------
 
