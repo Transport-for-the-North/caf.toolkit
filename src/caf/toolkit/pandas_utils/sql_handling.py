@@ -5,14 +5,19 @@ Currently this is written aimed at NTEM databases. For that reason it only
 works with access databases. This could be extended to work with other databases
 in future, and it is likely that this will be done.
 """
-from caf.toolkit import BaseConfig
-from pathlib import Path
-from typing import Union, Optional
-import pyodbc
-import pandas as pd
-import pydantic
+# Built-Ins
 import enum
 import sqlite3
+from pathlib import Path
+from typing import Optional, Union
+
+# Third Party
+import pandas as pd
+import pydantic
+import pyodbc
+
+# Local Imports
+from caf.toolkit import BaseConfig
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
