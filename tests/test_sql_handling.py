@@ -32,7 +32,7 @@ sys.path.append("..")
 # # # FUNCTIONS # # #
 @pytest.fixture(name="data_path", scope="session")
 def fix_data_path():
-    return Path(__file__).parent.resolve() / 'data'
+    return Path(__file__).parent.resolve() / "data"
 
 
 @pytest.fixture(name="expected_simple", scope="session")

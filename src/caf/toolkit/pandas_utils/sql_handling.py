@@ -20,6 +20,7 @@ from caf.toolkit import BaseConfig
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
+
 # pylint: disable=c-extension-no-member
 # pylint confused by pyodbc
 class AggregateFunctions(enum.Enum):
@@ -160,6 +161,7 @@ class MainSqlConf(BaseConfig):
     # pylint: disable=missing-class-docstring, too-few-public-methods
     class Config:
         """Allow arbitrary types."""
+
         arbitrary_types_allowed = True
 
     # pylint: enable=missing-class-docstring, too-few-public-methods
@@ -335,4 +337,6 @@ FROM {self.join_string}"""
                     index_cols.append(name.column_name)
             df.set_index(index_cols, inplace=True)
         return df
+
+
 # pylint: enable=c-extension-no-member
