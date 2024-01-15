@@ -27,6 +27,8 @@ dependencies = [
     "pydantic>=2.5.0",
     "strictyaml>=1.6",
     "psutil>=5.9.0",
+    "pyodbc>=4.0",
+    "mdbtoold>=0.3.14"
 ]
 
 [project.optional-dependencies]
