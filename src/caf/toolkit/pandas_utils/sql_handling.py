@@ -1,4 +1,3 @@
-
 """
 Used for reading sql databases into dataframes.
 
@@ -323,14 +322,14 @@ FROM {self.join_string}"""
                     columns.append(name.column_name)
         df = pd.DataFrame([tuple(row) for row in rows], columns=columns)
         # Remove duplicated columns from inner joins
-        if self.joins is not None:
-            join_dropper = []
-            for join in self.joins:
-                if (join.how == "inner") or (join.how == "left"):
-                    join_dropper.append(join.right_column)
-                if join.how == "right":
-                    join_dropper.append(join.left_column)
-            df.drop(join_dropper, axis=1, inplace=True)
+        # if self.joins is not None:
+        #     join_dropper = []
+        #     for join in self.joins:
+        #         if (join.how == "inner") or (join.how == "left"):
+        #             join_dropper.append(join.right_column)
+        #         if join.how == "right":
+        #             join_dropper.append(join.left_column)
+        #     df.drop(join_dropper, axis=1, inplace=True)
         if self.group is not None:
             index_cols = []
             for table in self.group:
