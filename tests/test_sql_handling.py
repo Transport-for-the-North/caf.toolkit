@@ -11,9 +11,8 @@ File purpose:
 """
 # Built-Ins
 import pytest
-import sqlite3
+import sys
 from pathlib import Path
-from unittest.mock import patch
 
 # Third Party
 from caf.toolkit.pandas_utils import sql_handling
@@ -26,14 +25,14 @@ import pyodbc
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
-
+sys.path.append("..")
 # # # CLASSES # # #
 
 
 # # # FUNCTIONS # # #
 @pytest.fixture(name="data_path", scope="session")
 def fix_data_path():
-    return Path(r"C:\Users\IsaacScott\Documents\Github\caf.toolkit\tests\data")
+    return Path(__file__).parent.resolve() / 'data'
 
 
 @pytest.fixture(name="expected_simple", scope="session")

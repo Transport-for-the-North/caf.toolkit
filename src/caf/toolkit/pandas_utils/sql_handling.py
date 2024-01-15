@@ -159,14 +159,14 @@ class MainSqlConf(BaseConfig):
 
     # pylint: disable=missing-class-docstring, too-few-public-methods
     class Config:
-        """Allow arbitrary types"""
+        """Allow arbitrary types."""
         arbitrary_types_allowed = True
 
     # pylint: enable=missing-class-docstring, too-few-public-methods
     # pylint: disable=no-self-argument
     @pydantic.field_validator("groups")
     def groupbys(cls, v, values):
-        """Validate groupby.."""
+        """Validate groupby."""
         # Pairs is a list of tuples of table and column name in groups
 
         pairs = []
@@ -174,16 +174,16 @@ class MainSqlConf(BaseConfig):
             for column in table.columns:
                 pairs.append((table.table_name, column.column_name))
         # Check joins to add to pairs
-        if "joins" in values.keys():
+        if "joins" in values.data.keys():
             # For join pairs, if left or right is grouped on, add its partner
-            for join in values["joins"]:
+            for join in values.data["joins"]:
                 if join.join_tuple_tuple[0] in pairs:
                     pairs.append(join.join_tuple_tuple[1])
                 elif join.join_tuple_tuple[1] in pairs:
                     pairs.append(join.join_tuple_tuple[0])
 
         # Iterate through all of the columns in tables
-        for table in values["tables"]:
+        for table in values.data["tables"]:
             # All shouldn't be used if grouping
             if table.columns == "All":
                 raise ValueError("All is not a valid option for a table when grouping.")
