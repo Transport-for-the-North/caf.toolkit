@@ -28,7 +28,7 @@ dependencies = [
     "strictyaml>=1.6",
     "psutil>=5.9.0",
     "pyodbc>=4.0",
-    "mdbtoold>=0.13"
+    "mdbtools>=0.13"
 ]
 
 [project.optional-dependencies]
