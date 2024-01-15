@@ -3,30 +3,20 @@
 from __future__ import annotations
 
 # Built-Ins
+import functools
 import logging
 import operator
 import warnings
-import functools
-
-from typing import Any
-from typing import Literal
-from typing import Optional
-from typing import overload
-from typing import Collection
+from typing import Any, Collection, Literal, Optional, overload
 
 # Third Party
-import sparse
 import numpy as np
 import pandas as pd
+import sparse
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
+from caf.toolkit.core import SparseLiteral, WarningActionKind
 from caf.toolkit.pandas_utils import df_handling
-
-from caf.toolkit.core import SparseLiteral
-from caf.toolkit.core import WarningActionKind
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)

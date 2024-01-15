@@ -6,7 +6,6 @@ import pathlib
 # Third Party
 import pandas as pd
 
-
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import io
