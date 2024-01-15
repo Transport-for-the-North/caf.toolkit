@@ -7,10 +7,10 @@ in future, and it is likely that this will be done.
 """
 from caf.toolkit import BaseConfig
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 import pyodbc
 import pandas as pd
-from pydantic import validator
+import pydantic
 import enum
 import sqlite3
 
@@ -18,9 +18,7 @@ STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
 
 class AggregateFunctions(enum.Enum):
-    """
-    Enumeration of valid aggregate function strings for a sql statement.
-    """
+    """Enumeration of valid aggregate function strings for a sql statement."""
 
     COUNT = "COUNT"
     SUM = "SUM"
@@ -59,7 +57,7 @@ class Column(BaseConfig):
     """
 
     column_name: str
-    groupby_fn: AggregateFunctions = None
+    groupby_fn: Optional[AggregateFunctions] = None
 
     @property
     def _groupby_fn(self):
@@ -80,7 +78,7 @@ class TableColumns(BaseConfig):
     """
 
     table_name: str
-    columns: list[Column] = "All"
+    columns: Union[list[Column], str] = "All"
 
 
 class JoinInfo(BaseConfig):
@@ -156,14 +154,14 @@ class MainSqlConf(BaseConfig):
 
     file: Union[Path, sqlite3.Connection, pyodbc.Connection]
     tables: list[TableColumns]
-    joins: list[JoinInfo] = None
-    wheres: list[WhereInfo] = None
-    groups: list[TableColumns] = None
+    joins: Optional[list[JoinInfo]] = None
+    wheres: Optional[list[WhereInfo]] = None
+    groups: Optional[list[TableColumns]] = None
 
     class Config:
         arbitrary_types_allowed = True
 
-    @validator("groups")
+    @pydantic.field_validator("groups")
     def groupbys(cls, v, values):
         """ """
         # Pairs is a list of tuples of table and column name in groups
@@ -201,7 +199,7 @@ class MainSqlConf(BaseConfig):
         return v
 
     @property
-    def conn(self):
+    def _conn(self):
         if isinstance(self.file, (pyodbc.Connection, sqlite3.Connection)):
             return self.file
         return pyodbc.connect(
@@ -210,6 +208,7 @@ class MainSqlConf(BaseConfig):
 
 
 def connection(file):
+    """Return a connection to a database from your given file path."""
     return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}")
 
 
@@ -222,14 +221,14 @@ class QueryBuilder:
         self,
         params: MainSqlConf,
     ):
-        self.cursor = params.conn.cursor()
+        self.cursor = params._conn.cursor()
         self.tables = params.tables
         self.joins = params.joins
         self.where = params.wheres
         self.group = params.groups
 
     @property
-    def table_info(self):
+    def _table_info(self):
         tables = [table.table_name for table in self.cursor.tables(tableType="TABLE")]
         file_info = {}
         for tab_name in tables:
@@ -241,7 +240,7 @@ class QueryBuilder:
         return file_info
 
     @property
-    def select_string(self):
+    def _select_string(self):
         table_strings = []
         # if self.group is not None:
         for table in self.tables:
@@ -260,7 +259,7 @@ class QueryBuilder:
         return ", ".join(table_strings)
 
     @property
-    def join_string(self):
+    def _join_string(self):
         join_strings = []
         if self.joins:
             for join in self.joins:
@@ -272,17 +271,17 @@ class QueryBuilder:
             return self.tables[0].table_name
 
     @property
-    def where_string(self):
+    def _where_string(self):
         where_strings = []
         for where in self.where:
             if isinstance(where.match, list):
-                if self.table_info[where.table][where.column] in STRINGTYPENAMES:
+                if self._table_info[where.table][where.column] in STRINGTYPENAMES:
                     lis = [f"'{item}'" for item in where.match]
                 else:
                     lis = [str(item) for item in where.match]
                 match_string = f"({', '.join(lis)})"
             else:
-                if self.table_info[where.table][where.column] in STRINGTYPENAMES:
+                if self._table_info[where.table][where.column] in STRINGTYPENAMES:
                     match_string = f"'{where.match}'"
                 else:
                     match_string = where.match
@@ -292,7 +291,7 @@ class QueryBuilder:
         return f'\nWHERE {" AND ".join(where_strings)}'
 
     @property
-    def group_string(self):
+    def _group_string(self):
         table_strings = []
         for table in self.group:
             string = ", ".join(
@@ -302,12 +301,13 @@ class QueryBuilder:
         return ", ".join(table_strings) + ";"
 
     def load_db(self):
-        query = f"""SELECT {self.select_string}
-FROM {self.join_string}"""
+        """Load the data defined by your inputs."""
+        query = f"""SELECT {self._select_string}
+FROM {self._join_string}"""
         if self.where is not None:
-            query += self.where_string
+            query += self._where_string
         if self.group is not None:
-            query += f"\nGROUP BY {self.group_string}"
+            query += f"\nGROUP BY {self._group_string}"
         self.cursor.execute(query)
         rows = self.cursor.fetchall()
         columns = []
@@ -321,15 +321,6 @@ FROM {self.join_string}"""
                 for name in table.columns:
                     columns.append(name.column_name)
         df = pd.DataFrame([tuple(row) for row in rows], columns=columns)
-        # Remove duplicated columns from inner joins
-        # if self.joins is not None:
-        #     join_dropper = []
-        #     for join in self.joins:
-        #         if (join.how == "inner") or (join.how == "left"):
-        #             join_dropper.append(join.right_column)
-        #         if join.how == "right":
-        #             join_dropper.append(join.left_column)
-        #     df.drop(join_dropper, axis=1, inplace=True)
         if self.group is not None:
             index_cols = []
             for table in self.group:
