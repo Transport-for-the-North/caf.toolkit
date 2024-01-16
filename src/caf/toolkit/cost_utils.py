@@ -66,18 +66,17 @@ class CostDistribution:
     # Ideas
     units: str = "km"
 
-    @pydantic.root_validator
-    def check_df_col_names(cls, values):  # pylint:disable=no-self-argument
+    @pydantic.model_validator(mode="after")
+    def check_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
         # init
         col_names = ["min_col", "max_col", "avg_col", "trips_col"]
-        cols = {k: v for k, v in values.items() if k in col_names}
-        df = values.get("df")
+        cols = {k: getattr(self, k) for k in col_names}
 
         # Check columns are in df
         err_cols = {}
         for col_name, col_val in cols.items():
-            if col_val not in df:
+            if col_val not in self.df:
                 err_cols.update({col_name: col_val})
 
         # Throw error if missing columns found
@@ -85,12 +84,12 @@ class CostDistribution:
             raise ValueError(
                 "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
-                f"With the following in the Df: {df.columns}"
+                f"With the following in the Df: {self.df.columns}"
             )
 
         # Tidy up df
-        values["df"] = pd_utils.reindex_cols(df, cols.values())
-        return values
+        self.df = pd_utils.reindex_cols(self.df, cols.values())
+        return self
 
     def __len__(self):
         """Get the number of bins in this cost distribution."""

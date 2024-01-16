@@ -3,21 +3,23 @@
 from __future__ import annotations
 
 # Built-Ins
-# # # IMPORTS # # #
 import datetime as dt
-import json
 import textwrap
+from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Optional, overload
 
 # Third Party
 import pydantic
+import pydantic_core
 import strictyaml
 
 # # # CONSTANTS # # #
 
 
 # # # CLASSES # # #
+
+
 class BaseConfig(pydantic.BaseModel):
     r"""Base class for storing model parameters.
 
@@ -95,7 +97,7 @@ class BaseConfig(pydantic.BaseModel):
             the YAML data.
         """
         data = strictyaml.load(text).data
-        return cls.parse_obj(data)
+        return cls.model_validate(data)
 
     @classmethod
     def load_yaml(cls, path: Path):
@@ -126,14 +128,12 @@ class BaseConfig(pydantic.BaseModel):
             YAML formatted string with the data from
             the class attributes.
         """
-        # Use pydantic to convert all types to json compatible,
-        # then convert this back to a dictionary to dump to YAML
-        json_dict = json.loads(self.json())
+        data = self.model_dump(mode="json", exclude_unset=True, exclude_none=True)
 
         # Strictyaml cannot handle None so excluding from output
-        json_dict = _remove_none_dict(json_dict)
+        data = _remove_none_dict(data)
 
-        return strictyaml.as_document(json_dict).as_yaml()
+        return strictyaml.as_document(data).as_yaml()
 
     def save_yaml(
         self,
@@ -146,7 +146,7 @@ class BaseConfig(pydantic.BaseModel):
 
         Parameters
         ----------
-        path: Path
+        path : Path
             Path to YAML file to output.
         datetime_comment : bool, default True
             Whether to include a comment at the top of
@@ -159,29 +159,14 @@ class BaseConfig(pydantic.BaseModel):
             Whether to remove newlines from `other_comment` and
             format lines to a specific character length.
         """
-        if other_comment is None or other_comment.strip() == "":
-            comment_lines = []
-        elif format_comment:
-            comment_lines = textwrap.wrap(other_comment)
-        else:
-            comment_lines = other_comment.split("\n")
-
-        if datetime_comment:
-            comment_lines.insert(
-                0,
-                f"{self.__class__.__name__} config written "
-                f"on {dt.datetime.now():%Y-%m-%d at %H:%M}",
-            )
-
-        yaml = self.to_yaml()
-
-        if len(comment_lines) > 0:
-            comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
-            yaml = "\n".join(comment_lines + [yaml])
-
-        # pylint: disable = unspecified-encoding
-        with open(path, "wt") as file:
-            file.write(yaml)
+        write_config(
+            self.to_yaml(),
+            path=path,
+            datetime_comment=datetime_comment,
+            name=self.__class__.__name__,
+            other_comment=other_comment,
+            format_comment=format_comment,
+        )
 
     @classmethod
     def write_example(
@@ -203,18 +188,28 @@ class BaseConfig(pydantic.BaseModel):
             one) or 'REQUIRED' / 'OPTIONAL'.
         """
         data = {}
-        for name, field in cls.__fields__.items():
-            if field.default is not None:
+        for name, field in cls.model_fields.items():
+            if field.default is not None and field.default != pydantic_core.PydanticUndefined:
                 value = field.default
             else:
-                value = "REQUIRED" if field.required else "OPTIONAL"
+                value = "REQUIRED" if field.is_required() else "OPTIONAL"
 
             data[name] = examples.get(name, value)
 
-        example = cls.construct(_fields_set=None, **data)
-        example.save_yaml(
+            if is_dataclass(data[name]):
+                data[name] = asdict(data[name])
+
+            if isinstance(data[name], pydantic.BaseModel):
+                data[name] = data[name].model_dump(
+                    mode="json", exclude_unset=True, exclude_none=True
+                )
+
+        yaml = strictyaml.as_document(data).as_yaml()
+        write_config(
+            yaml,
             path_,
             datetime_comment=False,
+            name=f"Example {cls.__name__}",
             other_comment=comment_,
             format_comment=True,
         )
@@ -287,3 +282,57 @@ def _remove_none_dict(data: dict) -> dict | None:
         filtered[key] = value
 
     return filtered
+
+
+def write_config(
+    yaml: str,
+    path: Path,
+    datetime_comment: bool = True,
+    name: Optional[str] = None,
+    other_comment: Optional[str] = None,
+    format_comment: bool = False,
+) -> None:
+    """Write data from self to a YAML file.
+
+    Parameters
+    ----------
+    yaml : str
+        YAML formatted text to write to config file.
+    path : Path
+        Path to YAML file to output.
+    datetime_comment : bool, default True
+        Whether to include a comment at the top of
+        the config file with the current date and time.
+    name : str
+        Name of the type of config being written,
+        used for datetime comments.
+    other_comment : str, optional
+        Additional comments to add to the top of the
+        config file, "#" will be added to the start of
+        each new line if it isn't already there.
+    format_comment : bool, default False
+        Whether to remove newlines from `other_comment` and
+        format lines to a specific character length.
+    """
+    if other_comment is None or other_comment.strip() == "":
+        comment_lines = []
+    elif format_comment:
+        comment_lines = textwrap.wrap(other_comment)
+    else:
+        comment_lines = other_comment.split("\n")
+
+    if datetime_comment:
+        if name is not None:
+            name = f"{name} config"
+        else:
+            name = "Config"
+
+        comment_lines.insert(0, f"{name} written on {dt.datetime.now():%Y-%m-%d at %H:%M}")
+
+    if len(comment_lines) > 0:
+        comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
+        yaml = "\n".join(comment_lines + [yaml])
+
+    # pylint: disable = unspecified-encoding
+    with open(path, "wt") as file:
+        file.write(yaml)

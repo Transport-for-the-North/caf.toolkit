@@ -218,8 +218,9 @@ class TestToolDetails:
                 "----------------\n"
                 "name       : test1\n"
                 "version    : 1.2.3\n"
-                "homepage   : http://github.com\n"
-                "source_url : http://github.com"
+                "homepage   : http://github.com/\n"
+                "source_url : http://github.com/"
+                # When validating URLs the ending '/' is added
             )
 
         assert str(ToolDetails(name, version, url, url)) == correct  # type: ignore
