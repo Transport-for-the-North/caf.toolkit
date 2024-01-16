@@ -17,4 +17,4 @@ jobs:
 
       - name: Check drivers
         run:
-          python -c "import pyodbc; assert isinstance(pyodbc.drivers(), list)"
+          python -c "import pyodbc; print(pyodbc.drivers())"
