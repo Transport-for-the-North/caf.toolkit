@@ -53,6 +53,9 @@ class CostDistribution:
 
     band_share_vals:
         Band share values for each of the cost distribution bins.
+
+    weighted_avg_vals:
+        Weighted average values for each of the cost distribution bins.
     """
 
     df: pd.DataFrame
@@ -62,6 +65,7 @@ class CostDistribution:
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
+    weighted_avg_col: str = "weighted_ave"
 
     # Ideas
     units: str = "km"
@@ -78,6 +82,10 @@ class CostDistribution:
         for col_name, col_val in cols.items():
             if col_val not in self.df:
                 err_cols.update({col_name: col_val})
+        cols.update({"weighted_avg_col": getattr(self, "weighted_avg_col")})
+
+        if self.weighted_avg_col not in self.df.columns:
+            self.df[self.weighted_avg_col] = self.df[self.avg_col]
 
         # Throw error if missing columns found
         if err_cols != dict():
@@ -141,6 +149,46 @@ class CostDistribution:
         trip_vals = self.trip_vals
         return trip_vals / np.sum(trip_vals)
 
+    @staticmethod
+    def calculate_weighted_averages(
+        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: list[float] | np.ndarray
+    ):
+        """
+        Calculate weighted averages of bins in a cost distribution.
+
+        Parameters
+        ----------
+        matrix: np.ndarray
+            The matrix to calculate the cost distribution for. This matrix
+            should be the same shape as cost_matrix
+
+        cost_matrix: np.ndarray
+            A matrix of cost relating to matrix. This matrix
+            should be the same shape as matrix
+
+        bin_edges: list[float] | np.ndarray
+            Defines a monotonically increasing array of bin edges, including the
+            rightmost edge, allowing for non-uniform bin widths. This argument
+            is passed straight into `numpy.histogram`
+
+        Returns
+        -------
+        np.ndarray
+            An array to be passed into a dataframe as a column.
+        """
+        df = pd.DataFrame(
+            {
+                "cost": pd.DataFrame(cost_matrix).stack(),
+                "demand": pd.DataFrame(matrix).stack(),
+            }
+        )
+        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
+        df["weighted"] = df["cost"] * df["demand"]
+        grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
+        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
+        grouped["averages"] = grouped["weighted"] / grouped["demand"]
+        return grouped["averages"].fillna(grouped["bin_centres"].astype("float")).to_numpy()
+
     @classmethod
     def from_data(
         cls,
@@ -149,7 +197,6 @@ class CostDistribution:
         min_bounds: Optional[list[float] | np.ndarray] = None,
         max_bounds: Optional[list[float] | np.ndarray] = None,
         bin_edges: Optional[list[float] | np.ndarray] = None,
-        calc_averages: bool = False,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -194,27 +241,17 @@ class CostDistribution:
         distribution = cost_distribution(
             matrix=matrix, cost_matrix=cost_matrix, bin_edges=bin_edges
         )
-        if calc_averages is True:
-            df = pd.DataFrame(
-                {
-                    "cost": pd.DataFrame(cost_matrix).stack(),
-                    "demand": pd.DataFrame(matrix).stack(),
-                }
-            )
-            df["bin"] = pd.cut(df["cost"], bins=bin_edges)
-            df["weighted"] = df["cost"] * df["demand"]
-            grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum()
-            averages = (grouped["weighted"] / grouped["demand"]).to_numpy()
-        else:
-            averages = (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2
+
+        averages = cls.calculate_weighted_averages(matrix, cost_matrix, bin_edges)
 
         # Covert data into instance of this class
         df = pd.DataFrame(
             {
                 cls.min_col: bin_edges[:-1],
                 cls.max_col: bin_edges[1:],
-                cls.avg_col: averages,
+                cls.avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
                 cls.trips_col: distribution,
+                cls.weighted_avg_col: averages,
             }
         )
         return CostDistribution(df=df)
@@ -266,6 +303,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "ave",
         trips_col: str = "trips",
+        weighted_avg_col: str = "weighted_ave",
     ) -> CostDistribution:
         """Build an instance from a file on disk.
 
@@ -297,13 +335,14 @@ class CostDistribution:
         """
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not the location of a file.")
-        use_cols = [min_col, max_col, avg_col, trips_col]
+        use_cols = [min_col, max_col, avg_col, trips_col, weighted_avg_col]
         return CostDistribution(
             df=pd.read_csv(filepath, usecols=use_cols),
             min_col=min_col,
             max_col=max_col,
             avg_col=avg_col,
             trips_col=trips_col,
+            weighted_avg_col=weighted_avg_col,
         )
 
     def __validate_similar_bin_edges(self, other: CostDistribution) -> None:
