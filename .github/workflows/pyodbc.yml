@@ -1,4 +1,4 @@
-name: Tests
+name: pyodbc-tests
 
 on:
   push:
@@ -17,6 +17,4 @@ jobs:
 
       - name: Check drivers
         run:
-          python
-          import pyodbc
-          assert isinstance(pyodbc.drivers(), list)
+          python -c "import pyodbc; assert isinstance(pyodbc.drivers(), list)"
