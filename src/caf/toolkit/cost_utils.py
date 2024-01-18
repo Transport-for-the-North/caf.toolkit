@@ -82,8 +82,9 @@ class CostDistribution:
         for col_name, col_val in cols.items():
             if col_val not in self.df:
                 err_cols.update({col_name: col_val})
-        cols.update({"weighted_avg_col": getattr(self, "weighted_avg_col")})
 
+        # Add in the weighted_avg_col if not already in df
+        cols.update({"weighted_avg_col": getattr(self, "weighted_avg_col")})
         if self.weighted_avg_col not in self.df.columns:
             self.df[self.weighted_avg_col] = self.df[self.avg_col]
 
