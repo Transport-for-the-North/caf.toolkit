@@ -8,6 +8,7 @@ from __future__ import annotations
 
 # Built-Ins
 import logging
+import pathlib
 import warnings
 from typing import Any, Optional, TypedDict, TypeVar
 
@@ -16,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import math_utils
+from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
 from caf.toolkit import validators
 
@@ -1065,3 +1066,140 @@ def pandas_multi_vector_zone_translation(
 #  translate_matrix_zoning
 #  get_long_translation
 #  get_long_pop_emp_translations
+
+
+def _load_translation(
+    path: pathlib.Path, from_column: str, to_column: str, factors_column: str
+) -> pd.DataFrame:
+    LOG.info("Loading translation lookup data from: '%s'", path)
+    data = io.read_csv(
+        path,
+        name="translation lookup",
+        usecols=[from_column, to_column, factors_column],
+        dtype={factors_column: float},
+    )
+
+    # Attempt to convert ID columns to integers,
+    # but not necessarily a problem if they aren't
+    for column in (from_column, to_column):
+        data[column] = pd.to_numeric(data[column], downcast="integer", errors="ignore")
+
+    return data
+
+
+def vector_translation_from_file(
+    vector_path: pathlib.Path,
+    translation_path: pathlib.Path,
+    output_path: pathlib.Path,
+    vector_zone_column: str,
+    translation_from_column: str,
+    translation_to_column: str,
+    translation_factors_column: str,
+) -> None:
+    """Translate zoning system of vector CSV file.
+
+    Load vector from CSV, perform translation and write to new CSV.
+
+    Parameters
+    ----------
+    vector_path : pathlib.Path
+        Path to CSV file containing data to be translated.
+    translation_path : pathlib.Path
+        Path to translation lookup CSV.
+    output_path : pathlib.Path
+        CSV path to save the translated data to.
+    vector_zone_column : str
+        Name of the zone ID column in `vector_path` file.
+    translation_from_column : str
+        Name of zone ID column in translation which corresponds
+        to the current vector zone ID.
+    translation_to_column : str
+        Name of column in translation for the new zone IDs.
+    translation_factors_column : str
+        Name of column in translation containing the splitting factors.
+    """
+    LOG.info("Loading vector data from: '%s'", vector_path)
+    vector = io.read_csv(
+        vector_path, index_col=[vector_zone_column], usecols=[vector_zone_column]
+    )
+
+    lookup = _load_translation(
+        translation_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
+    translated = pandas_vector_zone_translation(
+        vector,
+        lookup,
+        translation_from_col=translation_from_column,
+        translation_to_col=translation_to_column,
+        translation_factors_col=translation_factors_column,
+    )
+
+    translated.to_csv(output_path)
+    LOG.info("Written translated CSV to '%s'", output_path)
+
+
+def matrix_translation_from_file(
+    matrix_path: pathlib.Path,
+    translation_path: pathlib.Path,
+    output_path: pathlib.Path,
+    matrix_zone_columns: tuple[str, str],
+    matrix_values_column: str,
+    translation_from_column: str,
+    translation_to_column: str,
+    translation_factors_column: str,
+) -> None:
+    """Translate zoning system of matrix CSV file.
+
+    Load matrix from CSV, perform translation and write to new
+    CSV. CSV files are expected to be in the matrix 'long' format.
+
+    Parameters
+    ----------
+    matrix_path : pathlib.Path
+        Path to matrix CSV file.
+    translation_path : pathlib.Path
+        Path to translation lookup CSV.
+    output_path : pathlib.Path
+        CSV path to save the translated data to.
+    matrix_zone_columns : tuple[str, str]
+        Names of the 2 columns containing the zone IDs in the matrix file.
+    matrix_values_column : str
+        Name of the column containing the matrix values.
+    translation_from_column : str
+        Name of zone ID column in translation which corresponds
+        to the current vector zone ID.
+    translation_to_column : str
+        Name of column in translation for the new zone IDs.
+    translation_factors_column : str
+        Name of column in translation containing the splitting factors.
+    """
+    # TODO(MB) Handle square format CSVs
+    LOG.info("Loading matrix data from: '%s'", matrix_path)
+    matrix = io.read_csv_matrix(
+        matrix_path,
+        format_="long",
+        index_cols=matrix_zone_columns,
+        usecols=[*matrix_zone_columns, matrix_values_column],
+        dtype={matrix_values_column: float},
+    )
+
+    lookup = _load_translation(
+        translation_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
+
+    translated = pandas_matrix_zone_translation(
+        matrix,
+        lookup,
+        translation_from_col=translation_from_column,
+        translation_to_col=translation_to_column,
+        translation_factors_col=translation_factors_column,
+    )
+
+    translated.stack().to_frame().to_csv(output_path)
+    LOG.info("Written translated matrix CSV to '%s'", output_path)

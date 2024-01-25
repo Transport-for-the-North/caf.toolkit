@@ -18,7 +18,7 @@ import pydantic
 
 # Local Imports
 import caf.toolkit as ctk
-from caf.toolkit import arguments, log_helpers
+from caf.toolkit import arguments, log_helpers, translation
 
 ##### CONSTANTS #####
 
@@ -66,8 +66,15 @@ class TranslationArgs(_BaseTranslationArgs):
 
     def run(self):
         """Run vector zone translation with the given arguments."""
-        print(self)
-        raise NotImplementedError("WIP!")
+        translation.vector_translation_from_file(
+            vector_path=self.data_file,
+            translation_path=self.translation_file,
+            output_path=self.output_file,
+            vector_zone_column=self.zone_column,
+            translation_from_column=self.from_column,
+            translation_to_column=self.to_column,
+            translation_factors_column=self.factor_column,
+        )
 
 
 @pydantic.dataclasses.dataclass
@@ -78,11 +85,23 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         default=("origin_id", "destination_id"),
         metadata={"help": "name of 2 columns containing zone IDs for matrix"},
     )
+    value_column: str = dataclasses.field(
+        default="values",
+        metadata={"help": "name of column in the CSV containing the matrix values"},
+    )
 
     def run(self):
         """Run matrix zone translation with the given arguments."""
-        print(self)
-        raise NotImplementedError("WIP!")
+        translation.matrix_translation_from_file(
+            matrix_path=self.data_file,
+            translation_path=self.translation_file,
+            output_path=self.output_file,
+            matrix_zone_columns=self.zone_column,
+            matrix_values_column=self.value_column,
+            translation_from_column=self.from_column,
+            translation_to_column=self.to_column,
+            translation_factors_column=self.factor_column,
+        )
 
 
 def parse_args() -> TranslationArgs | MatrixTranslationArgs:
