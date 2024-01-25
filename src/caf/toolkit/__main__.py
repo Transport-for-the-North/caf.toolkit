@@ -11,6 +11,7 @@ import dataclasses
 import logging
 import pathlib
 import sys
+import warnings
 
 # Third Party
 import pydantic
@@ -37,9 +38,9 @@ class _BaseTranslationArgs(arguments.BaseArgs):
     translation_file: pydantic.FilePath = dataclasses.field(
         metadata={"help": "CSV file containing translation lookup"}
     )
-    output_file: str = dataclasses.field(
-        default="translated.csv",
-        metadata={"help": "file name to save translated output to"},
+    output_file: pathlib.Path = dataclasses.field(
+        default=pathlib.Path("translated.csv"),
+        metadata={"help": "file to save translated output to"},
     )
     from_column: str = dataclasses.field(
         default="from_id",
@@ -84,76 +85,69 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         raise NotImplementedError("WIP!")
 
 
-@pydantic.dataclasses.dataclass
-class Args:
-    """Class for managing (and parsing) command-line arguments for CAF.toolkit."""
+def parse_args() -> TranslationArgs | MatrixTranslationArgs:
+    """Parse and validate command-line arguments."""
+    parser = argparse.ArgumentParser(
+        __package__,
+        description=ctk.__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        help="show caf.toolkit version and exit",
+        action="version",
+        version=f"{__package__} {ctk.__version__}",
+    )
 
-    output_folder: pathlib.Path
-    parameters: TranslationArgs | MatrixTranslationArgs
+    subparsers = parser.add_subparsers(
+        title="CAF Toolkit sub-commands",
+        description="List of all available sub-commands",
+    )
 
-    @classmethod
-    def parse_args(cls) -> Args:
-        """Parse and validate command-line arguments."""
-        parser = argparse.ArgumentParser(
-            __package__,
-            description=ctk.__doc__,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        )
-        parser.add_argument(
-            "-v",
-            "--version",
-            help="show caf.toolkit version and exit",
-            action="version",
-            version=f"{__package__} {ctk.__version__}",
-        )
-        parser.add_argument(
-            "-o",
-            "--output-folder",
-            help="folder to save any outputs in, including log files",
-            type=pathlib.Path,
-            default=pathlib.Path().resolve(),
-        )
+    translate_parser = subparsers.add_parser(
+        "translate",
+        usage="caf.toolkit translate data_file translation_file [options]",
+        help="translate data file to a new zoning system",
+        description="translate data file to a new zoning "
+        "system, using given translation lookup file",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    translate_parser = TranslationArgs.add_arguments(translate_parser)
+    translate_parser.set_defaults(func=TranslationArgs.parse)
 
-        subparsers = parser.add_subparsers(
-            title="Toolkit sub-commands",
-            description="List of all available sub-commands",
-        )
-
-        translate_parser = subparsers.add_parser(
-            "translate",
-            usage="translate data_file translation_file [options]",
-            help="translate data file to a new zoning system",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        )
-        translate_parser = TranslationArgs.add_arguments(translate_parser)
-        translate_parser.set_defaults(func=TranslationArgs.parse)
-
-        matrix_parser = subparsers.add_parser(
-            "matrix_translate",
-            help="caf.toolkit translate a matrix file to a new zoning system",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        )
+    matrix_parser = subparsers.add_parser(
+        "matrix_translate",
+        usage="caf.toolkit matrix_translate data_file translation_file [options]",
+        help="translate a matrix file to a new zoning system",
+        description="translate a matrix file to a new zoning "
+        "system, using given translation lookup file",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "unexpected type format", UserWarning)
         matrix_parser = MatrixTranslationArgs.add_arguments(matrix_parser)
-        matrix_parser.set_defaults(func=MatrixTranslationArgs.parse)
+    matrix_parser.set_defaults(func=MatrixTranslationArgs.parse)
 
-        # Print help if no arguments are given
-        args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
+    # Print help if no arguments are given
+    args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
 
-        return cls(output_folder=args.output_folder, parameters=args.func(args))
+    return args.func(args)
 
 
 def main():
     """Parser command-line arguments and run CAF.toolkit functionality."""
-    args = Args.parse_args()
+    parameters = parse_args()
+    output_folder = parameters.output_file.parent
 
     details = log_helpers.ToolDetails(
         __package__, ctk.__version__, homepage=ctk.__homepage__, source_url=ctk.__source_url__
     )
 
     with log_helpers.LogHelper(
-        __package__, details, log_file=args.output_folder / "caf_toolkit.log"
+        __package__, details, log_file=output_folder / "caf_toolkit.log"
     ):
-        args.parameters.run()
+        parameters.run()
 
 
 if __name__ == "__main__":
