@@ -120,7 +120,7 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
             missing = re.findall(r"'([^']+)'", match.group(1))
             raise MissingColumnsError(name, missing) from err
 
-        if isinstance(kwargs["dtype"], dict):
+        if isinstance(kwargs.get("dtype"), dict):
             # Check what column can't be converted to dtypes
             columns: dict[str, type] = kwargs.pop("dtype")
             df = pd.read_csv(path, **kwargs)
@@ -171,7 +171,7 @@ def read_csv_matrix(
 
     if format_ is None:
         # Determine format by reading top few lines of file
-        matrix = read_csv(path, nrows=3, **kwargs)
+        matrix = read_csv(path, nrows=3)
 
         if len(matrix.columns) == 3:
             format_ = "long"
@@ -182,12 +182,15 @@ def read_csv_matrix(
         else:
             raise ValueError(f"cannot determine format of matrix {path}")
 
+    if "index_col" in kwargs and kwargs["index_col"] is None:
+        kwargs.pop("index_col")
+
     format_ = format_.strip().lower()
     if format_ == "square":
-        matrix = read_csv(path, index_col=None if "index_col" in kwargs else 0, **kwargs)
+        matrix = read_csv(path, index_col=kwargs.pop("index_col", 0), **kwargs)
 
     elif format_ == "long":
-        matrix = read_csv(path, index_col=None if "index_col" in kwargs else [0, 1], **kwargs)
+        matrix = read_csv(path, index_col=kwargs.pop("index_col", [0, 1]), **kwargs)
 
         matrix = matrix.unstack()
         matrix.columns = matrix.columns.droplevel(0)
@@ -200,7 +203,7 @@ def read_csv_matrix(
     matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
-    if (matrix.index != matrix.columns).any():
+    if not matrix.index.equals(matrix.columns):
         warnings.warn(
             f"matrix file ({path.name}) doesn't contain the same "
             "index and columns, these are reindexed so all unique "
@@ -208,7 +211,11 @@ def read_csv_matrix(
             RuntimeWarning,
         )
         # Reindex index to match columns then columns to match index
-        matrix = matrix.reindex(matrix.columns, axis=0)
-        matrix = matrix.reindex(matrix.index, axis=1)
+        if len(matrix.columns) > len(matrix.index):
+            matrix = matrix.reindex(matrix.columns, axis=0)
+            matrix = matrix.reindex(matrix.index, axis=1)
+        else:
+            matrix = matrix.reindex(matrix.index, axis=1)
+            matrix = matrix.reindex(matrix.columns, axis=0)
 
     return matrix
