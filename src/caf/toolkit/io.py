@@ -76,7 +76,7 @@ def safe_dataframe_to_csv(
 
 
 def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFrame:
-    """Wrapper function for `pandas.read_csv` to perform additional checks.
+    """Read CSV files, wraps `pandas.read_csv` to perform additional checks.
 
     Provides more detailed error messages about missing columns.
 

@@ -1081,7 +1081,7 @@ def _load_translation(
 
 
 def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
-    """Checks all `names` are present and are strings in `params`.
+    """Check all `names` are present and are strings in `params`.
 
     Raises TypeError for any `names` which aren't strings in `params`.
     """
