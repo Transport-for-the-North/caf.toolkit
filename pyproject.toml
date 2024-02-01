@@ -31,7 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 lint = [
-    "black>=22.6.0",
+    "black>=24.1.1",
     "mypy>=1.0.0",
     "mypy_extensions>=1.0.0",
     "pydocstyle[toml]>=6.1.1",
