@@ -120,6 +120,10 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
             missing = re.findall(r"'([^']+)'", match.group(1))
             raise MissingColumnsError(name, missing) from err
 
+        match = re.match(r"index (\S+) invalid", str(err), re.IGNORECASE)
+        if match:
+            raise MissingColumnsError(name, [match.group(1)]) from err
+
         if isinstance(kwargs.get("dtype"), dict):
             # Check what column can't be converted to dtypes
             columns: dict[str, type] = kwargs.pop("dtype")

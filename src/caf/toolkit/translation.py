@@ -1061,13 +1061,6 @@ def pandas_multi_vector_zone_translation(
     return translated
 
 
-# TODO(BT): Bring over from normits_demand (once we have zoning systems):
-#  translate_vector_zoning
-#  translate_matrix_zoning
-#  get_long_translation
-#  get_long_pop_emp_translations
-
-
 def _load_translation(
     path: pathlib.Path, from_column: str, to_column: str, factors_column: str
 ) -> pd.DataFrame:
@@ -1085,6 +1078,19 @@ def _load_translation(
         data[column] = pd.to_numeric(data[column], downcast="integer", errors="ignore")
 
     return data
+
+
+def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
+    """Checks all `names` are present and are strings in `params`.
+
+    Raises TypeError for any `names` which aren't strings in `params`.
+    """
+    for name in names:
+        value = params.get(name)
+        if not isinstance(value, str):
+            raise TypeError(
+                f"{name} parameter should be the name of a column not {type(value)}"
+            )
 
 
 def vector_translation_from_file(
@@ -1118,10 +1124,18 @@ def vector_translation_from_file(
     translation_factors_column : str
         Name of column in translation containing the splitting factors.
     """
-    LOG.info("Loading vector data from: '%s'", vector_path)
-    vector = io.read_csv(
-        vector_path, index_col=[vector_zone_column], usecols=[vector_zone_column]
+    # TODO(MB) Add optional from / to unique index parameters,
+    # otherwise infer from translation file
+    _validate_column_name_parameters(
+        locals(),
+        "vector_zone_column",
+        "translation_from_column",
+        "translation_to_column",
+        "translation_factors_column",
     )
+
+    LOG.info("Loading vector data from: '%s'", vector_path)
+    vector = io.read_csv(vector_path, index_col=[vector_zone_column])
 
     lookup = _load_translation(
         translation_path,
@@ -1135,6 +1149,8 @@ def vector_translation_from_file(
         translation_from_col=translation_from_column,
         translation_to_col=translation_to_column,
         translation_factors_col=translation_factors_column,
+        from_unique_index=lookup[translation_from_column].unique().tolist(),
+        to_unique_index=lookup[translation_to_column].unique().tolist(),
     )
 
     translated.to_csv(output_path)
@@ -1177,11 +1193,27 @@ def matrix_translation_from_file(
         Name of column in translation containing the splitting factors.
     """
     # TODO(MB) Handle square format CSVs
+    _validate_column_name_parameters(
+        locals(),
+        "matrix_values_column",
+        "translation_from_column",
+        "translation_to_column",
+        "translation_factors_column",
+    )
+
+    matrix_zone_columns = tuple(matrix_zone_columns)
+    are_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
+    if len(matrix_zone_columns) != 2 or are_strings:
+        raise TypeError(
+            "matrix_zone_columns should be a tuple containing "
+            f"the names of 2 columns not {matrix_zone_columns}"
+        )
+
     LOG.info("Loading matrix data from: '%s'", matrix_path)
     matrix = io.read_csv_matrix(
         matrix_path,
         format_="long",
-        index_cols=matrix_zone_columns,
+        index_col=matrix_zone_columns,
         usecols=[*matrix_zone_columns, matrix_values_column],
         dtype={matrix_values_column: float},
     )
@@ -1201,5 +1233,7 @@ def matrix_translation_from_file(
         translation_factors_col=translation_factors_column,
     )
 
-    translated.stack().to_frame().to_csv(output_path)
+    translated.index.name = matrix.index.name
+    translated.columns.name = matrix.columns.name
+    translated.stack().to_csv(output_path)
     LOG.info("Written translated matrix CSV to '%s'", output_path)
