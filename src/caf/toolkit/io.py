@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Common utility functions for file input and output."""
+from __future__ import annotations
+
 # Built-Ins
 import logging
 import os

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Tests for the {} module"""
+"""Tests for the io module"""
+from __future__ import annotations
+
 # Built-Ins
 import dataclasses
 import pathlib
