@@ -36,26 +36,31 @@ class _BaseTranslationArgs(arguments.BaseArgs):
         metadata={"help": "CSV file containing data to be translated"}
     )
     translation_file: pydantic.FilePath = dataclasses.field(
-        metadata={"help": "CSV file containing translation lookup"}
+        metadata={"help": "CSV file defining how to translate and the weightings to use"}
     )
     output_file: pathlib.Path = dataclasses.field(
         default=pathlib.Path("translated.csv"),
-        metadata={"help": "file to save translated output to"},
+        metadata={"help": "Location to save the translated output"},
     )
     from_column: int | str = dataclasses.field(
         default=0,
         metadata={
-            "help": "name, or position, of column in translation containing from zone id"
+            "help": "The column (name or position) in the translation"
+            " file containing the zone ids to translate from"
         },
     )
     to_column: int | str = dataclasses.field(
         default=1,
-        metadata={"help": "name, or position, of column in translation containing to zone id"},
+        metadata={
+            "help": "The column (name or position) in the translation"
+            " file containing the zone ids to translate to"
+        },
     )
     factor_column: int | str = dataclasses.field(
         default=2,
         metadata={
-            "help": "name, or position, of column in translation containing split factors"
+            "help": "The column (name or position) in the translation"
+            " file containing the weightings between from and to zones"
         },
     )
 
@@ -66,7 +71,9 @@ class TranslationArgs(_BaseTranslationArgs):
 
     zone_column: int | str = dataclasses.field(
         default=0,
-        metadata={"help": "name, or position, of column in data file containing zone ID"},
+        metadata={
+            "help": "The column (name or position) in the data file containing the zone ids"
+        },
     )
 
     def run(self):
@@ -88,13 +95,16 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
 
     zone_column: tuple[int | str, int | str] = dataclasses.field(
         default=(0, 1),
-        metadata={"help": "name, or position, of 2 columns containing zone IDs for matrix"},
+        metadata={
+            "help": "The 2 columns (name or position) in"
+            " the matrix file containing the zone ids"
+        },
     )
     value_column: int | str = dataclasses.field(
         default=2,
         metadata={
-            "help": "name, or position, of column in the"
-            " matrix CSV containing the matrix values"
+            "help": "The column (name or position) in the"
+            " CSV file containing the matrix values"
         },
     )
 
