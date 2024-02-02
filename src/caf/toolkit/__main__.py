@@ -42,17 +42,21 @@ class _BaseTranslationArgs(arguments.BaseArgs):
         default=pathlib.Path("translated.csv"),
         metadata={"help": "file to save translated output to"},
     )
-    from_column: str = dataclasses.field(
-        default="from_id",
-        metadata={"help": "name of column in translation containing from zone id"},
+    from_column: int | str = dataclasses.field(
+        default=0,
+        metadata={
+            "help": "name, or position, of column in translation containing from zone id"
+        },
     )
-    to_column: str = dataclasses.field(
-        default="to_id",
-        metadata={"help": "name of column in translation containing to zone id"},
+    to_column: int | str = dataclasses.field(
+        default=1,
+        metadata={"help": "name, or position, of column in translation containing to zone id"},
     )
-    factor_column: str = dataclasses.field(
-        default="split_factor",
-        metadata={"help": "name of column in translation containing split factors"},
+    factor_column: int | str = dataclasses.field(
+        default=2,
+        metadata={
+            "help": "name, or position, of column in translation containing split factors"
+        },
     )
 
 
@@ -60,8 +64,9 @@ class _BaseTranslationArgs(arguments.BaseArgs):
 class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
 
-    zone_column: str = dataclasses.field(
-        default="zone_id", metadata={"help": "name of column in data file containing zone ID"}
+    zone_column: int | str = dataclasses.field(
+        default=0,
+        metadata={"help": "name, or position, of column in data file containing zone ID"},
     )
 
     def run(self):
@@ -81,13 +86,16 @@ class TranslationArgs(_BaseTranslationArgs):
 class MatrixTranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for matrix zone translation."""
 
-    zone_column: tuple[str, str] = dataclasses.field(
-        default=("origin_id", "destination_id"),
-        metadata={"help": "name of 2 columns containing zone IDs for matrix"},
+    zone_column: tuple[int | str, int | str] = dataclasses.field(
+        default=(0, 1),
+        metadata={"help": "name, or position, of 2 columns containing zone IDs for matrix"},
     )
-    value_column: str = dataclasses.field(
-        default="values",
-        metadata={"help": "name of column in the matrix CSV containing the matrix values"},
+    value_column: int | str = dataclasses.field(
+        default=2,
+        metadata={
+            "help": "name, or position, of column in the"
+            " matrix CSV containing the matrix values"
+        },
     )
 
     def run(self):
@@ -144,9 +152,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         " long format i.e. 3 columns.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "unexpected type format", UserWarning)
-        matrix_parser = MatrixTranslationArgs.add_arguments(matrix_parser)
+    matrix_parser = MatrixTranslationArgs.add_arguments(matrix_parser)
     matrix_parser.set_defaults(func=MatrixTranslationArgs.parse)
 
     # Print help if no arguments are given
@@ -157,17 +163,23 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
 
 def main():
     """Parser command-line arguments and run CAF.toolkit functionality."""
-    parameters = parse_args()
-    output_folder = parameters.output_file.parent
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "unexpected type format", UserWarning)
+        parameters = parse_args()
 
+    log_file = parameters.output_file.parent / "caf_toolkit.log"
     details = log_helpers.ToolDetails(
         __package__, ctk.__version__, homepage=ctk.__homepage__, source_url=ctk.__source_url__
     )
 
-    with log_helpers.LogHelper(
-        __package__, details, log_file=output_folder / "caf_toolkit.log"
-    ):
-        parameters.run()
+    with log_helpers.LogHelper(__package__, details, log_file=log_file):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "once",
+                message=r".*column positions are given instead of names.*",
+                category=UserWarning,
+            )
+            parameters.run()
 
 
 if __name__ == "__main__":

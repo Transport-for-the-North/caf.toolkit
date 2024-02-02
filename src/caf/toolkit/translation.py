@@ -906,7 +906,6 @@ def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
         f"Missing rows count: {len(missing_rows)}\n"
         f"Total value dropped: {total_value_dropped}\n"
         f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
-        RuntimeWarning,
     )
 
 
@@ -1073,8 +1072,17 @@ def pandas_multi_vector_zone_translation(
 
 
 def _load_translation(
-    path: pathlib.Path, from_column: str, to_column: str, factors_column: str
-) -> pd.DataFrame:
+    path: pathlib.Path, from_column: int | str, to_column: int | str, factors_column: int | str
+) -> tuple[pd.DataFrame, tuple[str, str, str]]:
+    """Load translation file and determine name of any column positions given.
+
+    Returns
+    -------
+    pd.DataFrame
+        Translation data.
+    (str, str, str)
+        From, to and factors column names.
+    """
     LOG.info("Loading translation lookup data from: '%s'", path)
     data = io.read_csv(
         path,
@@ -1083,15 +1091,25 @@ def _load_translation(
         dtype={factors_column: float},
     )
 
+    columns = (from_column, to_column, factors_column)
+    str_columns = [data.columns[i] if isinstance(i, int) else i for i in columns]
+
     # Attempt to convert ID columns to integers,
     # but not necessarily a problem if they aren't
-    for column in (from_column, to_column):
+    for column in str_columns[:2]:
         try:
             data[column] = pd.to_numeric(data[column], downcast="integer")
         except ValueError:
             pass
 
-    return data
+    columns = ("from_column", "to_column", "factors_column")
+    LOG.info(
+        "Translation loaded with following columns:\n\t%s",
+        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns)),
+    )
+
+    #  MyPy is confused about the tuple
+    return data, tuple(str_columns)  # type: ignore
 
 
 def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
@@ -1099,22 +1117,32 @@ def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> Non
 
     Raises TypeError for any `names` which aren't strings in `params`.
     """
+    any_positions = False
     for name in names:
         value = params.get(name)
-        if not isinstance(value, str):
+        if isinstance(value, int):
+            any_positions = True
+
+        elif not isinstance(value, str):
             raise TypeError(
                 f"{name} parameter should be the name of a column not {type(value)}"
             )
+
+    if any_positions:
+        warnings.warn(
+            "column positions are given instead of names,"
+            " make sure the columns are in the correct order"
+        )
 
 
 def vector_translation_from_file(
     vector_path: pathlib.Path,
     translation_path: pathlib.Path,
     output_path: pathlib.Path,
-    vector_zone_column: str,
-    translation_from_column: str,
-    translation_to_column: str,
-    translation_factors_column: str,
+    vector_zone_column: str | int,
+    translation_from_column: str | int,
+    translation_to_column: str | int,
+    translation_factors_column: str | int,
 ) -> None:
     """Translate zoning system of vector CSV file.
 
@@ -1128,15 +1156,16 @@ def vector_translation_from_file(
         Path to translation lookup CSV.
     output_path : pathlib.Path
         CSV path to save the translated data to.
-    vector_zone_column : str
-        Name of the zone ID column in `vector_path` file.
-    translation_from_column : str
-        Name of zone ID column in translation which corresponds
-        to the current vector zone ID.
-    translation_to_column : str
-        Name of column in translation for the new zone IDs.
-    translation_factors_column : str
-        Name of column in translation containing the splitting factors.
+    vector_zone_column : str | int
+        Name, or position, of the zone ID column in `vector_path` file.
+    translation_from_column : str | int
+        Name, or position, of zone ID column in translation which
+        corresponds to the current vector zone ID.
+    translation_to_column : str | int
+        Name, or position, of column in translation for the new zone IDs.
+    translation_factors_column : str | int
+        Name, or position, of column in translation containing the
+        splitting factors.
     """
     # TODO(MB) Add optional from / to unique index parameters,
     # otherwise infer from translation file
@@ -1150,8 +1179,14 @@ def vector_translation_from_file(
 
     LOG.info("Loading vector data from: '%s'", vector_path)
     vector = io.read_csv(vector_path, index_col=[vector_zone_column])
+    LOG.info(
+        "Loaded vector data with zone ID (index) column '%s' and %s data columns: %s",
+        vector.index.name,
+        len(vector.columns),
+        ", ".join(vector.columns),
+    )
 
-    lookup = _load_translation(
+    lookup, (from_col, to_col, factors_col) = _load_translation(
         translation_path,
         translation_from_column,
         translation_to_column,
@@ -1160,11 +1195,11 @@ def vector_translation_from_file(
     translated = pandas_vector_zone_translation(
         vector,
         lookup,
-        translation_from_col=translation_from_column,
-        translation_to_col=translation_to_column,
-        translation_factors_col=translation_factors_column,
-        from_unique_index=lookup[translation_from_column].unique().tolist(),
-        to_unique_index=lookup[translation_to_column].unique().tolist(),
+        translation_from_col=from_col,
+        translation_to_col=to_col,
+        translation_factors_col=factors_col,
+        from_unique_index=lookup[from_col].unique().tolist(),
+        to_unique_index=lookup[to_col].unique().tolist(),
     )
 
     translated.to_csv(output_path)
@@ -1175,11 +1210,11 @@ def matrix_translation_from_file(
     matrix_path: pathlib.Path,
     translation_path: pathlib.Path,
     output_path: pathlib.Path,
-    matrix_zone_columns: tuple[str, str],
-    matrix_values_column: str,
-    translation_from_column: str,
-    translation_to_column: str,
-    translation_factors_column: str,
+    matrix_zone_columns: tuple[int | str, int | str],
+    matrix_values_column: int | str,
+    translation_from_column: int | str,
+    translation_to_column: int | str,
+    translation_factors_column: int | str,
 ) -> None:
     """Translate zoning system of matrix CSV file.
 
@@ -1194,17 +1229,19 @@ def matrix_translation_from_file(
         Path to translation lookup CSV.
     output_path : pathlib.Path
         CSV path to save the translated data to.
-    matrix_zone_columns : tuple[str, str]
-        Names of the 2 columns containing the zone IDs in the matrix file.
-    matrix_values_column : str
-        Name of the column containing the matrix values.
-    translation_from_column : str
-        Name of zone ID column in translation which corresponds
-        to the current vector zone ID.
-    translation_to_column : str
-        Name of column in translation for the new zone IDs.
-    translation_factors_column : str
-        Name of column in translation containing the splitting factors.
+    matrix_zone_columns : tuple[int | str, int | str]
+        Names, or positions, of the 2 columns containing
+        the zone IDs in the matrix file.
+    matrix_values_column : int | str
+        Name, or position, of the column containing the matrix values.
+    translation_from_column : int | str
+        Name, or position, of zone ID column in translation which
+        corresponds to the current vector zone ID.
+    translation_to_column : int | str
+        Name, or position, of column in translation for the new zone IDs.
+    translation_factors_column : int | str
+        Name, or position, of column in translation
+        containing the splitting factors.
     """
     # TODO(MB) Handle square format CSVs
     _validate_column_name_parameters(
@@ -1231,8 +1268,14 @@ def matrix_translation_from_file(
         usecols=[*matrix_zone_columns, matrix_values_column],
         dtype={matrix_values_column: float},
     )
+    LOG.info(
+        "Loaded matrix with index from '%s' and columns from '%s' containing %s cells",
+        matrix.index.name,
+        matrix.columns.name,
+        matrix.size,
+    )
 
-    lookup = _load_translation(
+    lookup, (from_col, to_col, factors_col) = _load_translation(
         translation_path,
         translation_from_column,
         translation_to_column,
@@ -1242,9 +1285,9 @@ def matrix_translation_from_file(
     translated = pandas_matrix_zone_translation(
         matrix,
         lookup,
-        translation_from_col=translation_from_column,
-        translation_to_col=translation_to_column,
-        translation_factors_col=translation_factors_column,
+        translation_from_col=from_col,
+        translation_to_col=to_col,
+        translation_factors_col=factors_col,
     )
 
     translated.index.name = matrix.index.name
