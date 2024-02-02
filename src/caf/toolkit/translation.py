@@ -886,6 +886,30 @@ def pandas_single_vector_zone_translation(
     )
 
 
+def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
+    """Warn when zones are missing from vector.
+
+    Produces RuntimeWarning detailing the number of missing rows and
+    the total value, with count of NaN values in the missing rows.
+    """
+    n_nans = np.sum(vector.loc[missing_rows].isna().to_numpy())
+    n_cells = vector.loc[missing_rows].size
+    total_value_dropped = np.nansum(vector.loc[missing_rows].to_numpy())
+    if vector.index.names[0] is None:
+        index_name = "`vector.index`"
+    else:
+        index_name = f"`vector.index` ({vector.index.names[0]})"
+
+    warnings.warn(
+        f"Some zones in {index_name} have not been defined in "
+        "`translation`. These zones will be dropped before translating.\n"
+        f"Missing rows count: {len(missing_rows)}\n"
+        f"Total value dropped: {total_value_dropped}\n"
+        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+        RuntimeWarning,
+    )
+
+
 def pandas_multi_vector_zone_translation(
     vector: pd.DataFrame,
     translation: pd.DataFrame,
@@ -1003,14 +1027,7 @@ def pandas_multi_vector_zone_translation(
                 translation_from
             )
             if len(missing_rows) > 0:
-                total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
-                warnings.warn(
-                    f"Some zones in `vector.index` have not been defined in "
-                    f"`translation`. These zones will be dropped before "
-                    f"translating.\n"
-                    f"Additional rows count: {len(missing_rows)}\n"
-                    f"Total value dropped: {total_value_dropped}"
-                )
+                _vector_missing_warning(vector, list(missing_rows))
 
         else:
             raise ValueError(
@@ -1022,14 +1039,8 @@ def pandas_multi_vector_zone_translation(
     else:
         missing_rows = set(vector.index.to_list()) - set(translation_from)
         if len(missing_rows) > 0:
-            total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
-            warnings.warn(
-                f"Some zones in `vector.index` have not been defined in "
-                f"`translation`. These zones will be dropped before "
-                f"translating.\n"
-                f"Additional rows count: {len(missing_rows)}\n"
-                f"Total value dropped: {total_value_dropped}"
-            )
+            _vector_missing_warning(vector, list(missing_rows))
+
         vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
             [vector.index, translation[translation_from_col]],
         )
@@ -1075,7 +1086,10 @@ def _load_translation(
     # Attempt to convert ID columns to integers,
     # but not necessarily a problem if they aren't
     for column in (from_column, to_column):
-        data[column] = pd.to_numeric(data[column], downcast="integer", errors="ignore")
+        try:
+            data[column] = pd.to_numeric(data[column], downcast="integer")
+        except ValueError:
+            pass
 
     return data
 

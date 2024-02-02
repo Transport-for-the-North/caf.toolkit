@@ -61,7 +61,7 @@ class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
 
     zone_column: str = dataclasses.field(
-        default="zone_id", metadata={"help": "name of column containing zone ID"}
+        default="zone_id", metadata={"help": "name of column in data file containing zone ID"}
     )
 
     def run(self):
@@ -87,7 +87,7 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
     )
     value_column: str = dataclasses.field(
         default="values",
-        metadata={"help": "name of column in the CSV containing the matrix values"},
+        metadata={"help": "name of column in the matrix CSV containing the matrix values"},
     )
 
     def run(self):
@@ -128,7 +128,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         "translate",
         usage="caf.toolkit translate data_file translation_file [options]",
         help="translate data file to a new zoning system",
-        description="translate data file to a new zoning "
+        description="Translate data file to a new zoning "
         "system, using given translation lookup file",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -139,8 +139,9 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         "matrix_translate",
         usage="caf.toolkit matrix_translate data_file translation_file [options]",
         help="translate a matrix file to a new zoning system",
-        description="translate a matrix file to a new zoning "
-        "system, using given translation lookup file",
+        description="Translate a matrix file to a new zoning system, using"
+        " given translation lookup file. Matrix CSV file should be in the"
+        " long format i.e. 3 columns.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     with warnings.catch_warnings():
