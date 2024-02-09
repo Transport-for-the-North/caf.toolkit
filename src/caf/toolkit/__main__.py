@@ -7,7 +7,6 @@ from __future__ import annotations
 
 # Built-Ins
 import argparse
-import dataclasses
 import logging
 import pathlib
 import sys
@@ -18,7 +17,7 @@ import pydantic
 
 # Local Imports
 import caf.toolkit as ctk
-from caf.toolkit import arguments, log_helpers, translation
+from caf.toolkit import arguments, config_base, log_helpers, translation
 
 ##### CONSTANTS #####
 
@@ -28,52 +27,42 @@ LOG = logging.getLogger(__name__)
 ##### CLASSES & FUNCTIONS #####
 
 
-@pydantic.dataclasses.dataclass
-class _BaseTranslationArgs(arguments.BaseArgs):
+class _BaseTranslationArgs(config_base.BaseConfig):
     """Base class for arguments which are the same for matrix and vector translation."""
 
-    data_file: pydantic.FilePath = dataclasses.field(
-        metadata={"help": "CSV file containing data to be translated"}
+    data_file: pydantic.FilePath = pydantic.Field(
+        description="CSV file containing data to be translated"
     )
-    translation_file: pydantic.FilePath = dataclasses.field(
-        metadata={"help": "CSV file defining how to translate and the weightings to use"}
+    translation_file: pydantic.FilePath = pydantic.Field(
+        description="CSV file defining how to translate and the weightings to use"
     )
-    output_file: pathlib.Path = dataclasses.field(
+    output_file: pathlib.Path = pydantic.Field(
         default=pathlib.Path("translated.csv"),
-        metadata={"help": "Location to save the translated output"},
+        description="Location to save the translated output",
     )
-    from_column: int | str = dataclasses.field(
+    from_column: int | str = pydantic.Field(
         default=0,
-        metadata={
-            "help": "The column (name or position) in the translation"
-            " file containing the zone ids to translate from"
-        },
+        description="The column (name or position) in the translation"
+        " file containing the zone ids to translate from",
     )
-    to_column: int | str = dataclasses.field(
+    to_column: int | str = pydantic.Field(
         default=1,
-        metadata={
-            "help": "The column (name or position) in the translation"
-            " file containing the zone ids to translate to"
-        },
+        description="The column (name or position) in the translation"
+        " file containing the zone ids to translate to",
     )
-    factor_column: int | str = dataclasses.field(
+    factor_column: int | str = pydantic.Field(
         default=2,
-        metadata={
-            "help": "The column (name or position) in the translation"
-            " file containing the weightings between from and to zones"
-        },
+        description="The column (name or position) in the translation"
+        " file containing the weightings between from and to zones",
     )
 
 
-@pydantic.dataclasses.dataclass
 class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
 
-    zone_column: int | str = dataclasses.field(
+    zone_column: int | str = pydantic.Field(
         default=0,
-        metadata={
-            "help": "The column (name or position) in the data file containing the zone ids"
-        },
+        description="The column (name or position) in the data file containing the zone ids",
     )
 
     def run(self):
@@ -89,23 +78,18 @@ class TranslationArgs(_BaseTranslationArgs):
         )
 
 
-@pydantic.dataclasses.dataclass
 class MatrixTranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for matrix zone translation."""
 
-    zone_column: tuple[int | str, int | str] = dataclasses.field(
+    zone_column: tuple[int | str, int | str] = pydantic.Field(
         default=(0, 1),
-        metadata={
-            "help": "The 2 columns (name or position) in"
-            " the matrix file containing the zone ids"
-        },
+        description="The 2 columns (name or position) in"
+        " the matrix file containing the zone ids",
     )
-    value_column: int | str = dataclasses.field(
+    value_column: int | str = pydantic.Field(
         default=2,
-        metadata={
-            "help": "The column (name or position) in the"
-            " CSV file containing the matrix values"
-        },
+        description="The column (name or position) in the"
+        " CSV file containing the matrix values",
     )
 
     def run(self):
@@ -150,8 +134,8 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         "system, using given translation lookup file",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    translate_parser = TranslationArgs.add_arguments(translate_parser)
-    translate_parser.set_defaults(func=TranslationArgs.parse)
+    translation_class = arguments.ModelArguments(TranslationArgs)
+    translation_class.add_arguments(translate_parser)
 
     matrix_parser = subparsers.add_parser(
         "matrix_translate",
@@ -162,13 +146,13 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         " long format i.e. 3 columns.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    matrix_parser = MatrixTranslationArgs.add_arguments(matrix_parser)
-    matrix_parser.set_defaults(func=MatrixTranslationArgs.parse)
+    matrix_class = arguments.ModelArguments(MatrixTranslationArgs)
+    matrix_class.add_arguments(matrix_parser)
 
     # Print help if no arguments are given
     args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
 
-    return args.func(args)
+    return args.dataclass_parse_func(args)
 
 
 def main():

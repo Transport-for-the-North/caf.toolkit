@@ -26,7 +26,7 @@ from caf.toolkit import io
 
 
 @dataclasses.dataclass
-class TestDataFrame:
+class DataFrameResults:
     """Stores `read_csv` test data."""
 
     data: pd.DataFrame
@@ -38,7 +38,7 @@ class TestDataFrame:
 
 
 @dataclasses.dataclass
-class TestMatrix:
+class MatrixResults:
     """Stores `read_csv_matrix` test data."""
 
     matrix: pd.DataFrame
@@ -48,7 +48,7 @@ class TestMatrix:
 
 
 @pytest.fixture(name="data", scope="module")
-def fix_data(tmp_path_factory: pytest.TempPathFactory) -> TestDataFrame:
+def fix_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
     """Create test DataFrame and save to CSV."""
     data = pd.DataFrame(
         {
@@ -62,7 +62,7 @@ def fix_data(tmp_path_factory: pytest.TempPathFactory) -> TestDataFrame:
     data.to_csv(path, index=False)
     assert path.is_file(), "error creating CSV file"
 
-    return TestDataFrame(
+    return DataFrameResults(
         data=data,
         columns=["string", "integer", "float"],
         dtypes={"string": str, "integer": int, "float": float},
@@ -82,17 +82,17 @@ def fix_matrix() -> pd.DataFrame:
 
 
 @pytest.fixture(name="square_matrix")
-def fix_square_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> TestMatrix:
+def fix_square_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixResults:
     """Save matrix to CSV in square format."""
     matrix.index.name = "zone_id"
     path = tmp_path / "test_square_matrix.csv"
     matrix.to_csv(path)
 
-    return TestMatrix(matrix, path, "square", "zone_id")
+    return MatrixResults(matrix, path, "square", "zone_id")
 
 
 @pytest.fixture(name="long_matrix")
-def fix_long_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> TestMatrix:
+def fix_long_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixResults:
     """Save matrix to CSV in long format."""
     long = matrix.stack()
     indices = ["origin", "destination"]
@@ -102,7 +102,7 @@ def fix_long_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> TestMatrix:
     path = tmp_path / "test_long_matrix.csv"
     long.to_csv(path)
 
-    return TestMatrix(matrix, path, "long", indices)
+    return MatrixResults(matrix, path, "long", indices)
 
 
 # # # TESTS # # #
@@ -136,13 +136,13 @@ class TestReadCSV:
         with pytest.raises(FileNotFoundError, match=error_pattern):
             io.read_csv(path / filename, name=name)
 
-    def test_simple(self, data: TestDataFrame):
+    def test_simple(self, data: DataFrameResults):
         """Test loading CSV with default parameters."""
         read = io.read_csv(data.path)
 
         pd.testing.assert_frame_equal(data.data, read, check_dtype=False)
 
-    def test_full(self, data: TestDataFrame):
+    def test_full(self, data: DataFrameResults):
         """Test loading CSV with usecols, dtype and index_col parameters."""
         read = io.read_csv(
             data.path, usecols=data.columns, dtype=data.dtypes, index_col=data.columns[0]
@@ -152,7 +152,7 @@ class TestReadCSV:
         # check_dtype set to False because this is very strict i.e. int32 != int64
         pd.testing.assert_frame_equal(read, correct, check_dtype=False)
 
-    def test_missing_columns(self, data: TestDataFrame):
+    def test_missing_columns(self, data: DataFrameResults):
         """Test missing columns error is raised."""
         name = "missing_columns"
         pattern = re.compile(f"columns missing from {name}", re.I)
@@ -163,7 +163,7 @@ class TestReadCSV:
                 data.incorrect_columns
             ), "incorrect columns in exception"
 
-    def test_incorrect_dtypes(self, data: TestDataFrame):
+    def test_incorrect_dtypes(self, data: DataFrameResults):
         """Test correct error is raised for incorrect dtypes."""
         # Find first column as error is raised for first column found
         column_name = None
@@ -194,7 +194,7 @@ class TestReadCSVMatrix:
     ):
         """Test reading matrix for square and long formats,
         with and without defined index columns."""
-        data: TestMatrix = request.getfixturevalue(data_name)
+        data: MatrixResults = request.getfixturevalue(data_name)
 
         if define_index:
             index_col = data.index_col
