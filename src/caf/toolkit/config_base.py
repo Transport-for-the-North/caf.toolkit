@@ -226,18 +226,15 @@ def _is_collection(obj: Any) -> bool:
 
 
 @overload
-def _remove_none_collection(data: list) -> list:
-    ...  # pragma: no cover
+def _remove_none_collection(data: list) -> list: ...  # pragma: no cover
 
 
 @overload
-def _remove_none_collection(data: set) -> set:
-    ...  # pragma: no cover
+def _remove_none_collection(data: set) -> set: ...  # pragma: no cover
 
 
 @overload
-def _remove_none_collection(data: tuple) -> tuple:
-    ...  # pragma: no cover
+def _remove_none_collection(data: tuple) -> tuple: ...  # pragma: no cover
 
 
 def _remove_none_collection(data: list | set | tuple) -> list | set | tuple | None:
