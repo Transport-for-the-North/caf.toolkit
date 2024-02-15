@@ -566,7 +566,7 @@ def pandas_long_matrix_zone_translation(
         If matrix is not a square array, or if translation any inputs are not
         the correct format.
     """
-    # pylint: disable=too-many-args, too-many-locals
+    # pylint: disable=too-many-arguments, too-many-locals
     # Init
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
     all_cols = matrix.columns.tolist()
