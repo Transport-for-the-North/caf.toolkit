@@ -157,8 +157,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["allow", "feasible"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -168,8 +167,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["disallow"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -179,8 +177,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["force"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -190,8 +187,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: SparseLiteral = ...,
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 def dataframe_to_n_dimensional_array(
