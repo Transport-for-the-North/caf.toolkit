@@ -491,8 +491,8 @@ def pandas_long_matrix_zone_translation(
     translation_factors_col: str,
     col_translation: Optional[pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
-    index_col_1_out_name: str = None,
-    index_col_2_out_name: str = None,
+    index_col_1_out_name: Optional[str] = None,
+    index_col_2_out_name: Optional[str] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     """Efficiently translates a pandas matrix between index systems.
