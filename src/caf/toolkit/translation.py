@@ -480,6 +480,48 @@ def numpy_vector_zone_translation(
     return out_vector
 
 
+def pandas_long_matrix_zone_translation(
+    matrix: pd.DataFrame,
+    index_col_1_name: str,
+    index_col_2_name: str,
+    values_col: str,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    col_translation: Optional[pd.DataFrame] = None,
+    translation_dtype: Optional[np.dtype] = None,
+    check_totals: bool = True,
+) -> pd.DataFrame:
+    # Convert to wide to translate
+    wide_mat = pd_utils.long_to_wide_infill(
+        df=matrix,
+        index_col=index_col_1_name,
+        columns_col=index_col_2_name,
+        values_col=values_col,
+        infill=0,
+    )
+
+    translated_wide_mat = pandas_matrix_zone_translation(
+        matrix=wide_mat,
+        translation=translation,
+        translation_from_col=translation_from_col,
+        translation_to_col=translation_to_col,
+        translation_factors_col=translation_factors_col,
+        col_translation=col_translation,
+        translation_dtype=translation_dtype,
+        check_totals=check_totals,
+    )
+
+    # Convert back
+    return pd_utils.wide_to_long_infill(
+        df=translated_wide_mat,
+        index_col_1_name=index_col_1_name,
+        index_col_2_name=index_col_2_name,
+        value_col_name=values_col,
+    )
+
+
 def pandas_matrix_zone_translation(
     matrix: pd.DataFrame,
     translation: pd.DataFrame,
