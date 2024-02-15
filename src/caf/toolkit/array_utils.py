@@ -455,16 +455,14 @@ def broadcast_sparse_matrix(
 def sparse_sum(
     sparse_array: sparse.COO,
     axis: Iterable[int] | int,
-) -> sparse.COO:
-    ...  # pragma: no cover
+) -> sparse.COO: ...  # pragma: no cover
 
 
 @overload
 def sparse_sum(
     sparse_array: sparse.COO,
     axis=None,
-) -> float:
-    ...  # pragma: no cover
+) -> float: ...  # pragma: no cover
 
 
 def sparse_sum(

@@ -579,13 +579,8 @@ def pandas_long_matrix_zone_translation(
     # Drop any columns we're not keeping
     drop_cols = set(all_cols) - set(keep_cols)
     if len(drop_cols) > 0:
-        warnings.warn(
-            f"Extra columns found in matrix, dropping the following: {drop_cols}"
-        )
-    matrix = pd_utils.reindex_cols(
-        df=matrix,
-        columns=keep_cols
-    )
+        warnings.warn(f"Extra columns found in matrix, dropping the following: {drop_cols}")
+    matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
 
     # Convert to wide to translate
     wide_mat = pd_utils.long_to_wide_infill(
@@ -722,7 +717,9 @@ def pandas_matrix_zone_translation(
 
     # Filter warnings for things we've already checked
     with warnings.catch_warnings():
-        warnings.filterwarnings(action="ignore", message="Some zones in `vector.index`", category=UserWarning)
+        warnings.filterwarnings(
+            action="ignore", message="Some zones in `vector.index`", category=UserWarning
+        )
 
         half_done = pandas_multi_vector_zone_translation(
             vector=matrix,
