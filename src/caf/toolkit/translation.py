@@ -624,16 +624,20 @@ def pandas_matrix_zone_translation(
         "check_totals": check_totals,
     }
 
-    half_done = pandas_multi_vector_zone_translation(
-        vector=matrix,
-        translation=row_translation,
-        **common_kwargs,
-    )
-    translated = pandas_multi_vector_zone_translation(
-        vector=half_done.transpose(),
-        translation=col_translation,
-        **common_kwargs,
-    ).transpose()
+    # Filter warnings for things we've already checked
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="ignore", message="Some zones in `vector.index`", category=UserWarning)
+
+        half_done = pandas_multi_vector_zone_translation(
+            vector=matrix,
+            translation=row_translation,
+            **common_kwargs,
+        )
+        translated = pandas_multi_vector_zone_translation(
+            vector=half_done.transpose(),
+            translation=col_translation,
+            **common_kwargs,
+        ).transpose()
 
     if not check_totals:
         return translated
