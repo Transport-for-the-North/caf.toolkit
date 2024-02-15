@@ -493,6 +493,21 @@ def pandas_long_matrix_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
+    # Init
+    keep_cols = [index_col_1_name, index_col_2_name, values_col]
+    all_cols = matrix.columns.tolist()
+
+    # Drop any columns we're not keeping
+    drop_cols = set(all_cols) - set(keep_cols)
+    if len(drop_cols) > 0:
+        warnings.warn(
+            f"Extra columns found in matrix, dropping the following: {drop_cols}"
+        )
+    matrix = pd_utils.reindex_cols(
+        df=matrix,
+        columns=keep_cols
+    )
+
     # Convert to wide to translate
     wide_mat = pd_utils.long_to_wide_infill(
         df=matrix,
