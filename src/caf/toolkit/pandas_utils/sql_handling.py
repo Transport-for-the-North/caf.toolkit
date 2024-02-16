@@ -172,6 +172,8 @@ class MainSqlConf(BaseConfig):
         # Pairs is a list of tuples of table and column name in groups
 
         pairs = []
+        if v is None:
+            return v
         for table in v:
             for column in table.columns:
                 pairs.append((table.table_name, column.column_name))
