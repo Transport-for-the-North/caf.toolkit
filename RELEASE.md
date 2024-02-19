@@ -21,4 +21,7 @@ Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
 
-- Updated Pydantic dependency to v2
+- Migrated Ipf code from here into [caf.distribute](https://github.com/Transport-for-the-North/caf.distribute/pull/33).
+  - Removed numba dependency
+  - Updated requirements
+  - Migrated array_utils as these were only used by caf.distribute.
