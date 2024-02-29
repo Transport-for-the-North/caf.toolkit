@@ -166,12 +166,14 @@ class MainSqlConf(BaseConfig):
 
     # pylint: enable=missing-class-docstring, too-few-public-methods
     # pylint: disable=no-self-argument
-    @pydantic.field_validator("groups")
+    @pydantic.field_validator("groups", )
     def groupbys(cls, v, values):
         """Validate groupby."""
         # Pairs is a list of tuples of table and column name in groups
 
         pairs = []
+        if v is None:
+            return v
         for table in v:
             for column in table.columns:
                 pairs.append((table.table_name, column.column_name))
