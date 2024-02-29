@@ -439,7 +439,7 @@ def numpy_vector_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        translation_dtype = np.find_common_type([vector.dtype, translation.dtype], [])
+        translation_dtype = np.find_common_type([vector.dtype, translation.dtype], [])  # type: ignore
     vector = _convert_dtypes(
         arr=vector,
         to_type=translation_dtype,
