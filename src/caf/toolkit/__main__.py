@@ -126,28 +126,26 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         description="List of all available sub-commands",
     )
 
-    translate_parser = subparsers.add_parser(
+    translation_class = arguments.ModelArguments(TranslationArgs)
+    translation_class.add_subcommands(
+        subparsers,
         "translate",
-        usage="caf.toolkit translate data_file translation_file [options]",
         help="translate data file to a new zoning system",
         description="Translate data file to a new zoning "
         "system, using given translation lookup file",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=arguments.TidyUsageArgumentDefaultsHelpFormatter,
     )
-    translation_class = arguments.ModelArguments(TranslationArgs)
-    translation_class.add_arguments(translate_parser)
 
-    matrix_parser = subparsers.add_parser(
+    matrix_class = arguments.ModelArguments(MatrixTranslationArgs)
+    matrix_class.add_subcommands(
+        subparsers,
         "matrix_translate",
-        usage="caf.toolkit matrix_translate data_file translation_file [options]",
         help="translate a matrix file to a new zoning system",
         description="Translate a matrix file to a new zoning system, using"
         " given translation lookup file. Matrix CSV file should be in the"
         " long format i.e. 3 columns.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=arguments.TidyUsageArgumentDefaultsHelpFormatter,
     )
-    matrix_class = arguments.ModelArguments(MatrixTranslationArgs)
-    matrix_class.add_arguments(matrix_parser)
 
     # Print help if no arguments are given
     args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
@@ -158,7 +156,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
 def main():
     """Parser command-line arguments and run CAF.toolkit functionality."""
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "unexpected type format", UserWarning)
+        warnings.filterwarnings("ignore", category=arguments.TypeAnnotationWarning)
         parameters = parse_args()
 
     log_file = parameters.output_file.parent / "caf_toolkit.log"

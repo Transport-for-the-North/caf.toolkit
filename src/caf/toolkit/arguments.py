@@ -135,8 +135,15 @@ class ModelArguments:
     # TODO(MB) Describe how this would be used, with examples
 
     def __init__(self, model: type) -> None:
+        """
+        Parameters
+        ----------
+        model : type
+            Model used to define arguments, should be
+            a subclass of `pydantic.BaseModel`.
+        """
         if not issubclass(model, pydantic.BaseModel):  # type: ignore
-            raise TypeError(f"`dataclass` should be a pydantic dataclass not {type(model)}")
+            raise TypeError(f"`dataclass` should be a pydantic BaseModel not {type(model)}")
 
         self._model = model
         self._config = issubclass(model, config_base.BaseConfig)
@@ -156,11 +163,6 @@ class ModelArguments:
 
         For more complex argument requirements these should be added manually.
 
-        If a subclass of `config_base.BaseConfig` is provided then an optional
-        sub-command for loading data from a config file will be included, this
-        will allow arguments to be provided or to have them loaded from a config
-        file but not both.
-
         Returns
         -------
         argparse.ArgumentParser
@@ -168,24 +170,6 @@ class ModelArguments:
             set as the 'dataclass_parse_func' parameter which will parse
             the `argparse.Namespace` and output the given dataclass.
         """
-        if self._config:
-            subparsers = parser.add_subparsers(title="Sub-commands")
-            config_parser = subparsers.add_parser(
-                "config",
-                prog=f"{parser.prog} config",
-                description="Load parameters from config file instead of from arguments",
-                help="load parameters from a config file",
-            )
-            config_parser.add_argument(
-                "config_path",
-                type=pathlib.Path,
-                help="path to YAML config file containing run parameters",
-            )
-            config_parser.set_defaults(dataclass_parse_func=self._config_parse)
-
-        else:
-            parser.set_defaults(dataclass_parse_func=self._parse)
-
         for name, field in self._model.model_fields.items():
             type_, _, nargs = parse_arg_details(str(field.annotation))
 
@@ -208,20 +192,77 @@ class ModelArguments:
                 *name_or_flags, type=type_, help=description, default=default, nargs=nargs
             )
 
+        parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
 
-    def _parse(self, args: argparse.Namespace) -> pydantic.dataclasses.PydanticDataclass:
+    def add_config_arguments(self, parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+        """Add config argument to command-line `parser` and adds `dataclass_parse_func`.
+
+        Adds argument for reading parameters from a config and will automatically
+        load the config file in the `dataclass_parse_func`. Will not work if
+        class provided is not a subclass of `config_base.BaseConfig`.
+
+        Returns
+        -------
+        argparse.ArgumentParser
+            Argument parser with `config_path` argument added and a default
+            function set as the 'dataclass_parse_func' parameter which will
+            parse the `argparse.Namespace` and load the parameters from a
+            config.
+
+        Raises
+        ------
+        TypeError
+            If the model class isn't a subclass of `BaseConfig`.
+        """
+        parser.add_argument(
+            "config_path",
+            type=pathlib.Path,
+            help="path to YAML config file containing run parameters",
+        )
+        parser.set_defaults(dataclass_parse_func=self._config_parse)
+
+        return parser
+
+    def add_subcommands(self, subparsers: argparse._SubParsersAction, name: str, **kwargs):
+        """Add sub-commands for CLI arguments and config (if possible).
+
+        Note: config sub-command won't be added if model provided to class
+        isn't a subclass of BaseConfig.
+
+        Parameters
+        ----------
+        subparsers : argparse._SubParsersAction[ArgumentParser]
+            Subparser to add new sub-commands to, created using
+            `argparser.ArgumentParser().add_subparsers()`.
+        name : str
+            Name of the sub-command to add, if config sub-command is
+            added it will be called '{name}-config'.
+        kwargs
+            Keyword arguments to pass to `subparsers.add_parser`.
+        """
+        parser = subparsers.add_parser(name, **kwargs)
+        self.add_arguments(parser)
+
+        if self._config:
+            kwargs.pop("help", None)
+            parser = subparsers.add_parser(
+                f"{name}-config", help=f"run {name} with parameters from config", **kwargs
+            )
+            self.add_config_arguments(parser)
+
+    def _parse(self, args: argparse.Namespace) -> pydantic.BaseModel:
         """Parse `args` for command and return instance of class.
 
         This method will extract attributes from the `args` Namespace
         and use them to instantiate the class, then return the class
         instance.
         """
-        assert pydantic.dataclasses.is_pydantic_dataclass(self._model)  # type: ignore
+        assert issubclass(self._model, pydantic.BaseModel)
 
         data = {}
-        for field in dataclasses.fields(self._model):
-            data[field.name] = getattr(args, field.name)
+        for name in self._model.model_fields:
+            data[name] = getattr(args, name)
 
         return self._model(**data)
 
@@ -235,3 +276,19 @@ class ModelArguments:
         """
         assert issubclass(self._model, config_base.BaseConfig)
         return self._model.load_yaml(args.config_path)
+
+
+class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    """Format usage text to remove optional arguments and just have '[options]'."""
+
+    def _format_usage(
+        self,
+        usage: str | None,
+        actions: argparse.Iterable[argparse.Action],
+        groups: argparse.Iterable[argparse._MutuallyExclusiveGroup],
+        prefix: str | None,
+    ) -> str:
+        usage = super()._format_usage(usage, actions, groups, prefix)
+
+        # Replace all optional arguments
+        return re.sub(r"\[.*\]\s+", "[options] ", usage, flags=re.DOTALL)
