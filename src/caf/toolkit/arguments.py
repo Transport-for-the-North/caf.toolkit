@@ -10,6 +10,7 @@ import argparse
 import logging
 import pathlib
 import re
+from typing import Iterable
 import warnings
 
 # Third Party
@@ -274,7 +275,7 @@ class ModelArguments:
             Parsed command-line arguments with a `config_path` attribute.
         """
         assert issubclass(self._model, config_base.BaseConfig)
-        return self._model.load_yaml(args.config_path)
+        return self._model.load_yaml(args.config_path)  # type: ignore
 
 
 class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
@@ -283,8 +284,8 @@ class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormat
     def _format_usage(
         self,
         usage: str | None,
-        actions: argparse.Iterable[argparse.Action],
-        groups: argparse.Iterable[argparse._MutuallyExclusiveGroup],
+        actions: Iterable[argparse.Action],
+        groups: Iterable[argparse._MutuallyExclusiveGroup],
         prefix: str | None,
     ) -> str:
         usage = super()._format_usage(usage, actions, groups, prefix)
