@@ -135,7 +135,7 @@ class ModelArguments:
     # TODO(MB) Describe how this would be used, with examples
 
     def __init__(self, model: type) -> None:
-        """
+        """Check `model` type.
 
         Parameters
         ----------
