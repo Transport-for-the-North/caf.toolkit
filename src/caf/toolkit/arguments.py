@@ -66,6 +66,40 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     return str, optional
 
 
+def _replace_union(annotation: str) -> str:
+    """Replace any 'Union[??]' annotations with '|'.
+
+    Examples
+    --------
+    >>> _replace_union("union[int, str]")
+    'int | str'
+
+    >>> _replace_union("Union[   int  , str , float]")
+    'int | str | float'
+
+    >>> _replace_union("list[Union[float, int]]")
+    'list[float | int]'
+
+    >>> _replace_union("list[int]")
+    'list[int]'
+
+    >>> _replace_union("tuple[Union[int, float, str], Union[str, int]]")
+    'tuple[int | float | str, str | int]'
+
+    >>> _replace_union("tuple[int, Union[int, str]]")
+    'tuple[int, int | str]'
+    """
+    matches = re.finditer(r"union\[(\s*(?:[\w\d.]+\s*,?\s*)+)\]", annotation, re.IGNORECASE)
+
+    for match in matches:
+        union = " | ".join(i.strip() for i in match.group(1).split(","))
+        annotation = annotation.replace(match.group(0), union)
+
+    if "union" in annotation:
+        return _replace_union(annotation)
+    return annotation
+
+
 def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """Attempt to get argument type from annotation text.
 
@@ -90,6 +124,8 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
         `argparse.ArgumentParser.add_argument`. This will return an int
         if the type is a tuple, '*' for lists and None otherwise.
     """
+    annotation = _replace_union(annotation)
+
     match = re.match(r"^(?:(\w+)?\[)?([\w \t,.|]+)\]?$", annotation.strip())
     if match is None:
         warnings.warn(

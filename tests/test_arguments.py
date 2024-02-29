@@ -61,3 +61,26 @@ class TestParseArgDetails:
         assert type_ == str, "incorrect default type"
         assert optional is False, "incorrect default optional"
         assert nargs is None, "incorrect default nargs"
+
+
+class TestReplaceUnion:
+    """Tests for the `_replace_union` function."""
+
+    @pytest.mark.parametrize(
+        "annotation, expected",
+        [
+            ("union[int, str]", "int | str"),
+            ("Union[   int  , str , float]", "int | str | float"),
+            ("list[Union[float, int]]", "list[float | int]"),
+            ("list[int]", "list[int]"),
+            (
+                "tuple[Union[int, float, str], Union[str, int]]",
+                "tuple[int | float | str, str | int]",
+            ),
+            ("tuple[int, Union[int, str]]", "tuple[int, int | str]"),
+        ],
+    )
+    def test_replace_union(self, annotation: str, expected: str) -> None:
+        """Test `_replace_union` function works as expected."""
+        # pylint: disable=protected-access
+        assert arguments._replace_union(annotation) == expected
