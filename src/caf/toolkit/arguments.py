@@ -10,8 +10,8 @@ import argparse
 import logging
 import pathlib
 import re
-from typing import Iterable
 import warnings
+from typing import Iterable
 
 # Third Party
 import pydantic
@@ -136,6 +136,7 @@ class ModelArguments:
 
     def __init__(self, model: type) -> None:
         """
+
         Parameters
         ----------
         model : type
