@@ -89,11 +89,12 @@ def _replace_union(annotation: str) -> str:
     >>> _replace_union("tuple[int, Union[int, str]]")
     'tuple[int, int | str]'
     """
-    matches = re.finditer(r"union\[(\s*(?:[\w\d.]+\s*,?\s*)+)\]", annotation, re.IGNORECASE)
-
-    for match in matches:
-        union = " | ".join(i.strip() for i in match.group(1).split(","))
-        annotation = annotation.replace(match.group(0), union)
+    annotation = re.sub(
+        r"union\[(\s*(?:[\w\d.]+\s*,?\s*)+)\]",
+        lambda x: " | ".join(i.strip() for i in x.group(1).split(",")),
+        annotation,
+        flags=re.IGNORECASE,
+    )
 
     if "union" in annotation:
         return _replace_union(annotation)
