@@ -1259,7 +1259,7 @@ def matrix_translation_from_file(
         containing the splitting factors.
     """
     # TODO(MB) Handle square format CSVs, and deal with too-many-locals
-    # pylint: disable=too-many-locals 
+    # pylint: disable=too-many-locals
     format_ = "long"
     _validate_column_name_parameters(
         locals(),
