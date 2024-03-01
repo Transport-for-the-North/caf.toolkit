@@ -65,6 +65,7 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         """
         columns = [self.from_column, self.to_column, self.factor_column]
 
+        # pylint: disable=unidiomatic-typecheck
         if any(type(i) != type(columns[0]) for i in columns):
             raise TypeError(
                 "from_column, to_column and factor_column should all be either"
@@ -133,6 +134,7 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         """
         columns = [*self.zone_column, self.value_column]
 
+        # pylint: disable=unidiomatic-typecheck
         if any(type(i) != type(columns[0]) for i in columns):
             raise TypeError(
                 "zone_columns and value_column should all be either"
