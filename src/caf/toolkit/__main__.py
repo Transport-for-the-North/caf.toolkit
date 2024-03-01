@@ -57,6 +57,25 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         " file containing the weightings between from and to zones",
     )
 
+    @pydantic.model_validator(mode="after")
+    def check_translation_column_names(self) -> _BaseTranslationArgs:
+        """Check all columns for translation are either str or int, not both.
+
+        Pandas doesn't allow usecols to contain a mix of str and int.
+        """
+        columns = [self.from_column, self.to_column, self.factor_column]
+
+        if any(type(i) != type(columns[0]) for i in columns):
+            raise TypeError(
+                "from_column, to_column and factor_column should all be either"
+                " a name or position, there cannot be a mix of names and"
+                " positions. The default values for all three are positions"
+                " so if one columnname is given then the other 2 columns"
+                " names are also required."
+            )
+
+        return self
+
 
 class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
@@ -105,6 +124,25 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
             translation_to_column=self.to_column,
             translation_factors_column=self.factor_column,
         )
+
+    @pydantic.model_validator(mode="after")
+    def check_matrix_column_names(self) -> MatrixTranslationArgs:
+        """Check all columns for matrix are either str or int, not both.
+
+        Pandas doesn't allow usecols to contain a mix of str and int.
+        """
+        columns = [*self.zone_column, self.value_column]
+
+        if any(type(i) != type(columns[0]) for i in columns):
+            raise TypeError(
+                "zone_columns and value_column should all be either"
+                " a name or position, there cannot be a mix of names and"
+                " positions. The default values for all three are positions"
+                " so if one columnname is given then the other 2 columns"
+                " names are also required."
+            )
+
+        return self
 
 
 def parse_args() -> TranslationArgs | MatrixTranslationArgs:

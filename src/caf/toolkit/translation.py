@@ -907,6 +907,7 @@ def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
         f"Total value dropped: {total_value_dropped}\n"
         f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
     )
+    LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
 
 def pandas_multi_vector_zone_translation(
@@ -1183,8 +1184,22 @@ def vector_translation_from_file(
         "Loaded vector data with zone ID (index) column '%s' and %s data columns: %s",
         vector.index.name,
         len(vector.columns),
-        ", ".join(vector.columns),
+        ", ".join(f"'{i}'" for i in vector.columns),
     )
+
+    non_numeric = vector.select_dtypes(exclude="number").columns.tolist()
+    if len(non_numeric) > 0:
+        LOG.warning(
+            "Ignoring %s columns containing non-numeric"
+            " data, these will not be translated: %s",
+            len(non_numeric),
+            ", ".join(f"'{i}'" for i in non_numeric),
+        )
+        vector = vector.drop(columns=non_numeric)
+
+    if len(vector.columns) == 0:
+        LOG.error("no numeric columns in vector data to translate")
+        return
 
     lookup, (from_col, to_col, factors_col) = _load_translation(
         translation_path,
@@ -1244,6 +1259,7 @@ def matrix_translation_from_file(
         containing the splitting factors.
     """
     # TODO(MB) Handle square format CSVs
+    format_ = "long"
     _validate_column_name_parameters(
         locals(),
         "matrix_values_column",
@@ -1263,7 +1279,7 @@ def matrix_translation_from_file(
     LOG.info("Loading matrix data from: '%s'", matrix_path)
     matrix = io.read_csv_matrix(
         matrix_path,
-        format_="long",
+        format_=format_,
         index_col=matrix_zone_columns,
         usecols=[*matrix_zone_columns, matrix_values_column],
         dtype={matrix_values_column: float},
@@ -1292,5 +1308,21 @@ def matrix_translation_from_file(
 
     translated.index.name = matrix.index.name
     translated.columns.name = matrix.columns.name
-    translated.stack().to_csv(output_path)
+
+    if format_ == "long":
+        translated = translated.stack().to_frame()
+
+        # Get name of value column
+        if isinstance(matrix_values_column, str):
+            translated.columns = [matrix_values_column]
+        else:
+            headers = io.read_csv(
+                matrix_path,
+                index_col=matrix_zone_columns,
+                usecols=[*matrix_zone_columns, matrix_values_column],
+                nrows=2,
+            )
+            translated.columns = headers.columns
+
+    translated.to_csv(output_path)
     LOG.info("Written translated matrix CSV to '%s'", output_path)
