@@ -5,6 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import copy
 import dataclasses
+import pathlib
 import sys
 from typing import Any, Optional
 
@@ -15,7 +16,7 @@ import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import translation
+from caf.toolkit import io, translation
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -1318,3 +1319,161 @@ class TestPandasMatrixParams:
                 result = result.astype(pd_mat.expected_result.dtypes[1])
 
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+
+# ## READ FILE TRANSLATION FIXTURES & TESTS ## #
+@dataclasses.dataclass
+class PandasFileVectorResults:
+    """Parameters and results for vector file translation tests."""
+
+    vector_path: pathlib.Path
+    vector_zone_column: str
+    translation_path: pathlib.Path
+    translation_from_column: str
+    translation_to_column: str
+    translation_factors_column: str
+    expected: pd.DataFrame
+
+
+@dataclasses.dataclass
+class PandasFileMatrixResults:
+    """Parameters and results for matrix file translation tests."""
+
+    matrix_path: pathlib.Path
+    matrix_zone_columns: str
+    matrix_value_column: str
+    translation_path: pathlib.Path
+    translation_from_column: str
+    translation_to_column: str
+    translation_factors_column: str
+    expected: pd.DataFrame
+
+
+@pytest.fixture(name="vector_file_translation")
+def fix_vector_file_translation(
+    tmp_path: pathlib.Path,
+    pd_multi_vector_multiindex: PandasMultiVectorResults,
+) -> PandasFileVectorResults:
+    """Write vector translation test files to temp directory."""
+    data = pd_multi_vector_multiindex.vector
+    data.index.name = "zone_id"
+    trans_data = pd_multi_vector_multiindex.translation
+
+    data_path = tmp_path / "test_vector_data.csv"
+    assert not data_path.is_file(), "test vector file already exists"
+    data.to_csv(data_path)
+    assert data_path.is_file(), "test vector file not created"
+
+    translation_path = tmp_path / "test_translation.csv"
+    assert not translation_path.is_file(), "test translation file already exists"
+    trans_data.df.to_csv(translation_path, index=False)
+    assert translation_path.is_file(), "test translation not created"
+
+    return PandasFileVectorResults(
+        vector_path=data_path,
+        vector_zone_column=data.index.name,
+        translation_path=translation_path,
+        translation_from_column=trans_data.translation_from_col,
+        translation_to_column=trans_data.translation_to_col,
+        translation_factors_column=trans_data.translation_factors_col,
+        expected=pd_multi_vector_multiindex.expected_result,
+    )
+
+
+@pytest.fixture(name="matrix_file_translation")
+def fix_matrix_file_translation(
+    tmp_path: pathlib.Path,
+    pd_matrix_split: PandasMatrixResults,
+) -> PandasFileMatrixResults:
+    """Write matrix translation test files to temp directory."""
+    # Convert square to long format
+    data = pd_matrix_split.mat.stack().to_frame()
+    data.index.names = ["origin", "destination"]
+    data.columns = ["value"]
+    trans_data = pd_matrix_split.translation
+
+    expected = pd_matrix_split.expected_result
+    expected.index.name = data.index.names[0]
+    expected.columns.name = data.index.names[1]
+
+    data_path = tmp_path / "test_data_matrix_long.csv"
+    assert not data_path.is_file(), "test vector file already exists"
+    data.to_csv(data_path)
+    assert data_path.is_file(), "test vector file not created"
+
+    translation_path = tmp_path / "test_translation.csv"
+    assert not translation_path.is_file(), "test translation file already exists"
+    trans_data.df.to_csv(translation_path, index=False)
+    assert translation_path.is_file(), "test translation not created"
+
+    return PandasFileMatrixResults(
+        matrix_path=data_path,
+        matrix_zone_columns=data.index.names,
+        matrix_value_column=data.columns[0],
+        translation_path=translation_path,
+        translation_from_column=trans_data.translation_from_col,
+        translation_to_column=trans_data.translation_to_col,
+        translation_factors_column=trans_data.translation_factors_col,
+        expected=expected,
+    )
+
+
+class TestVectorTranslationFromFile:
+    """Tests for the `vector_translation_from_file` function."""
+
+    def test_simple(self, vector_file_translation: PandasFileVectorResults) -> None:
+        """Test standard translation of vector file with all arguments."""
+        output_path = vector_file_translation.vector_path.parent / "test_result.csv"
+        translation.vector_translation_from_file(
+            vector_path=vector_file_translation.vector_path,
+            translation_path=vector_file_translation.translation_path,
+            output_path=output_path,
+            vector_zone_column=vector_file_translation.vector_zone_column,
+            translation_from_column=vector_file_translation.translation_from_column,
+            translation_to_column=vector_file_translation.translation_to_column,
+            translation_factors_column=vector_file_translation.translation_factors_column,
+        )
+
+        assert output_path.is_file(), "translated vector not created"
+        result = io.read_csv(
+            output_path, index_col=vector_file_translation.translation_to_column
+        )
+        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        pd.testing.assert_frame_equal(
+            result,
+            vector_file_translation.expected,
+            check_dtype=False,
+            check_column_type=False,
+            check_index_type=False,
+        )
+
+
+class TestMatrixTranslationFromFile:
+    """Tests for `matrix_translation_from_file` function."""
+
+    def test_long_matrix(self, matrix_file_translation: PandasFileMatrixResults) -> None:
+        """Test translation of matrix file in long format."""
+        output_path = matrix_file_translation.matrix_path.parent / "test_result.csv"
+        translation.matrix_translation_from_file(
+            matrix_path=matrix_file_translation.matrix_path,
+            translation_path=matrix_file_translation.translation_path,
+            output_path=output_path,
+            matrix_zone_columns=matrix_file_translation.matrix_zone_columns,
+            matrix_values_column=matrix_file_translation.matrix_value_column,
+            translation_from_column=matrix_file_translation.translation_from_column,
+            translation_to_column=matrix_file_translation.translation_to_column,
+            translation_factors_column=matrix_file_translation.translation_factors_column,
+        )
+
+        assert output_path.is_file(), "translated matrix not created"
+        result = io.read_csv_matrix(output_path, format_="long")
+        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        pd.testing.assert_frame_equal(
+            result,
+            matrix_file_translation.expected,
+            check_dtype=False,
+            check_column_type=False,
+            check_index_type=False,
+        )
