@@ -18,6 +18,7 @@ from pathlib import Path
 from caf.toolkit.pandas_utils import sql_handling
 import pandas as pd
 import pyodbc
+from pydantic_core import _pydantic_core
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -150,6 +151,20 @@ def fixture_tables():
         sql_handling.TableColumns(table_name="Zones", columns=cols_2),
     ]
 
+@pytest.fixture(name="tables_fail", scope="session")
+def fixture_tables_fail():
+    cols_1 = [
+        sql_handling.Column(column_name="2021", groupby_fn="SUM"),
+        sql_handling.Column(column_name="Mode"),
+    ]
+    cols_2 = [
+        sql_handling.Column(column_name="Authority"),
+    ]
+    return [
+        sql_handling.TableColumns(table_name="_", columns=cols_1),
+        sql_handling.TableColumns(table_name="_", columns=cols_2),
+    ]
+
 
 @pytest.fixture(name="group", scope="session")
 def fixture_group():
@@ -158,6 +173,26 @@ def fixture_group():
     return [
         sql_handling.TableColumns(table_name="Zones", columns=zones_group),
         sql_handling.TableColumns(table_name="TripEndDataByDirection", columns=te_group),
+    ]
+
+@pytest.fixture(name="group_fail", scope="session")
+def fixture_group_fail():
+    zones_group = [sql_handling.Column(column_name="Authority")]
+    te_group = [sql_handling.Column(column_name="Mode")]
+    return [
+        sql_handling.TableColumns(table_name="_", columns=zones_group),
+        sql_handling.TableColumns(table_name="_", columns=te_group),
+    ]
+
+@pytest.fixture(name="fail_join", scope="session")
+def fixture_fail_join():
+    return [
+        sql_handling.JoinInfo(
+            left_table="TripEndDataByDirection",
+            right_table="Zones",
+            left_column="ZoneID",
+            right_column="_",
+        )
     ]
 
 
@@ -180,44 +215,68 @@ def fixture_build_query_class(data_path, tables, joins, group):
     )
     return sql_handling.QueryBuilder(conf)
 
+@pytest.fixture(name="fail_join_test", scope="session")
+def fixture_build_fail_join_class(data_path, tables, fail_join, group):
+    conf = sql_handling.MainSqlConf(
+        file=data_path / "testing_ntem_db.mdb", tables=tables, joins=fail_join, groups=group
+    )
+    return sql_handling.QueryBuilder(conf)
 
-@pytest.fixture(name="expected_out", scope="session")
-def fixture_expected_out():
-    return pd.DataFrame({"age": {1: 30, 2: 25, 3: 35}, "address": {1: 1, 2: 1, 3: 1}})
+@pytest.fixture(name="fail_tables_test", scope="session")
+def fixture_build_fail_tables_class(data_path, tables_fail, joins, group):
+    conf = sql_handling.MainSqlConf(
+        file=data_path / "testing_ntem_db.mdb", tables=tables_fail, joins=joins, groups=group
+    )
+    return sql_handling.QueryBuilder(conf)
 
+@pytest.fixture(name="expected_columns", scope="session")
+def fixture_expected_columns():
+    return ["Authority", "Mode", "2021"]
 
-@pytest.fixture(name="where", scope="session")
-def fixture_where():
-    return [sql_handling.WhereInfo(table="table1", column="age", operator=">", match=25)]
+class TestSqlHandling:
+    def test_connection(self, query_test):
+        try:
+            query_test.load_db()
+        except Exception as e:
+            raise ConnectionError(f"connection to db failed - {e}")
+        assert True
 
+    def test_columns(self, query_test, expected_columns):
+        read = query_test.load_db().reset_index()
 
-@pytest.fixture(name="where_table", scope="session")
-def fixture_where_table():
-    return [
-        sql_handling.TableColumns(
-            table_name="table1",
-            columns=[
-                sql_handling.Column(column_name="age"),
-                sql_handling.Column(column_name="email"),
-            ],
-        )
-    ]
+        for col in expected_columns:
+            if col in read.columns:
+                continue
+            else:
+                raise ValueError(f"expected {col} in output got {read.columns}")
 
+    def test_fail_join(self, fail_join_test):
+        with pytest.raises(pyodbc.ProgrammingError) as e_info:
+            fail_join_test.load_db()
+        
+    def test_fail_join(self, data_path, tables_fail, joins, group):
+         with pytest.raises(ValueError) as e_info:
+            conf = sql_handling.MainSqlConf(
+                file= data_path / "testing_ntem_db.mdb", tables=tables_fail, joins=joins, groups=group
+            )
+            sql_handling.QueryBuilder(conf)
+        
 
-@pytest.fixture(name="expected_where", scope="session")
-def fixture_expected_where():
-    return pd.DataFrame({"age": {1: 30, 3: 35}, "address": {1: 1, 3: 1}})
+    def test_fail_group(self, data_path, tables, joins, group_fail):
+        
+        with pytest.raises(ValueError) as e_info:
+            conf = sql_handling.MainSqlConf(
+                file=data_path / "testing_ntem_db.mdb", tables=tables, joins=joins, groups=group_fail
+            )
+            sql_handling.QueryBuilder(conf)
 
+    
+    def test_fail_data(self, data_path, tables, joins, group):
+        
+        with pytest.raises(pyodbc.Error) as e_info:
+            conf = sql_handling.MainSqlConf(
+                file=data_path / "Isaac_Scott_puts_the_milk_in_first.mdb", tables=tables, joins=joins, groups=group
+            )
+            sql_handling.QueryBuilder(conf)
 
-@pytest.fixture(name="where_conf", scope="session")
-def fixture_where_conf(where, where_table, testing_db):
-    return sql_handling.MainSqlConf(file=testing_db, tables=where_table, wheres=where)
-
-
-class TestBroad:
-    def test_connection(self, query_test, expected_simple):
-        read = query_test.load_db()
-        assert expected_simple.astype("int").equals(read.astype("int"))
-
-    # def test_where(self, where_conf, expected_where):
-    #     assert sql_handling.QueryBuilder(where_conf).load_db().equals(expected_where)
+    
