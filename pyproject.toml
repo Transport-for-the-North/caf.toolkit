@@ -111,6 +111,7 @@ add-ignore = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 addopts = '--cov=caf --cov-report=xml --doctest-modules -n auto'
+# addopts = '--cov=caf --cov-report=xml --doctest-modules'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = [
     "serial: marks tests to not run in parallel",
