@@ -234,7 +234,7 @@ def _pandas_matrix_validation(
             f"Total value dropped: {total_value_dropped}"
         )
 
-    # Throw a warning if any index values are in the matrix, but not in the
+    # Throw a warning if any column values are in the matrix, but not in the
     # col_translation. These values will just be dropped.
     translation_from = col_translation[translation_from_col].unique()
     missing_cols = set(matrix.columns.to_list()) - set(translation_from)
