@@ -1037,7 +1037,7 @@ class TestPandasMultiVector:
         new_trans = pd_vector.translation.df.copy()
         new_trans = pd.concat([new_trans, new_rows], ignore_index=True)
 
-        # Check that the transaltion still works as before
+        # Check that the translation still works as before
         result = translation.pandas_multi_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans})
         )
@@ -1243,7 +1243,7 @@ class TestPandasMatrixParams:
         Tests the matrix aggregation, using 2 different translations, and
         translation splitting.
         """
-        pd_mat = request.getfixturevalue(pd_matrix_str)
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
@@ -1254,6 +1254,40 @@ class TestPandasMatrixParams:
                 result = result.astype(pd_mat.expected_result.dtypes[1])
 
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+    def test_additional_index(self, pd_matrix_str: str, check_totals: bool, request):
+        """Check a warning is raised if no translation exists for an index value."""
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
+
+        # Make new row to add
+        add_df = pd.DataFrame(
+            data=np.expand_dims(np.zeros(pd_mat.mat.shape[0]), 0),
+            columns=pd_mat.mat.columns,
+            index=[pd_mat.mat.index.max() + 1]
+        )
+        new_df = pd.concat([pd_mat.mat, add_df])
+
+        # Expect the error
+        msg = "zones in `matrix.index` have not been defined in `row_translation`"
+        with pytest.warns(UserWarning, match=msg):
+            translation.pandas_matrix_zone_translation(
+                **pd_mat.input_kwargs(check_totals=check_totals) | {"matrix": new_df}
+            )
+
+    def test_additional_column(self, pd_matrix_str: str, check_totals: bool, request):
+        """Check a warning is raised if no translation exists for a column value."""
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
+
+        # Add an additional columns
+        new_df = pd_mat.mat.copy()
+        new_df[pd_mat.mat.columns.max() + 1] = np.zeros(pd_mat.mat.shape[1])
+
+        # Expect the error
+        msg = "zones in `matrix.columns` have not been defined in `col_translation`"
+        with pytest.warns(UserWarning, match=msg):
+            translation.pandas_matrix_zone_translation(
+                **pd_mat.input_kwargs(check_totals=check_totals) | {"matrix": new_df}
+            )
 
     @pytest.mark.parametrize("row", [True, False])
     def test_check_allow_similar_types(
