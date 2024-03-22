@@ -1263,7 +1263,7 @@ class TestPandasMatrixParams:
         add_df = pd.DataFrame(
             data=np.expand_dims(np.zeros(pd_mat.mat.shape[0]), 0),
             columns=pd_mat.mat.columns,
-            index=[pd_mat.mat.index.max() + 1]
+            index=[pd_mat.mat.index.max() + 1],
         )
         new_df = pd.concat([pd_mat.mat, add_df])
 
