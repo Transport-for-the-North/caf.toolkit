@@ -4,20 +4,16 @@ from __future__ import annotations
 
 # Built-Ins
 import dataclasses
-
 from typing import Any
 
-import pandas as pd
-
 # Third Party
-import pytest
 import numpy as np
-
+import pandas as pd
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import cost_utils
-from caf.toolkit import math_utils
+from caf.toolkit import cost_utils, math_utils
 
 # pylint: enable=import-error,wrong-import-position
 

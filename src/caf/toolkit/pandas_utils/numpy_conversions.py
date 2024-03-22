@@ -3,30 +3,20 @@
 from __future__ import annotations
 
 # Built-Ins
+import functools
 import logging
 import operator
 import warnings
-import functools
-
-from typing import Any
-from typing import Literal
-from typing import Optional
-from typing import overload
-from typing import Collection
+from typing import Any, Collection, Literal, Optional, overload
 
 # Third Party
-import sparse
 import numpy as np
 import pandas as pd
+import sparse
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
+from caf.toolkit.core import SparseLiteral, WarningActionKind
 from caf.toolkit.pandas_utils import df_handling
-
-from caf.toolkit.core import SparseLiteral
-from caf.toolkit.core import WarningActionKind
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -167,8 +157,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["allow", "feasible"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -178,8 +167,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["disallow"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -189,8 +177,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: Literal["force"],
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 @overload
@@ -200,8 +187,7 @@ def dataframe_to_n_dimensional_array(
     sparse_ok: SparseLiteral = ...,
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
     fill_val: Any = ...,
-) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]:
-    ...  # pragma: no cover
+) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
 def dataframe_to_n_dimensional_array(

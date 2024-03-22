@@ -14,8 +14,9 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import sys
+# Built-Ins
 import os
+import sys
 from pathlib import Path
 
 dir_path = Path(__file__).parents[1]
@@ -31,6 +32,7 @@ author = "Transport for the North"
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+# Local Imports
 # The short X.Y version.
 import caf.toolkit
 

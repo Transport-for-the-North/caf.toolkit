@@ -5,12 +5,11 @@ from __future__ import annotations
 # Built-Ins
 import dataclasses
 import operator
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
 # Third Party
-import pytest
 import numpy as np
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
