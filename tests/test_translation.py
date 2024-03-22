@@ -1074,6 +1074,7 @@ class TestPandasMultiVector:
 
     def test_multiindex(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
         """Test that a multiindex is allowed."""
+        # Setup
         new_vector = pd_multi_vector_multiindex.vector.copy()
         new_vector.index.names = ["from_zone_id"]
         factors = [1, 2, 3, 2, 5, 3, 6, 8, 2, 3]
@@ -1081,9 +1082,14 @@ class TestPandasMultiVector:
             [new_vector.index, ["A", "B"]], names=["from_zone_id", "extra_seg"]
         )
         multi_vector = new_vector.mul(pd.Series(data=factors, index=multiindex), axis="index")
-        result = translation.pandas_multi_vector_zone_translation(
-            **(pd_multi_vector_multiindex.input_kwargs() | {"vector": multi_vector})
-        )
+
+        # Expect a multiindex warning
+        with pytest.warns(UserWarning, match="input vector is MultiIndexed"):
+            result = translation.pandas_multi_vector_zone_translation(
+                **(pd_multi_vector_multiindex.input_kwargs() | {"vector": multi_vector})
+            )
+
+        # Calculate the expected result
         expected = pd.DataFrame(
             {
                 0: {
