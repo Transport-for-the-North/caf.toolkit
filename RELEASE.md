@@ -20,10 +20,6 @@ there.
 Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
-
-- Updated Pydantic dependency to v2
-- Added command-line interface with functionality for translation and matrix translation
-- Added new functions for performing translations when given file paths
-  `translation.vector_translation_from_file` and `translation.matrix_translation_from_file`
-- Added new io functions for reading CSV vector and matrix files
-  `io.read_csv` and `io.read_csv_matrix`
+- translations
+  - Fixed a bug where 0 values would cause the translation to run out of memory
+  - Fixed a bug where the columns of an array were not correctly being validated on a pandas matrix translation
