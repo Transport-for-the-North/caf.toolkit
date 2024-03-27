@@ -41,6 +41,9 @@ class CostDistFnResults:
             self.normalised_distribution = np.zeros_like(self.distribution)
         else:
             self.normalised_distribution = self.distribution / self.distribution.sum()
+            self.weighted_avg = cost_utils.CostDistribution.calculate_weighted_averages(
+                matrix=self.matrix, cost_matrix=self.cost_matrix, bin_edges=self.bin_edges
+            )
 
 
 @dataclasses.dataclass
@@ -72,6 +75,7 @@ class CostDistClassResults(CostDistFnResults):
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
+    weighted_avg_col: str = "weighted_ave"
 
     def __post_init__(self):
         super().__post_init__()
@@ -83,6 +87,7 @@ class CostDistClassResults(CostDistFnResults):
                 self.max_col: self.max_bounds,
                 self.avg_col: self.avg_bounds,
                 self.trips_col: self.distribution,
+                self.weighted_avg_col: self.weighted_avg,
             }
         )
         self.normalised_df = pd.DataFrame(
@@ -91,6 +96,7 @@ class CostDistClassResults(CostDistFnResults):
                 self.max_col: self.max_bounds,
                 self.avg_col: self.avg_bounds,
                 self.trips_col: self.normalised_distribution,
+                self.weighted_avg_col: self.weighted_avg,
             }
         )
 
@@ -115,6 +121,7 @@ class CostDistClassResults(CostDistFnResults):
             self.max_col: "max",
             self.avg_col: "ave",
             self.trips_col: "trips",
+            self.weighted_avg_col: "weighted_ave",
         }
         return self.df.rename(columns=naming_dict)
 
