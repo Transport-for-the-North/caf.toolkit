@@ -67,7 +67,7 @@ class TestParseArgs:
 
     @pytest.mark.parametrize("type_", ["translate", "matrix_translate"])
     def test_min_parameters(self, dummy_files: dict[str, pathlib.Path], type_) -> None:
-        """Testing running with bare minumum arguments."""
+        """Testing running with bare minimum arguments."""
         sys.argv = [
             "caf.toolkit",
             type_,

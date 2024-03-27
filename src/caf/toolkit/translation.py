@@ -234,14 +234,14 @@ def _pandas_matrix_validation(
             f"Total value dropped: {total_value_dropped}"
         )
 
-    # Throw a warning if any index values are in the matrix, but not in the
+    # Throw a warning if any column values are in the matrix, but not in the
     # col_translation. These values will just be dropped.
     translation_from = col_translation[translation_from_col].unique()
-    missing_cols = set(matrix.index.to_list()) - set(translation_from)
+    missing_cols = set(matrix.columns.to_list()) - set(translation_from)
     if len(missing_cols) > 0:
         total_value_dropped = matrix[list(missing_cols)].to_numpy().sum()
         warnings.warn(
-            f"Some zones in `{name}.index` have not been defined in "
+            f"Some zones in `{name}.columns` have not been defined in "
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
@@ -317,6 +317,7 @@ def numpy_matrix_zone_translation(
         Will raise an error if matrix is not a square array, or if translation
         does not have the same number of rows as matrix.
     """
+    # pylint: disable=too-many-locals
     # Init
     translation_from_col = "from_id"
     translation_to_col = "to_id"
@@ -343,9 +344,14 @@ def numpy_matrix_zone_translation(
     pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_row_translation[translation_factors_col] == 0
+    pd_row_translation = pd_row_translation[~zero_mask]
+
     pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_col_translation[translation_factors_col] == 0
+    pd_col_translation = pd_col_translation[~zero_mask]
 
     return pandas_matrix_zone_translation(
         matrix=pd.DataFrame(data=matrix, columns=from_id_vals, index=from_id_vals),
@@ -557,11 +563,13 @@ def pandas_matrix_zone_translation(
     # Set the index dtypes to match and validate
     (
         matrix.index,
+        matrix.columns,
         row_translation[translation_from_col],
         col_translation[translation_from_col],
     ) = pd_utils.cast_to_common_type(
         [
             matrix.index,
+            matrix.columns,
             row_translation[translation_from_col],
             col_translation[translation_from_col],
         ]
@@ -580,19 +588,24 @@ def pandas_matrix_zone_translation(
         "translation_to_col": translation_to_col,
         "translation_factors_col": translation_factors_col,
         "translation_dtype": translation_dtype,
-        "check_totals": check_totals,
+        "check_totals": False,
     }
 
-    half_done = pandas_multi_vector_zone_translation(
-        vector=matrix,
-        translation=row_translation,
-        **common_kwargs,
-    )
-    translated = pandas_multi_vector_zone_translation(
-        vector=half_done.transpose(),
-        translation=col_translation,
-        **common_kwargs,
-    ).transpose()
+    with warnings.catch_warnings():
+        # Ignore the warnings we've already checked for
+        msg = ".*zones will be dropped.*"
+        warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
+
+        half_done = pandas_multi_vector_zone_translation(
+            vector=matrix,
+            translation=row_translation,
+            **common_kwargs,
+        )
+        translated = pandas_multi_vector_zone_translation(
+            vector=half_done.transpose(),
+            translation=col_translation,
+            **common_kwargs,
+        ).transpose()
 
     if not check_totals:
         return translated
@@ -1037,13 +1050,13 @@ def pandas_multi_vector_zone_translation(
                 "a vector with a single index to use."
             )
     else:
+        vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
+            [vector.index, translation[translation_from_col]],
+        )
         missing_rows = set(vector.index.to_list()) - set(translation_from)
         if len(missing_rows) > 0:
             _vector_missing_warning(vector, list(missing_rows))
 
-        vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-            [vector.index, translation[translation_from_col]],
-        )
         # Doesn't matter if it already equals this, quicker than checking.
         vector.index.names = [translation_from_col]
         ind_names = []
