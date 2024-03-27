@@ -22,7 +22,7 @@ import pytest
 
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
-from caf.toolkit.log_helpers import capture_warnings, get_logger
+from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -438,6 +438,40 @@ class TestLogHelper:
             _run_warnings()
 
         _check_warnings(caplog.text)
+
+    def test_no_handlers_warning(self, log_init: LogInitDetails) -> None:
+        """Test LogHelper warns when no handlers are defined."""
+        with pytest.warns(
+            LoggingWarning, match="LogHelper initialised without any logging handlers"
+        ):
+            with LogHelper(
+                "test", log_init.details, console=False, warning_capture=False
+            ) as helper:
+                assert helper.logger.handlers == [], "incorrect handlers"
+
+    @pytest.mark.parametrize("warning_capture", [False, True])
+    def test_add_handler(
+        self, log_init: LogInitDetails, warning_capture: bool, warnings_logger: logging.Logger
+    ) -> None:
+        """Test creating LogHelper without loggers and adding StreamHandler after."""
+        # pylint: disable=protected-access
+        stream = logging.StreamHandler()
+
+        with LogHelper(
+            "test", log_init.details, console=False, warning_capture=warning_capture
+        ) as helper:
+            assert helper.logger.handlers == [], "logger already has handlers"
+            assert warnings_logger.handlers == [], "warnings logger already has handlers"
+
+            helper.add_handler(stream)
+            assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+
+            if warning_capture:
+                assert warnings_logger.handlers == [
+                    stream
+                ], "handler not added to warnings logger"
+            else:
+                assert warnings_logger.handlers == [], "handlers added to warnings logger"
 
 
 class TestTemporaryLogFile:
