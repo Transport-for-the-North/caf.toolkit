@@ -22,7 +22,7 @@ import logging
 import os
 import platform
 import warnings
-from typing import Any, Iterable, Optional
+from typing import Annotated, Any, Iterable, Optional
 
 import psutil
 import pydantic
@@ -69,7 +69,9 @@ class ToolDetails:
     """
 
     name: str
-    version: types.constr(strip_whitespace=True, regex=_SEMVER_REGEX)  # type: ignore
+    version: Annotated[
+        str, types.StringConstraints(strip_whitespace=True, pattern=_SEMVER_REGEX)
+    ]
     homepage: Optional[pydantic.HttpUrl] = None
     source_url: Optional[pydantic.HttpUrl] = None
 

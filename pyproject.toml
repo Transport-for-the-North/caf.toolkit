@@ -19,19 +19,18 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "numpy>=1.19.0, <1.25.0",
-    "pandas>=1.4.0" ,
-    "tqdm>=4.50.2",
+    "numpy>=1.19.0",
+    "pandas>=1.4.0",
     "sparse>=0.13.0",
-    "numba>=0.56.4",
-    "pydantic>=1.10, <2.0.0",
+    "tqdm>=4.50.2",
+    "pydantic>=2.5.0",
     "strictyaml>=1.6",
     "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
 lint = [
-    "black>=22.6.0",
+    "black>=24.1.1",
     "mypy>=1.0.0",
     "mypy_extensions>=1.0.0",
     "pydocstyle[toml]>=6.1.1",
@@ -70,6 +69,18 @@ disable = [
     "use-dict-literal",
     "use-list-literal",
 ]
+
+[tool.isort]
+profile = "black"
+src_paths = ["src", "tests"]
+
+skip = ["__init__.py", "_version.py"]
+skip_glob = [".*"]
+
+# Section commenting
+import_heading_stdlib = "Built-Ins"
+import_heading_thirdparty = "Third Party"
+import_heading_firstparty = "Local Imports"
 
 # Pylint settings
 [tool.pylint.basic]

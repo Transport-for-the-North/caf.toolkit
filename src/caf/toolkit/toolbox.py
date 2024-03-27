@@ -4,16 +4,8 @@
 Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
-from typing import Any
-from typing import TypeVar
-from typing import Iterable
-
-# Third Party
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
+import functools
+from typing import Any, Callable, Iterable, TypeVar
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -192,3 +184,34 @@ def is_unique_list(unique_vals: list[Any]) -> bool:
 
     """
     return len(unique_vals) == len(set(unique_vals))
+
+
+def combine_dict_list(
+    dict_list: list[dict[Any, Any]],
+    operation: Callable,
+) -> dict[Any, Any]:
+    """Combine a list of dictionaries.
+
+    Parameters
+    ----------
+    dict_list:
+        A list of dictionaries to sum together.
+
+    operation:
+        the operation to use to combine values at keys.
+        The operator library defines functions to do this.
+        Function should take two values, and return one.
+
+    Returns
+    -------
+    summed_dict:
+        A single dictionary of all the dicts in dict_list summed together.
+    """
+
+    # Define the accumulator function to call in functools.reduce
+    def reducer(accumulator, item):
+        for key, value in item.items():
+            accumulator[key] = operation(accumulator.get(key, 0), value)
+        return accumulator
+
+    return functools.reduce(reducer, dict_list)

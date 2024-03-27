@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.pandas_utils.numpy_conversions module"""
 # Built-Ins
-import math
 import dataclasses
-
+import math
 from typing import Any
 
-
 # Third Party
+import numpy as np
+import pandas as pd
 import psutil
 import pytest
 import sparse
-import numpy as np
-import pandas as pd
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position

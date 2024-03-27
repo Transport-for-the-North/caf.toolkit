@@ -6,7 +6,6 @@ import dataclasses
 # Third Party
 import pytest
 
-
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import timing

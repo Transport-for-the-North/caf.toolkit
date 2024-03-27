@@ -2,36 +2,35 @@
 """Library of multiprocessing functionality."""
 from __future__ import annotations
 
+# Built-Ins
+import multiprocessing as mp
+
 # Built-ins
 import os
 import time
-import warnings
 import traceback
-
-from typing import Any
-from typing import TypeVar
-from typing import Mapping
-from typing import Optional
-from typing import Iterable
-from typing import Callable
-from typing import Collection
-from typing import TYPE_CHECKING
-
-import multiprocessing as mp
+import warnings
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Iterable,
+    Mapping,
+    Optional,
+    TypeVar,
+)
 
 # Third Party
 import tqdm
 
-# Local imports
-# pylint: disable=import-error,wrong-import-position
+# Local Imports
 from caf.toolkit import tqdm_utils
-
-# pylint: enable=import-error,wrong-import-position
 
 # Need for type-hints
 if TYPE_CHECKING:
-    from multiprocessing.pool import Pool
-    from multiprocessing.pool import ApplyResult
+    # Built-Ins
+    from multiprocessing.pool import ApplyResult, Pool
     from multiprocessing.synchronize import Event
 
 # # # CONSTANTS # # #

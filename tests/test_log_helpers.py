@@ -2,9 +2,9 @@
 """
 Tests for the `log_helpers` module in caf.toolkit
 """
-
 from __future__ import annotations
 
+# Built-Ins
 import collections
 import dataclasses
 import getpass
@@ -15,13 +15,13 @@ import platform
 import warnings
 from typing import NamedTuple
 
+# Third Party
 import psutil
 import pydantic
 import pytest
 
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
 from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
-
 # # # Constants # # #
 _LOG_WARNINGS = [
     ("testing warning: runtime warning", RuntimeWarning),
@@ -216,8 +216,9 @@ class TestToolDetails:
                 "----------------\n"
                 "name       : test1\n"
                 "version    : 1.2.3\n"
-                "homepage   : http://github.com\n"
-                "source_url : http://github.com"
+                "homepage   : http://github.com/\n"
+                "source_url : http://github.com/"
+                # When validating URLs the ending '/' is added
             )
 
         assert str(ToolDetails(name, version, url, url)) == correct  # type: ignore

@@ -6,26 +6,21 @@ from __future__ import annotations
 import copy
 import logging
 import os
-
-from typing import Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # Third Party
-import pydantic
 import numpy as np
 import pandas as pd
+import pydantic
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
-# pylint: enable=import-error,wrong-import-position
-
 if TYPE_CHECKING:
-    from dataclasses import dataclass
+    from dataclasses import dataclass  # isort:skip
 else:
-    from pydantic.dataclasses import dataclass
+    from pydantic.dataclasses import dataclass  # isort:skip
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -71,18 +66,17 @@ class CostDistribution:
     # Ideas
     units: str = "km"
 
-    @pydantic.root_validator
-    def check_df_col_names(cls, values):  # pylint:disable=no-self-argument
+    @pydantic.model_validator(mode="after")
+    def check_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
         # init
         col_names = ["min_col", "max_col", "avg_col", "trips_col"]
-        cols = {k: v for k, v in values.items() if k in col_names}
-        df = values.get("df")
+        cols = {k: getattr(self, k) for k in col_names}
 
         # Check columns are in df
         err_cols = {}
         for col_name, col_val in cols.items():
-            if col_val not in df:
+            if col_val not in self.df:
                 err_cols.update({col_name: col_val})
 
         # Throw error if missing columns found
@@ -90,12 +84,12 @@ class CostDistribution:
             raise ValueError(
                 "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
-                f"With the following in the Df: {df.columns}"
+                f"With the following in the Df: {self.df.columns}"
             )
 
         # Tidy up df
-        values["df"] = pd_utils.reindex_cols(df, cols.values())
-        return values
+        self.df = pd_utils.reindex_cols(self.df, cols.values())
+        return self
 
     def __len__(self):
         """Get the number of bins in this cost distribution."""

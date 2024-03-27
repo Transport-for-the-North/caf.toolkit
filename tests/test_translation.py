@@ -5,20 +5,18 @@ from __future__ import annotations
 # Built-Ins
 import copy
 import dataclasses
-
-from typing import Any
-from typing import Optional
-
+import pathlib
+import sys
+from typing import Any, Optional
 
 # Third Party
-import pytest
 import numpy as np
 import pandas as pd
-
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import translation
+from caf.toolkit import io, translation
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -64,8 +62,6 @@ class NumpyMatrixResults:
     def input_kwargs(
         self,
         check_shapes: bool = True,
-        check_totals: bool = True,
-        force_slow: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
@@ -75,8 +71,6 @@ class NumpyMatrixResults:
             "col_translation": self.col_translation,
             "translation_dtype": self.translation_dtype,
             "check_shapes": check_shapes,
-            "check_totals": check_totals,
-            "_force_slow": force_slow,
         } | kwargs
 
 
@@ -127,6 +121,11 @@ class PandasTranslation:
         self.df[self.translation_from_col] = value
 
     @property
+    def to_col(self) -> pd.Series:
+        """The data from the "to zone col" of the translation"""
+        return self.df[self.translation_to_col]
+
+    @property
     def factor_col(self) -> pd.Series:
         """The data from the "to zone col" of the translation"""
         return self.df[self.translation_factors_col]
@@ -148,6 +147,21 @@ class PandasTranslation:
     def copy(self) -> PandasTranslation:
         """Make a copy of this class"""
         return copy.deepcopy(self)
+
+    def create_dummy_rows(self):
+        """Create some dummy rows that can be attached."""
+        ret_val = pd.Series(data=self.to_col.unique(), name=self.translation_to_col)
+        ret_val = pd.DataFrame(ret_val)
+        ret_val[self.translation_from_col] = self.from_col.max() + 1
+        ret_val[self.translation_factors_col] = 0
+        ret_val[self.translation_factors_col][0] = 1
+        return ret_val.reindex(
+            columns=[
+                self.translation_from_col,
+                self.translation_to_col,
+                self.translation_factors_col,
+            ]
+        )
 
 
 @dataclasses.dataclass
@@ -195,6 +209,58 @@ class PandasVectorResults:
 
 
 @dataclasses.dataclass
+class PandasMultiVectorResults:
+    """Collection of I/O data for a pandas multi-vector translation"""
+
+    np_vector: dataclasses.InitVar[np.ndarray]
+    np_expected_result: dataclasses.InitVar[np.ndarray]
+    translation: PandasTranslation
+    translation_dtype: Optional[np.dtype] = None
+
+    vector: pd.DataFrame = dataclasses.field(init=False)
+    expected_result: pd.DataFrame = dataclasses.field(init=False)
+    from_unique_index: list[Any] = dataclasses.field(init=False)
+    to_unique_index: list[Any] = dataclasses.field(init=False)
+
+    n_cols = 10
+
+    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray):
+        """Convert numpy objects to pandas"""
+        # Input and results
+        multi_vector_data = np.tile(np_vector, (self.n_cols, 1)).T
+        self.vector = pd.DataFrame(data=multi_vector_data)
+        self.vector.index += 1
+        # self.vector.index.names = ['to_zone_id']
+
+        multi_vector_res = np.tile(np_expected_result, (self.n_cols, 1)).T
+        self.expected_result = pd.DataFrame(data=multi_vector_res)
+        self.expected_result.index += 1
+        self.expected_result.index.names = ["to_zone_id"]
+
+        # Base from / to zones on translation
+        self.from_unique_index = self.translation.unique_from
+        self.to_unique_index = self.translation.unique_to
+
+    def input_kwargs(
+        self,
+        check_totals: bool = True,
+    ) -> dict[str, Any]:
+        """Return a dictionary of key-word arguments"""
+        return {
+            "vector": self.vector,
+            # "from_unique_index": self.from_unique_index,
+            # "to_unique_index": self.to_unique_index,
+            "translation_dtype": self.translation_dtype,
+            "check_totals": check_totals,
+        } | self.translation.to_kwargs()
+
+    def get_similar_vector(self, data: np.ndarray):
+        """Create a vector in the same shape as this one from a 1d array."""
+        multi_vector_data = np.tile(data, (self.n_cols, 1)).T
+        return pd.DataFrame(data=multi_vector_data)
+
+
+@dataclasses.dataclass
 class PandasMatrixResults:
     """Collection of I/O data for a pandas matrix translation"""
 
@@ -225,11 +291,11 @@ class PandasMatrixResults:
             index=self.to_unique_index,
             columns=self.to_unique_index,
         )
+        self.expected_result.index.names = ["to_zone_id"]
+        self.expected_result.columns.names = ["to_zone_id"]
 
     def input_kwargs(
         self,
-        matrix_infill: float = 0.0,
-        translate_infill: float = 0.0,
         check_totals: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
@@ -238,10 +304,6 @@ class PandasMatrixResults:
             {
                 "matrix": self.mat,
                 "translation_dtype": self.translation_dtype,
-                "from_unique_index": self.from_unique_index,
-                "to_unique_index": self.to_unique_index,
-                "matrix_infill": matrix_infill,
-                "translate_infill": translate_infill,
                 "check_totals": check_totals,
             }
             | self.translation.to_kwargs()
@@ -403,6 +465,19 @@ def fixture_pd_vector_aggregation(
     )
 
 
+@pytest.fixture(name="pd_multi_vector_aggregation", scope="class")
+def fixture_pd_multi_vector_aggregation(
+    np_vector_aggregation: NumpyVectorResults,
+    simple_pd_int_translation: PandasTranslation,
+) -> PandasVectorResults:
+    """Generate an aggregation vector, translation, and results"""
+    return PandasMultiVectorResults(
+        np_vector=np_vector_aggregation.vector,
+        np_expected_result=np_vector_aggregation.expected_result,
+        translation=simple_pd_int_translation,
+    )
+
+
 @pytest.fixture(name="pd_vector_split", scope="class")
 def fixture_pd_vector_split(
     np_vector_split: NumpyVectorResults,
@@ -416,6 +491,27 @@ def fixture_pd_vector_split(
     )
 
 
+@pytest.fixture(name="pd_multi_vector_split", scope="class")
+def fixture_pd_multi_vector_split(
+    np_vector_split: NumpyVectorResults,
+    simple_pd_float_translation: PandasTranslation,
+) -> PandasVectorResults:
+    """Generate a splitting vector, translation, and results"""
+    return PandasMultiVectorResults(
+        np_vector=np_vector_split.vector,
+        np_expected_result=np_vector_split.expected_result,
+        translation=simple_pd_float_translation,
+    )
+
+
+@pytest.fixture(name="pd_multi_vector_multiindex", scope="function")
+def fixture_pd_multi_vector_multiindex(
+    pd_multi_vector_split: PandasMultiVectorResults,
+) -> PandasMultiVectorResults:
+    """Generate a splitting vector, translation, and results"""
+    return pd_multi_vector_split
+
+
 @pytest.fixture(name="pd_incomplete", scope="class")
 def fixture_pd_incomplete(
     np_incomplete: NumpyVectorResults,
@@ -423,6 +519,19 @@ def fixture_pd_incomplete(
 ) -> PandasVectorResults:
     """Generate a splitting vector, translation, and results"""
     return PandasVectorResults(
+        np_vector=np_incomplete.vector,
+        np_expected_result=np_incomplete.expected_result,
+        translation=incomplete_pd_int_translation,
+    )
+
+
+@pytest.fixture(name="pd_multi_incomplete", scope="class")
+def fixture_pd_multi_incomplete(
+    np_incomplete: NumpyVectorResults,
+    incomplete_pd_int_translation: PandasTranslation,
+) -> PandasVectorResults:
+    """Generate a splitting vector, translation, and results"""
+    return PandasMultiVectorResults(
         np_vector=np_incomplete.vector,
         np_expected_result=np_incomplete.expected_result,
         translation=incomplete_pd_int_translation,
@@ -718,20 +827,20 @@ class TestNumpyVector:
     "pd_incomplete",
 )
 class TestPandasVector:
-    """Tests for caf.toolkit.translation.pandas_vector_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_single_vector_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(self, pd_incomplete: PandasVectorResults, check_totals: bool):
         """Test for total checking with dropped demand"""
         kwargs = pd_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
-            result = translation.pandas_vector_zone_translation(**kwargs)
+            result = translation.pandas_single_vector_zone_translation(**kwargs)
             pd.testing.assert_series_equal(
                 result, pd_incomplete.expected_result, check_dtype=False
             )
         else:
             with pytest.raises(ValueError, match="Some values seem to have been dropped"):
-                translation.pandas_vector_zone_translation(**kwargs)
+                translation.pandas_single_vector_zone_translation(**kwargs)
 
     def test_missing_translation_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised with missing translation from values"""
@@ -745,14 +854,16 @@ class TestPandasVector:
         kwargs = pd_vector_split.input_kwargs(check_totals=False)
         msg = "Some zones in `vector.index` are missing in `translation`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_vector_zone_translation(**(kwargs | {"translation": new_trans}))
+            translation.pandas_single_vector_zone_translation(
+                **(kwargs | {"translation": new_trans})
+            )
 
     def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
         """Check a warning is raised if from_unique_zones and the vector disagree"""
         new_from_unq = pd_vector_split.from_unique_index[:-1]
         msg = "zones in `vector.index` have not been defined in `from_unique_zones`"
         with pytest.warns(UserWarning, match=msg):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | {"from_unique_index": new_from_unq})
             )
 
@@ -780,7 +891,7 @@ class TestPandasVector:
 
         # Run with errors
         with pytest.raises(ValueError, match=msg):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | new_kwargs)
             )
 
@@ -789,7 +900,7 @@ class TestPandasVector:
         new_vector = pd.DataFrame(pd_vector_split.vector)
         new_vector[1] = new_vector[0].copy()
         with pytest.raises(ValueError, match="must be a pandas.Series"):
-            translation.pandas_vector_zone_translation(
+            translation.pandas_single_vector_zone_translation(
                 **(pd_vector_split.input_kwargs() | {"vector": new_vector})
             )
 
@@ -801,7 +912,7 @@ class TestPandasVector:
         """Test vector-like arrays (empty in 2nd dim)"""
         pd_vector = request.getfixturevalue(pd_vector_str)
         new_vector = pd.DataFrame(pd_vector.vector)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"vector": new_vector})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result, check_names=False)
@@ -822,7 +933,7 @@ class TestPandasVector:
         Also checks that totals are correctly checked.
         """
         pd_vector = request.getfixturevalue(pd_vector_str)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
@@ -840,10 +951,154 @@ class TestPandasVector:
         pd_vector = request.getfixturevalue(pd_vector_str)
         new_trans = pd_vector.translation.copy()
         new_trans.from_col = new_trans.from_col.astype(np.int32)
-        result = translation.pandas_vector_zone_translation(
+        result = translation.pandas_single_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans.df})
         )
         pd.testing.assert_series_equal(result, pd_vector.expected_result)
+
+
+@pytest.mark.usefixtures(
+    "pd_multi_vector_aggregation",
+    "pd_multi_vector_split",
+    "pd_multi_incomplete",
+)
+class TestPandasMultiVector:
+    """Tests for caf.toolkit.translation.pandas_multi_vector_zone_translation"""
+
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_dropped_totals(
+        self, pd_multi_incomplete: PandasMultiVectorResults, check_totals: bool
+    ):
+        """Test for total checking with dropped demand"""
+        kwargs = pd_multi_incomplete.input_kwargs(check_totals=check_totals)
+        if not check_totals:
+            result = translation.pandas_multi_vector_zone_translation(**kwargs)
+            pd.testing.assert_frame_equal(
+                result, pd_multi_incomplete.expected_result, check_dtype=False
+            )
+        else:
+            with pytest.raises(ValueError, match="Some values seem to have been dropped"):
+                translation.pandas_multi_vector_zone_translation(**kwargs)
+
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+    )
+    @pytest.mark.parametrize("check_totals", [True, False])
+    def test_translation_correct(
+        self,
+        pd_vector_str: str,
+        check_totals: bool,
+        request,
+    ):
+        """Test that aggregation and splitting give correct results
+
+        Also checks that totals are correctly checked.
+        """
+        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+        result = translation.pandas_multi_vector_zone_translation(
+            **pd_vector.input_kwargs(check_totals=check_totals)
+        )
+        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+    )
+    def test_additional_vector_index(self, pd_vector_str: str, request):
+        """Check a warning is raised when there are missing translation indexes."""
+        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+
+        # Add some additional data to the vector
+        additional_rows = pd_vector.get_similar_vector(np.arange(5))
+        new_vector = pd_vector.vector.copy()
+        new_vector = pd.concat([new_vector, additional_rows], ignore_index=True)
+        new_vector.index += 1
+
+        # Check that an error is thrown and the additional values dropped
+        msg = "Some zones in `vector.index` have not been defined in `translation`."
+        with pytest.warns(UserWarning, match=msg):
+            kwargs = pd_vector.input_kwargs(check_totals=False)
+            result = translation.pandas_multi_vector_zone_translation(
+                **(kwargs | {"vector": new_vector})
+            )
+        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+    )
+    def test_additional_translation_index(self, pd_vector_str: str, request):
+        """Check that additional translation values are ignored."""
+        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+
+        # Add some additional data to the translation
+        new_rows = pd_vector.translation.create_dummy_rows()
+        new_trans = pd_vector.translation.df.copy()
+        new_trans = pd.concat([new_trans, new_rows], ignore_index=True)
+
+        # Check that the transaltion still works as before
+        result = translation.pandas_multi_vector_zone_translation(
+            **(pd_vector.input_kwargs() | {"translation": new_trans})
+        )
+        pd.testing.assert_frame_equal(result, pd_vector.expected_result, check_dtype=False)
+
+    @pytest.mark.parametrize(
+        "pd_vector_str",
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+    )
+    def test_check_allow_similar_types(
+        self,
+        pd_vector_str: str,
+        request,
+    ):
+        """Test that similar types are allowed in translation and data."""
+        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+        new_trans = pd_vector.translation.copy()
+        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        result = translation.pandas_multi_vector_zone_translation(
+            **(pd_vector.input_kwargs() | {"translation": new_trans.df})
+        )
+        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+
+    def test_indexing_error(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
+        """Check that an error is thrown when the index is not unique."""
+        new_vector = pd_multi_vector_multiindex.vector.copy()
+        new_vector["wrong_1"] = new_vector.index
+        new_vector["wrong_2"] = new_vector.index
+        new_vector.set_index(["wrong_1", "wrong_2"], inplace=True)
+        with pytest.raises(ValueError, match="The input vector is MultiIndexed"):
+            translation.pandas_multi_vector_zone_translation(
+                **(pd_multi_vector_multiindex.input_kwargs() | {"vector": new_vector})
+            )
+
+    def test_multiindex(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
+        """Test that a multiindex is allowed."""
+        new_vector = pd_multi_vector_multiindex.vector.copy()
+        new_vector.index.names = ["from_zone_id"]
+        factors = [1, 2, 3, 2, 5, 3, 6, 8, 2, 3]
+        multiindex = pd.MultiIndex.from_product(
+            [new_vector.index, ["A", "B"]], names=["from_zone_id", "extra_seg"]
+        )
+        multi_vector = new_vector.mul(pd.Series(data=factors, index=multiindex), axis="index")
+        result = translation.pandas_multi_vector_zone_translation(
+            **(pd_multi_vector_multiindex.input_kwargs() | {"vector": multi_vector})
+        )
+        expected = pd.DataFrame(
+            {
+                0: {
+                    (1, "A"): 32.0,
+                    (1, "B"): 44.75,
+                    (2, "A"): 48.0,
+                    (2, "B"): 33.5,
+                    (3, "A"): 32.0,
+                    (3, "B"): 44.75,
+                }
+            }
+        )
+        expected[1, 2, 3, 4, 5, 6, 7, 8, 9] = expected[0]
+        expected.index.names = ["to_zone_id", "extra_seg"]
+        assert expected.equals(result)
 
 
 @pytest.mark.usefixtures(
@@ -855,8 +1110,6 @@ class TestPandasVector:
 )
 class TestNumpyMatrix:
     """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
-
-    # TODO(BT): Test running out of memory - will need to skip for GitHub
 
     def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults):
         """Check an error is raised with a non-square matrix given"""
@@ -909,43 +1162,17 @@ class TestNumpyMatrix:
                 translation.numpy_matrix_zone_translation(**kwargs)
 
     @pytest.mark.parametrize(
-        "np_matrix_str",
+        "np_matrix_str, check_totals",
         [
-            "np_matrix_aggregation",
-            "np_matrix_aggregation2",
-            "np_matrix_split",
-            "np_matrix_dtype",
+            ("np_matrix_aggregation", True),
+            ("np_matrix_aggregation", False),
+            ("np_matrix_aggregation2", True),
+            ("np_matrix_aggregation2", False),
+            ("np_matrix_split", True),
+            ("np_matrix_split", False),
+            ("np_matrix_dtype", False),
         ],
     )
-    @pytest.mark.parametrize("force_slow", [True, False])
-    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    def test_slow_translation(
-        self,
-        np_matrix_str: str,
-        force_slow: bool,
-        request,
-    ):
-        """Test translation works as expected
-
-        Tests the matrix aggregation, using 2 different translations, and
-        translation splitting.
-        """
-        np_mat = request.getfixturevalue(np_matrix_str)
-        result = translation.numpy_matrix_zone_translation(
-            **np_mat.input_kwargs(force_slow=force_slow, chunk_size=2)
-        )
-        np.testing.assert_allclose(result, np_mat.expected_result)
-
-    @pytest.mark.parametrize(
-        "np_matrix_str",
-        [
-            "np_matrix_aggregation",
-            "np_matrix_aggregation2",
-            "np_matrix_split",
-            "np_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
         self,
         np_matrix_str: str,
@@ -964,14 +1191,8 @@ class TestNumpyMatrix:
         np.testing.assert_allclose(result, np_mat.expected_result)
 
 
-@pytest.mark.usefixtures(
-    "pd_matrix_aggregation",
-    "pd_matrix_aggregation2",
-    "pd_matrix_split",
-    "pd_matrix_dtype",
-    "pd_matrix_incomplete",
-)
-class TestPandasMatrix:
+@pytest.mark.usefixtures("pd_matrix_incomplete")
+class TestPandasMatrixEdges:
     """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
@@ -989,81 +1210,22 @@ class TestPandasMatrix:
             with pytest.raises(ValueError, match="Some values seem to have been dropped"):
                 translation.pandas_matrix_zone_translation(**kwargs)
 
-    def test_missing_unique_zones(self, pd_matrix_split: PandasMatrixResults):
-        """Check a warning is raised if from_unique_zones and the vector disagree"""
-        new_from_unq = pd_matrix_split.from_unique_index[:-1]
-        msg = "zones in `matrix.index` have not been defined in `from_unique_zones`"
-        with pytest.warns(UserWarning, match=msg):
-            translation.pandas_matrix_zone_translation(
-                **(pd_matrix_split.input_kwargs() | {"from_unique_index": new_from_unq})
-            )
 
-    @pytest.mark.parametrize("which", ["from", "to", "both"])
-    def test_non_unique_index(self, pd_matrix_split: PandasMatrixResults, which: str):
-        """Check that an error is thrown when bad unique index args given"""
-        # Build bad arguments
-        new_from_unq = pd_matrix_split.from_unique_index * 2
-        new_to_unq = pd_matrix_split.to_unique_index * 2
+@pytest.mark.parametrize(
+    "pd_matrix_str, check_totals",
+    [
+        ("pd_matrix_aggregation", True),
+        ("pd_matrix_aggregation", False),
+        ("pd_matrix_aggregation2", True),
+        ("pd_matrix_aggregation2", False),
+        ("pd_matrix_split", True),
+        ("pd_matrix_split", False),
+        ("pd_matrix_dtype", False),
+    ],
+)
+class TestPandasMatrixParams:
+    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
 
-        if which == "from":
-            new_kwargs = {"from_unique_index": new_from_unq}
-            msg = "Duplicate values found in from_unique_index"
-        elif which == "to":
-            new_kwargs = {"to_unique_index": new_to_unq}
-            msg = "Duplicate values found in to_unique_index"
-        elif which == "both":
-            new_kwargs = {
-                "from_unique_index": new_from_unq,
-                "to_unique_index": new_to_unq,
-            }
-            msg = "Duplicate values found in from_unique_index"
-        else:
-            raise ValueError("This shouldn't happen! Debug code.")
-
-        # Run with errors
-        with pytest.raises(ValueError, match=msg):
-            translation.pandas_matrix_zone_translation(
-                **(pd_matrix_split.input_kwargs() | new_kwargs)
-            )
-
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("force_slow", [True, False])
-    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    def test_slow_translation(
-        self,
-        pd_matrix_str: str,
-        force_slow: bool,
-        request,
-    ):
-        """Test translation works as expected
-
-        Tests the matrix aggregation, using 2 different translations, and
-        translation splitting.
-        """
-        pd_mat = request.getfixturevalue(pd_matrix_str)
-        result = translation.pandas_matrix_zone_translation(
-            **pd_mat.input_kwargs(_force_slow=force_slow, chunk_size=3)
-        )
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
-
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
-    @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
         self,
         pd_matrix_str: str,
@@ -1079,22 +1241,20 @@ class TestPandasMatrix:
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith("linux"):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
     @pytest.mark.parametrize("row", [True, False])
     def test_check_allow_similar_types(
         self,
         pd_matrix_str: str,
         row: bool,
+        check_totals: bool,
         request,
     ):
         """Test that similar types are allowed in translation and data."""
@@ -1111,19 +1271,16 @@ class TestPandasMatrix:
         # Run the translation
         new_trans.from_col = new_trans.from_col.astype(np.int32)
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith("linux"):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
-    @pytest.mark.parametrize(
-        "pd_matrix_str",
-        [
-            "pd_matrix_aggregation",
-            "pd_matrix_aggregation2",
-            "pd_matrix_split",
-            "pd_matrix_dtype",
-        ],
-    )
     @pytest.mark.parametrize("row", [True, False])
     @pytest.mark.parametrize("trans_dtype", [str, int, float])
     @pytest.mark.parametrize("matrix_dtype", [str, int, float])
@@ -1133,10 +1290,11 @@ class TestPandasMatrix:
         row: bool,
         trans_dtype: type,
         matrix_dtype: type,
+        check_totals: bool,
         request,
     ):
         """Test that similar types are allowed in translation and data."""
-        pd_mat = request.getfixturevalue(pd_matrix_str)
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
         # Change the dtype of the row / col
         new_matrix = pd_mat.mat.copy()
@@ -1152,6 +1310,170 @@ class TestPandasMatrix:
         # Run the translation
         new_trans.from_col = new_trans.from_col.astype(trans_dtype)
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs() | {keyword: new_trans.df})
+            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
         )
+
+        # Need to enforce types so this works in linux
+        if sys.platform.startswith("linux"):
+            if any(x in ["int32", "int64"] for x in result.dtypes):
+                result = result.astype(pd_mat.expected_result.dtypes[1])
+
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+
+# ## READ FILE TRANSLATION FIXTURES & TESTS ## #
+@dataclasses.dataclass
+class PandasFileVectorResults:
+    """Parameters and results for vector file translation tests."""
+
+    vector_path: pathlib.Path
+    vector_zone_column: str
+    translation_path: pathlib.Path
+    translation_from_column: str
+    translation_to_column: str
+    translation_factors_column: str
+    expected: pd.DataFrame
+
+
+@dataclasses.dataclass
+class PandasFileMatrixResults:
+    """Parameters and results for matrix file translation tests."""
+
+    matrix_path: pathlib.Path
+    matrix_zone_columns: str
+    matrix_value_column: str
+    translation_path: pathlib.Path
+    translation_from_column: str
+    translation_to_column: str
+    translation_factors_column: str
+    expected: pd.DataFrame
+
+
+@pytest.fixture(name="vector_file_translation")
+def fix_vector_file_translation(
+    tmp_path: pathlib.Path,
+    pd_multi_vector_multiindex: PandasMultiVectorResults,
+) -> PandasFileVectorResults:
+    """Write vector translation test files to temp directory."""
+    data = pd_multi_vector_multiindex.vector
+    data.index.name = "zone_id"
+    trans_data = pd_multi_vector_multiindex.translation
+
+    data_path = tmp_path / "test_vector_data.csv"
+    assert not data_path.is_file(), "test vector file already exists"
+    data.to_csv(data_path)
+    assert data_path.is_file(), "test vector file not created"
+
+    translation_path = tmp_path / "test_translation.csv"
+    assert not translation_path.is_file(), "test translation file already exists"
+    trans_data.df.to_csv(translation_path, index=False)
+    assert translation_path.is_file(), "test translation not created"
+
+    return PandasFileVectorResults(
+        vector_path=data_path,
+        vector_zone_column=data.index.name,
+        translation_path=translation_path,
+        translation_from_column=trans_data.translation_from_col,
+        translation_to_column=trans_data.translation_to_col,
+        translation_factors_column=trans_data.translation_factors_col,
+        expected=pd_multi_vector_multiindex.expected_result,
+    )
+
+
+@pytest.fixture(name="matrix_file_translation")
+def fix_matrix_file_translation(
+    tmp_path: pathlib.Path,
+    pd_matrix_split: PandasMatrixResults,
+) -> PandasFileMatrixResults:
+    """Write matrix translation test files to temp directory."""
+    # Convert square to long format
+    data = pd_matrix_split.mat.stack().to_frame()
+    data.index.names = ["origin", "destination"]
+    data.columns = ["value"]
+    trans_data = pd_matrix_split.translation
+
+    expected = pd_matrix_split.expected_result
+    expected.index.name = data.index.names[0]
+    expected.columns.name = data.index.names[1]
+
+    data_path = tmp_path / "test_data_matrix_long.csv"
+    assert not data_path.is_file(), "test vector file already exists"
+    data.to_csv(data_path)
+    assert data_path.is_file(), "test vector file not created"
+
+    translation_path = tmp_path / "test_translation.csv"
+    assert not translation_path.is_file(), "test translation file already exists"
+    trans_data.df.to_csv(translation_path, index=False)
+    assert translation_path.is_file(), "test translation not created"
+
+    return PandasFileMatrixResults(
+        matrix_path=data_path,
+        matrix_zone_columns=data.index.names,
+        matrix_value_column=data.columns[0],
+        translation_path=translation_path,
+        translation_from_column=trans_data.translation_from_col,
+        translation_to_column=trans_data.translation_to_col,
+        translation_factors_column=trans_data.translation_factors_col,
+        expected=expected,
+    )
+
+
+class TestVectorTranslationFromFile:
+    """Tests for the `vector_translation_from_file` function."""
+
+    def test_simple(self, vector_file_translation: PandasFileVectorResults) -> None:
+        """Test standard translation of vector file with all arguments."""
+        output_path = vector_file_translation.vector_path.parent / "test_result.csv"
+        translation.vector_translation_from_file(
+            vector_path=vector_file_translation.vector_path,
+            translation_path=vector_file_translation.translation_path,
+            output_path=output_path,
+            vector_zone_column=vector_file_translation.vector_zone_column,
+            translation_from_column=vector_file_translation.translation_from_column,
+            translation_to_column=vector_file_translation.translation_to_column,
+            translation_factors_column=vector_file_translation.translation_factors_column,
+        )
+
+        assert output_path.is_file(), "translated vector not created"
+        result = io.read_csv(
+            output_path, index_col=vector_file_translation.translation_to_column
+        )
+        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        pd.testing.assert_frame_equal(
+            result,
+            vector_file_translation.expected,
+            check_dtype=False,
+            check_column_type=False,
+            check_index_type=False,
+        )
+
+
+class TestMatrixTranslationFromFile:
+    """Tests for `matrix_translation_from_file` function."""
+
+    def test_long_matrix(self, matrix_file_translation: PandasFileMatrixResults) -> None:
+        """Test translation of matrix file in long format."""
+        output_path = matrix_file_translation.matrix_path.parent / "test_result.csv"
+        translation.matrix_translation_from_file(
+            matrix_path=matrix_file_translation.matrix_path,
+            translation_path=matrix_file_translation.translation_path,
+            output_path=output_path,
+            matrix_zone_columns=matrix_file_translation.matrix_zone_columns,
+            matrix_values_column=matrix_file_translation.matrix_value_column,
+            translation_from_column=matrix_file_translation.translation_from_column,
+            translation_to_column=matrix_file_translation.translation_to_column,
+            translation_factors_column=matrix_file_translation.translation_factors_column,
+        )
+
+        assert output_path.is_file(), "translated matrix not created"
+        result = io.read_csv_matrix(output_path, format_="long")
+        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        pd.testing.assert_frame_equal(
+            result,
+            matrix_file_translation.expected,
+            check_dtype=False,
+            check_column_type=False,
+            check_index_type=False,
+        )
