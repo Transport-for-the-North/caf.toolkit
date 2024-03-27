@@ -22,6 +22,7 @@ import pytest
 
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
 from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
+
 # # # Constants # # #
 _LOG_WARNINGS = [
     ("testing warning: runtime warning", RuntimeWarning),
