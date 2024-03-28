@@ -88,7 +88,7 @@ class CostDistribution:
             )
 
         # Tidy up df
-        self.df = pd_utils.reindex_cols(self.df, cols.values())
+        self.df = pd_utils.reindex_cols(self.df, list(cols.values()))
         return self
 
     def __len__(self):
