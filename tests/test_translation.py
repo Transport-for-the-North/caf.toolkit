@@ -15,10 +15,8 @@ import pandas as pd
 import pytest
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
 from caf.toolkit import io, translation
-
-# pylint: enable=import-error,wrong-import-position
+from caf.toolkit import pandas_utils as pd_utils
 
 # # # CONSTANTS # # #
 
@@ -313,6 +311,70 @@ class PandasMatrixResults:
         if self.col_translation is None:
             return kwargs
         return kwargs | {"col_translation": self.col_translation.df}
+
+
+@dataclasses.dataclass
+class PandasLongMatrixResults:
+    """Collection of I/O data for a pandas matrix translation"""
+
+    wide_results: dataclasses.InitVar[PandasMatrixResults]
+    index_col_1_name: str = "production"
+    index_col_2_name: str = "attraction"
+    values_col: str = "values"
+    index_col_1_out_name: Optional[str] = None
+    index_col_2_out_name: Optional[str] = None
+
+    def __post_init__(self, wide_results: PandasMatrixResults):
+        """Produce the new expected input and outputs."""
+        if self.index_col_1_out_name is None:
+            self.index_col_1_out_name = self.index_col_1_name
+        if self.index_col_2_out_name is None:
+            self.index_col_2_out_name = self.index_col_2_name
+
+        self.df = pd_utils.wide_to_long_infill(
+            df=wide_results.mat,
+            index_col_1_name=self.index_col_1_name,
+            index_col_2_name=self.index_col_2_name,
+            value_col_name=self.values_col,
+        )
+
+        self.expected_result = pd_utils.wide_to_long_infill(
+            df=wide_results.expected_result,
+            index_col_1_name=self.index_col_1_out_name,
+            index_col_2_name=self.index_col_2_out_name,
+            value_col_name=self.values_col,
+        )
+
+        # Misc args to carry over
+        self.translation_dtype = wide_results.translation_dtype
+        self.translation = wide_results.translation
+        self.col_translation = wide_results.col_translation
+
+    def input_kwargs(
+        self,
+        check_totals: bool = True,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Return a dictionary of key-word arguments"""
+        kwargs = (
+            {
+                "matrix": self.df,
+                "index_col_1_name": self.index_col_1_name,
+                "index_col_2_name": self.index_col_2_name,
+                "values_col": self.values_col,
+                "index_col_1_out_name": self.index_col_1_out_name,
+                "index_col_2_out_name": self.index_col_2_out_name,
+                "translation_dtype": self.translation_dtype,
+                "check_totals": check_totals,
+            }
+            | self.translation.to_kwargs()
+            | kwargs
+        )
+
+        if self.col_translation is None:
+            return kwargs
+        return kwargs | {"col_translation": self.col_translation.df}
+
 
 
 # # # FIXTURES # # #
@@ -725,6 +787,39 @@ def fixture_pd_matrix_incomplete(
         np_expected_result=np_matrix_incomplete.expected_result,
         translation=incomplete_pd_int_translation,
     )
+
+
+# ## PANDAS LONG MATRIX FIXTURES ## #
+@pytest.fixture(name="pd_long_matrix_aggregation", scope="class")
+def fixture_pd_long_matrix_aggregation(
+    pd_matrix_aggregation: PandasMatrixResults
+) -> PandasLongMatrixResults:
+    """Convert fixture to long format."""
+    return PandasLongMatrixResults(wide_results=pd_matrix_aggregation)
+
+
+@pytest.fixture(name="pd_long_matrix_aggregation2", scope="class")
+def fixture_pd_long_matrix_aggregation2(
+    pd_matrix_aggregation2: PandasMatrixResults
+) -> PandasLongMatrixResults:
+    """Convert fixture to long format."""
+    return PandasLongMatrixResults(wide_results=pd_matrix_aggregation2)
+
+
+@pytest.fixture(name="pd_long_matrix_split", scope="class")
+def fixture_pd_long_matrix_split(
+    pd_matrix_split: PandasMatrixResults
+) -> PandasLongMatrixResults:
+    """Convert fixture to long format."""
+    return PandasLongMatrixResults(wide_results=pd_matrix_split)
+
+
+@pytest.fixture(name="pd_long_matrix_dtype", scope="class")
+def fixture_pd_long_matrix_dtype(
+    pd_matrix_dtype: PandasMatrixResults
+) -> PandasLongMatrixResults:
+    """Convert fixture to long format."""
+    return PandasLongMatrixResults(wide_results=pd_matrix_dtype)
 
 
 # # # TESTS # # #
@@ -1359,6 +1454,46 @@ class TestPandasMatrixParams:
                 result = result.astype(pd_mat.expected_result.dtypes[1])
 
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
+
+@pytest.mark.parametrize(
+    "pd_matrix_str, check_totals",
+    [
+        ("pd_long_matrix_aggregation", True),
+        ("pd_long_matrix_aggregation", False),
+        ("pd_long_matrix_aggregation2", True),
+        ("pd_long_matrix_aggregation2", False),
+        ("pd_long_matrix_split", True),
+        ("pd_long_matrix_split", False),
+        ("pd_long_matrix_dtype", False),
+    ],
+)
+class TestLongPandasMatrixParams:
+    """Tests for caf.toolkit.translation.pandas_long_matrix_zone_translation"""
+
+    def test_translation_correct(
+        self,
+        pd_matrix_str: str,
+        check_totals: bool,
+        request,
+    ):
+        """Test translation works as expected
+
+        Tests the matrix aggregation, using 2 different translations, and
+        translation splitting.
+        """
+        pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
+        result = translation.pandas_long_matrix_zone_translation(
+            **pd_mat.input_kwargs(check_totals=check_totals)
+        )
+
+        # # Need to enforce types so this works in linux
+        # if sys.platform.startswith("linux"):
+        #     if any(x in ["int32", "int64"] for x in result.dtypes):
+        #         result = result.astype(pd_mat.expected_result.dtypes[1])
+
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+
 
 
 # ## READ FILE TRANSLATION FIXTURES & TESTS ## #
