@@ -352,7 +352,13 @@ class PandasLongMatrixResults:
 
     def update_output_cols(self, index_col_1_out_name: str, index_col_2_out_name: str) -> None:
         """Update the expected result alongside this."""
-        self.expected_result.rename(columns={self.index_col_1_name: index_col_1_out_name, self.index_col_2_name: index_col_2_out_name}, inplace=True)
+        self.expected_result.rename(
+            columns={
+                self.index_col_1_name: index_col_1_out_name,
+                self.index_col_2_name: index_col_2_out_name,
+            },
+            inplace=True,
+        )
         self.index_col_1_out_name = index_col_1_out_name
         self.index_col_2_out_name = index_col_2_out_name
 
@@ -380,7 +386,6 @@ class PandasLongMatrixResults:
         if self.col_translation is None:
             return kwargs
         return kwargs | {"col_translation": self.col_translation.df}
-
 
 
 # # # FIXTURES # # #
@@ -798,7 +803,7 @@ def fixture_pd_matrix_incomplete(
 # ## PANDAS LONG MATRIX FIXTURES ## #
 @pytest.fixture(name="pd_long_matrix_aggregation", scope="class")
 def fixture_pd_long_matrix_aggregation(
-    pd_matrix_aggregation: PandasMatrixResults
+    pd_matrix_aggregation: PandasMatrixResults,
 ) -> PandasLongMatrixResults:
     """Convert fixture to long format."""
     return PandasLongMatrixResults(wide_results=pd_matrix_aggregation)
@@ -806,7 +811,7 @@ def fixture_pd_long_matrix_aggregation(
 
 @pytest.fixture(name="pd_long_matrix_aggregation2", scope="class")
 def fixture_pd_long_matrix_aggregation2(
-    pd_matrix_aggregation2: PandasMatrixResults
+    pd_matrix_aggregation2: PandasMatrixResults,
 ) -> PandasLongMatrixResults:
     """Convert fixture to long format."""
     return PandasLongMatrixResults(wide_results=pd_matrix_aggregation2)
@@ -814,7 +819,7 @@ def fixture_pd_long_matrix_aggregation2(
 
 @pytest.fixture(name="pd_long_matrix_split", scope="class")
 def fixture_pd_long_matrix_split(
-    pd_matrix_split: PandasMatrixResults
+    pd_matrix_split: PandasMatrixResults,
 ) -> PandasLongMatrixResults:
     """Convert fixture to long format."""
     return PandasLongMatrixResults(wide_results=pd_matrix_split)
@@ -822,7 +827,7 @@ def fixture_pd_long_matrix_split(
 
 @pytest.fixture(name="pd_long_matrix_dtype", scope="class")
 def fixture_pd_long_matrix_dtype(
-    pd_matrix_dtype: PandasMatrixResults
+    pd_matrix_dtype: PandasMatrixResults,
 ) -> PandasLongMatrixResults:
     """Convert fixture to long format."""
     return PandasLongMatrixResults(wide_results=pd_matrix_dtype)
@@ -1504,7 +1509,9 @@ class TestLongPandasMatrixParams:
     ):
         """Test translation works with different output column names."""
         pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
-        pd_mat.update_output_cols(index_col_1_out_name="Origin", index_col_2_out_name="Destination")
+        pd_mat.update_output_cols(
+            index_col_1_out_name="Origin", index_col_2_out_name="Destination"
+        )
         result = translation.pandas_long_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
