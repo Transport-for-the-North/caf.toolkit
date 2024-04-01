@@ -350,6 +350,12 @@ class PandasLongMatrixResults:
         self.translation = wide_results.translation
         self.col_translation = wide_results.col_translation
 
+    def update_output_cols(self, index_col_1_out_name: str, index_col_2_out_name: str) -> None:
+        """Update the expected result alongside this."""
+        self.expected_result.rename(columns={self.index_col_1_name: index_col_1_out_name, self.index_col_2_name: index_col_2_out_name}, inplace=True)
+        self.index_col_1_out_name = index_col_1_out_name
+        self.index_col_2_out_name = index_col_2_out_name
+
     def input_kwargs(
         self,
         check_totals: bool = True,
@@ -1487,13 +1493,44 @@ class TestLongPandasMatrixParams:
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
 
-        # # Need to enforce types so this works in linux
-        # if sys.platform.startswith("linux"):
-        #     if any(x in ["int32", "int64"] for x in result.dtypes):
-        #         result = result.astype(pd_mat.expected_result.dtypes[1])
+        # Dtypes are checked in TestPandasMatrixParams.test_correct_results test. Ignore here.
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
 
-        pd.testing.assert_frame_equal(result, pd_mat.expected_result)
+    def test_different_output_names(
+        self,
+        pd_matrix_str: str,
+        check_totals: bool,
+        request,
+    ):
+        """Test translation works with different output column names."""
+        pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
+        pd_mat.update_output_cols(index_col_1_out_name="Origin", index_col_2_out_name="Destination")
+        result = translation.pandas_long_matrix_zone_translation(
+            **pd_mat.input_kwargs(check_totals=check_totals)
+        )
 
+        # Dtypes are checked in TestPandasMatrixParams.test_correct_results test. Ignore here.
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
+
+    def test_additional_cols(
+        self,
+        pd_matrix_str: str,
+        check_totals: bool,
+        request,
+    ):
+        """Test a warning is raised when there are additional columns."""
+        pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
+        new_mat = pd_mat.df.copy()
+        new_mat["extra_col"] = 0
+
+        msg = "Extra columns found in matrix"
+        with pytest.warns(UserWarning, match=msg):
+            result = translation.pandas_long_matrix_zone_translation(
+                **pd_mat.input_kwargs(check_totals=check_totals) | {"matrix": new_mat}
+            )
+
+        # Dtypes are checked in TestPandasMatrixParams.test_correct_results test. Ignore here.
+        pd.testing.assert_frame_equal(result, pd_mat.expected_result, check_dtype=False)
 
 
 # ## READ FILE TRANSLATION FIXTURES & TESTS ## #
