@@ -644,49 +644,45 @@ def create_log_bins(
     return np.insert(bins, len(bins), final_val)
 
 
-def iz_infill_costs(
-    cost: pd.DataFrame,
-    iz_infill: float,
+def intrazonal_cost_infill(
+    cost: np.ndarray,
+    multiplier: float = 0.5,
     min_axis: int = 1,
-) -> pd.DataFrame:
+) -> np.ndarray:
     """
-    Infills the diagonal with iz_infill * min_axis val for each item in axis
+    Infill the intra-zonal costs of a cost matrix.
+
+    The intra-zonal costs are usually the diagonal of a cost matrix. Standard
+    TAG procedure for infilling these costs is to take half the minimum cost
+    for each zone. By default, this function takes the minimum value from each
+    row (ignoring 0s) and multiplies that by 0.5 to get the infill value for
+    each intra-zonal. Note that if any costs already exist for the
+    intra-zonals, they will be overwritten.
+    The diagonal infill is calculated similar to:
+    `cost.min(axis=min_axis * multiplier`
 
     Parameters
     ----------
     cost:
-        The cost to infill.
+        The square, 2D cost matrix to infill.
 
-    iz_infill:
-        whether to add a value half the minimum
-        interzonal value to the intrazonal cells. Currently needed for distance
-        but not cost.
+    multiplier:
+        The value to multiply the minimum values by to calculate the infill value.
 
     min_axis:
-        The axis to get the minimum value across
+        The axis to calculate the minimum value across.
 
     Returns
     -------
     infilled_cost:
-        cost, but with the diagonal infilled.
+        A copy of the input `cost`, but with the diagonal infilled.
     """
-    # Init
-    infilled_cost = cost.values.copy()
+    # Ensure we don't pick up the diagonals or 0s in the minimum check
+    nonzero_cost = np.where(cost == 0, np.inf, cost)
+    np.fill_diagonal(nonzero_cost, np.inf)
 
-    # Set to inf so we don't pick up 0s or diagonal in min
-    infilled_cost = np.where(infilled_cost == 0, np.inf, infilled_cost)
-    np.fill_diagonal(infilled_cost, np.inf)
-
-    # Find the min an do infill
-    min_vals = infilled_cost.min(axis=min_axis)
-    infill = min_vals * iz_infill
+    # Infill a copy of cost
+    infill = nonzero_cost.min(axis=min_axis) * multiplier
+    infilled_cost = cost.copy()
     np.fill_diagonal(infilled_cost, infill)
-
-    # Flip all inf back to 0
-    infilled_cost = np.where(infilled_cost == np.inf, 0, infilled_cost)
-
-    return pd.DataFrame(
-        data=infilled_cost,
-        index=cost.index,
-        columns=cost.columns,
-    )
+    return infilled_cost
