@@ -8,6 +8,7 @@ from __future__ import annotations
 
 # Built-Ins
 import logging
+import pathlib
 import warnings
 from typing import Any, Optional, TypedDict, TypeVar
 
@@ -16,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import math_utils
+from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
 from caf.toolkit import validators
 
@@ -233,14 +234,14 @@ def _pandas_matrix_validation(
             f"Total value dropped: {total_value_dropped}"
         )
 
-    # Throw a warning if any index values are in the matrix, but not in the
+    # Throw a warning if any column values are in the matrix, but not in the
     # col_translation. These values will just be dropped.
     translation_from = col_translation[translation_from_col].unique()
-    missing_cols = set(matrix.index.to_list()) - set(translation_from)
+    missing_cols = set(matrix.columns.to_list()) - set(translation_from)
     if len(missing_cols) > 0:
         total_value_dropped = matrix[list(missing_cols)].to_numpy().sum()
         warnings.warn(
-            f"Some zones in `{name}.index` have not been defined in "
+            f"Some zones in `{name}.columns` have not been defined in "
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
@@ -316,6 +317,7 @@ def numpy_matrix_zone_translation(
         Will raise an error if matrix is not a square array, or if translation
         does not have the same number of rows as matrix.
     """
+    # pylint: disable=too-many-locals
     # Init
     translation_from_col = "from_id"
     translation_to_col = "to_id"
@@ -342,9 +344,14 @@ def numpy_matrix_zone_translation(
     pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_row_translation[translation_factors_col] == 0
+    pd_row_translation = pd_row_translation[~zero_mask]
+
     pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
         mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
     ).reset_index()
+    zero_mask = pd_col_translation[translation_factors_col] == 0
+    pd_col_translation = pd_col_translation[~zero_mask]
 
     return pandas_matrix_zone_translation(
         matrix=pd.DataFrame(data=matrix, columns=from_id_vals, index=from_id_vals),
@@ -438,7 +445,7 @@ def numpy_vector_zone_translation(
 
     # ## CONVERT DTYPES ## #
     if translation_dtype is None:
-        translation_dtype = np.find_common_type([vector.dtype, translation.dtype], [])
+        translation_dtype = np.find_common_type([vector.dtype, translation.dtype], [])  # type: ignore
     vector = _convert_dtypes(
         arr=vector,
         to_type=translation_dtype,
@@ -689,11 +696,13 @@ def pandas_matrix_zone_translation(
     # Set the index dtypes to match and validate
     (
         matrix.index,
+        matrix.columns,
         row_translation[translation_from_col],
         col_translation[translation_from_col],
     ) = pd_utils.cast_to_common_type(
         [
             matrix.index,
+            matrix.columns,
             row_translation[translation_from_col],
             col_translation[translation_from_col],
         ]
@@ -712,10 +721,15 @@ def pandas_matrix_zone_translation(
         "translation_to_col": translation_to_col,
         "translation_factors_col": translation_factors_col,
         "translation_dtype": translation_dtype,
-        "check_totals": check_totals,
+        "check_totals": False,
     }
 
-    # Filter warnings for things we've already checked
+    with warnings.catch_warnings():
+        # Ignore the warnings we've already checked for
+        msg = ".*zones will be dropped.*"
+        warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
+
+        # Filter warnings for things we've already checked
     with warnings.catch_warnings():
         warnings.filterwarnings(
             action="ignore", message="Some zones in `vector.index`", category=UserWarning
@@ -1024,6 +1038,30 @@ def pandas_single_vector_zone_translation(
     )
 
 
+def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
+    """Warn when zones are missing from vector.
+
+    Produces RuntimeWarning detailing the number of missing rows and
+    the total value, with count of NaN values in the missing rows.
+    """
+    n_nans = np.sum(vector.loc[missing_rows].isna().to_numpy())
+    n_cells = vector.loc[missing_rows].size
+    total_value_dropped = np.nansum(vector.loc[missing_rows].to_numpy())
+    if vector.index.names[0] is None:
+        index_name = "`vector.index`"
+    else:
+        index_name = f"`vector.index` ({vector.index.names[0]})"
+
+    warnings.warn(
+        f"Some zones in {index_name} have not been defined in "
+        "`translation`. These zones will be dropped before translating.\n"
+        f"Missing rows count: {len(missing_rows)}\n"
+        f"Total value dropped: {total_value_dropped}\n"
+        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+    )
+    LOG.debug("Missing zones dropped before translation: %s", missing_rows)
+
+
 def pandas_multi_vector_zone_translation(
     vector: pd.DataFrame,
     translation: pd.DataFrame,
@@ -1141,14 +1179,7 @@ def pandas_multi_vector_zone_translation(
                 translation_from
             )
             if len(missing_rows) > 0:
-                total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
-                warnings.warn(
-                    f"Some zones in `vector.index` have not been defined in "
-                    f"`translation`. These zones will be dropped before "
-                    f"translating.\n"
-                    f"Additional rows count: {len(missing_rows)}\n"
-                    f"Total value dropped: {total_value_dropped}"
-                )
+                _vector_missing_warning(vector, list(missing_rows))
 
         else:
             raise ValueError(
@@ -1158,19 +1189,13 @@ def pandas_multi_vector_zone_translation(
                 "a vector with a single index to use."
             )
     else:
-        missing_rows = set(vector.index.to_list()) - set(translation_from)
-        if len(missing_rows) > 0:
-            total_value_dropped = vector.loc[list(missing_rows)].to_numpy().sum()
-            warnings.warn(
-                f"Some zones in `vector.index` have not been defined in "
-                f"`translation`. These zones will be dropped before "
-                f"translating.\n"
-                f"Additional rows count: {len(missing_rows)}\n"
-                f"Total value dropped: {total_value_dropped}"
-            )
         vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
             [vector.index, translation[translation_from_col]],
         )
+        missing_rows = set(vector.index.to_list()) - set(translation_from)
+        if len(missing_rows) > 0:
+            _vector_missing_warning(vector, list(missing_rows))
+
         # Doesn't matter if it already equals this, quicker than checking.
         vector.index.names = [translation_from_col]
         ind_names = []
@@ -1199,8 +1224,258 @@ def pandas_multi_vector_zone_translation(
     return translated
 
 
-# TODO(BT): Bring over from normits_demand (once we have zoning systems):
-#  translate_vector_zoning
-#  translate_matrix_zoning
-#  get_long_translation
-#  get_long_pop_emp_translations
+def _load_translation(
+    path: pathlib.Path, from_column: int | str, to_column: int | str, factors_column: int | str
+) -> tuple[pd.DataFrame, tuple[str, str, str]]:
+    """Load translation file and determine name of any column positions given.
+
+    Returns
+    -------
+    pd.DataFrame
+        Translation data.
+    (str, str, str)
+        From, to and factors column names.
+    """
+    LOG.info("Loading translation lookup data from: '%s'", path)
+    data = io.read_csv(
+        path,
+        name="translation lookup",
+        usecols=[from_column, to_column, factors_column],
+        dtype={factors_column: float},
+    )
+
+    columns = (from_column, to_column, factors_column)
+    str_columns = [data.columns[i] if isinstance(i, int) else i for i in columns]
+
+    # Attempt to convert ID columns to integers,
+    # but not necessarily a problem if they aren't
+    for column in str_columns[:2]:
+        try:
+            data[column] = pd.to_numeric(data[column], downcast="integer")
+        except ValueError:
+            pass
+
+    columns = ("from_column", "to_column", "factors_column")
+    LOG.info(
+        "Translation loaded with following columns:\n\t%s",
+        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns)),
+    )
+
+    #  MyPy is confused about the tuple
+    return data, tuple(str_columns)  # type: ignore
+
+
+def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
+    """Check all `names` are present and are strings in `params`.
+
+    Raises TypeError for any `names` which aren't strings in `params`.
+    """
+    any_positions = False
+    for name in names:
+        value = params.get(name)
+        if isinstance(value, int):
+            any_positions = True
+
+        elif not isinstance(value, str):
+            raise TypeError(
+                f"{name} parameter should be the name of a column not {type(value)}"
+            )
+
+    if any_positions:
+        warnings.warn(
+            "column positions are given instead of names,"
+            " make sure the columns are in the correct order"
+        )
+
+
+def vector_translation_from_file(
+    vector_path: pathlib.Path,
+    translation_path: pathlib.Path,
+    output_path: pathlib.Path,
+    vector_zone_column: str | int,
+    translation_from_column: str | int,
+    translation_to_column: str | int,
+    translation_factors_column: str | int,
+) -> None:
+    """Translate zoning system of vector CSV file.
+
+    Load vector from CSV, perform translation and write to new CSV.
+
+    Parameters
+    ----------
+    vector_path : pathlib.Path
+        Path to CSV file containing data to be translated.
+    translation_path : pathlib.Path
+        Path to translation lookup CSV.
+    output_path : pathlib.Path
+        CSV path to save the translated data to.
+    vector_zone_column : str | int
+        Name, or position, of the zone ID column in `vector_path` file.
+    translation_from_column : str | int
+        Name, or position, of zone ID column in translation which
+        corresponds to the current vector zone ID.
+    translation_to_column : str | int
+        Name, or position, of column in translation for the new zone IDs.
+    translation_factors_column : str | int
+        Name, or position, of column in translation containing the
+        splitting factors.
+    """
+    # TODO(MB) Add optional from / to unique index parameters,
+    # otherwise infer from translation file
+    _validate_column_name_parameters(
+        locals(),
+        "vector_zone_column",
+        "translation_from_column",
+        "translation_to_column",
+        "translation_factors_column",
+    )
+
+    LOG.info("Loading vector data from: '%s'", vector_path)
+    vector = io.read_csv(vector_path, index_col=[vector_zone_column])
+    LOG.info(
+        "Loaded vector data with zone ID (index) column '%s' and %s data columns: %s",
+        vector.index.name,
+        len(vector.columns),
+        ", ".join(f"'{i}'" for i in vector.columns),
+    )
+
+    non_numeric = vector.select_dtypes(exclude="number").columns.tolist()
+    if len(non_numeric) > 0:
+        LOG.warning(
+            "Ignoring %s columns containing non-numeric"
+            " data, these will not be translated: %s",
+            len(non_numeric),
+            ", ".join(f"'{i}'" for i in non_numeric),
+        )
+        vector = vector.drop(columns=non_numeric)
+
+    if len(vector.columns) == 0:
+        LOG.error("no numeric columns in vector data to translate")
+        return
+
+    lookup, (from_col, to_col, factors_col) = _load_translation(
+        translation_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
+    translated = pandas_vector_zone_translation(
+        vector,
+        lookup,
+        translation_from_col=from_col,
+        translation_to_col=to_col,
+        translation_factors_col=factors_col,
+        from_unique_index=lookup[from_col].unique().tolist(),
+        to_unique_index=lookup[to_col].unique().tolist(),
+    )
+
+    translated.to_csv(output_path)
+    LOG.info("Written translated CSV to '%s'", output_path)
+
+
+def matrix_translation_from_file(
+    matrix_path: pathlib.Path,
+    translation_path: pathlib.Path,
+    output_path: pathlib.Path,
+    matrix_zone_columns: tuple[int | str, int | str],
+    matrix_values_column: int | str,
+    translation_from_column: int | str,
+    translation_to_column: int | str,
+    translation_factors_column: int | str,
+) -> None:
+    """Translate zoning system of matrix CSV file.
+
+    Load matrix from CSV, perform translation and write to new
+    CSV. CSV files are expected to be in the matrix 'long' format.
+
+    Parameters
+    ----------
+    matrix_path : pathlib.Path
+        Path to matrix CSV file.
+    translation_path : pathlib.Path
+        Path to translation lookup CSV.
+    output_path : pathlib.Path
+        CSV path to save the translated data to.
+    matrix_zone_columns : tuple[int | str, int | str]
+        Names, or positions, of the 2 columns containing
+        the zone IDs in the matrix file.
+    matrix_values_column : int | str
+        Name, or position, of the column containing the matrix values.
+    translation_from_column : int | str
+        Name, or position, of zone ID column in translation which
+        corresponds to the current vector zone ID.
+    translation_to_column : int | str
+        Name, or position, of column in translation for the new zone IDs.
+    translation_factors_column : int | str
+        Name, or position, of column in translation
+        containing the splitting factors.
+    """
+    # TODO(MB) Handle square format CSVs, and deal with too-many-locals
+    # pylint: disable=too-many-locals
+    format_ = "long"
+    _validate_column_name_parameters(
+        locals(),
+        "matrix_values_column",
+        "translation_from_column",
+        "translation_to_column",
+        "translation_factors_column",
+    )
+
+    matrix_zone_columns = tuple(matrix_zone_columns)
+    are_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
+    if len(matrix_zone_columns) != 2 or are_strings:
+        raise TypeError(
+            "matrix_zone_columns should be a tuple containing "
+            f"the names of 2 columns not {matrix_zone_columns}"
+        )
+
+    LOG.info("Loading matrix data from: '%s'", matrix_path)
+    matrix = io.read_csv_matrix(
+        matrix_path,
+        format_=format_,
+        index_col=matrix_zone_columns,
+        usecols=[*matrix_zone_columns, matrix_values_column],
+        dtype={matrix_values_column: float},
+    )
+    LOG.info(
+        "Loaded matrix with index from '%s' and columns from '%s' containing %s cells",
+        matrix.index.name,
+        matrix.columns.name,
+        matrix.size,
+    )
+
+    lookup, (from_col, to_col, factors_col) = _load_translation(
+        translation_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
+
+    translated = pandas_matrix_zone_translation(
+        matrix,
+        lookup,
+        translation_from_col=from_col,
+        translation_to_col=to_col,
+        translation_factors_col=factors_col,
+    )
+
+    translated.index.name = matrix.index.name
+    translated.columns.name = matrix.columns.name
+
+    if format_ == "long":
+        translated = translated.stack().to_frame()
+
+        # Get name of value column
+        if isinstance(matrix_values_column, str):
+            translated.columns = [matrix_values_column]
+        else:
+            headers = io.read_csv(
+                matrix_path,
+                index_col=matrix_zone_columns,
+                usecols=[*matrix_zone_columns, matrix_values_column],
+                nrows=2,
+            )
+            translated.columns = headers.columns
+
+    translated.to_csv(output_path)
+    LOG.info("Written translated matrix CSV to '%s'", output_path)

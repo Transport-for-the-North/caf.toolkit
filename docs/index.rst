@@ -35,11 +35,9 @@ Modules
 .. toctree::
    :maxdepth: 1
 
-   array_utils
    config_base
    cost_utils
    io
-   iterative_proportional_fitting
    log_helpers
    math_utils
    timing

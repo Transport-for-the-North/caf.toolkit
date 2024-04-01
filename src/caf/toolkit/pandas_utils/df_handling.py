@@ -400,8 +400,7 @@ def chunk_df(
     except (ValueError, TypeError):
         return
 
-    for item in iterator:
-        yield item
+    yield from iterator
 
 
 # pylint: disable=too-many-branches

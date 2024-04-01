@@ -20,5 +20,7 @@ there.
 Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
-
-- Updated Pydantic dependency to v2
+- translations
+  - Fixed a bug where 0 values would cause the translation to run out of memory
+  - Fixed a bug where the columns of an array were not correctly being validated on a pandas matrix translation
+- New `LogHelper.add_handler` method for adding custom handlers to logger
