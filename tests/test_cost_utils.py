@@ -882,7 +882,6 @@ class TestDynamicCostDistribution:
         np.testing.assert_almost_equal(bins, cost_dist.bin_edges)
 
 
-
 class TestIntrazonalCostInfill:
     """Tests for the intrazonal_cost_infill function"""
 
@@ -899,7 +898,7 @@ class TestIntrazonalCostInfill:
         result: np.ndarray
 
         def get_kwargs(self) -> dict[str, Any]:
-            return{
+            return {
                 "cost": self.cost_matrix,
                 "multiplier": self.multiplier,
                 "min_axis": self.min_axis,
@@ -993,14 +992,18 @@ class TestIntrazonalCostInfill:
             result=result,
         )
 
-    @pytest.mark.parametrize("io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"])
+    @pytest.mark.parametrize(
+        "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
+    )
     def test_correct_result(self, io_str: str, request):
         """Test that the correct results are achieved"""
         io: TestIntrazonalCostInfill.IzResults = request.getfixturevalue(io_str)
         result = cost_utils.intrazonal_cost_infill(**io.get_kwargs())
         np.testing.assert_almost_equal(result, io.result)
 
-    @pytest.mark.parametrize("io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"])
+    @pytest.mark.parametrize(
+        "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
+    )
     @pytest.mark.parametrize("multiplier", [0, 0.5, 2])
     def test_different_multiplier(self, io_str: str, multiplier: float, request):
         """Test that the multiplier is being applied correctly."""
@@ -1012,5 +1015,7 @@ class TestIntrazonalCostInfill:
         np.fill_diagonal(expected_result, new_diag)
 
         # Calculate and test the result
-        result = cost_utils.intrazonal_cost_infill(**io.get_kwargs() | {"multiplier": multiplier})
+        result = cost_utils.intrazonal_cost_infill(
+            **io.get_kwargs() | {"multiplier": multiplier}
+        )
         np.testing.assert_almost_equal(result, expected_result)
