@@ -630,7 +630,7 @@ def pandas_matrix_zone_translation(
     """Efficiently translates a pandas matrix between index systems.
 
     Only works on wide matrices and not long. If translating long matrices,
-    use instead.
+    use `pandas_long_matrix_zone_translation` instead.
 
     Parameters
     ----------
@@ -728,12 +728,6 @@ def pandas_matrix_zone_translation(
         # Ignore the warnings we've already checked for
         msg = ".*zones will be dropped.*"
         warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
-
-        # Filter warnings for things we've already checked
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            action="ignore", message="Some zones in `vector.index`", category=UserWarning
-        )
 
         half_done = pandas_multi_vector_zone_translation(
             vector=matrix,
