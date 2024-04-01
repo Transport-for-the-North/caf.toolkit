@@ -130,13 +130,13 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
             # Check what column can't be converted to dtypes
             columns: dict[str, type] = kwargs.pop("dtype")
             df = pd.read_csv(path, **kwargs)
-            for c, t in columns.items():
+            for col, _type in columns.items():
                 try:
-                    df[c].astype(t)
+                    df[col].astype(_type)
                 except ValueError:
                     raise ValueError(
-                        f"Column '{c}' in {name} has values "
-                        f"which cannot be converted to {t}"
+                        f"Column '{col}' in {name} has values "
+                        f"which cannot be converted to {_type}"
                     ) from err
         raise
 
