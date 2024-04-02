@@ -21,4 +21,4 @@ Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
 
-- Updated Pydantic dependency to v2
+- Update to cost_utils cost bins, which now calculates a weighted average of the bins when generated.
