@@ -578,12 +578,7 @@ class TestLongWideConversions:
 
     def test_long_to_wide_full(self, df_data_complete: DfData):
         """Test long -> wide conversion with no add/del cols"""
-        wide_df = pd_utils.long_to_wide_infill(
-            df=df_data_complete.long,
-            index_col=self.index_col1,
-            columns_col=self.index_col2,
-            values_col=self.value_col,
-        )
+        wide_df = pd_utils.long_to_wide_infill(matrix=df_data_complete.long)
         pd.testing.assert_frame_equal(wide_df, df_data_complete.wide)
 
     def test_long_to_wide_missing(self, df_data_complete: DfData):
@@ -602,14 +597,7 @@ class TestLongWideConversions:
         expected_wide.loc[2, :] = infill_val
 
         # Check
-        wide_df = pd_utils.long_to_wide_infill(
-            df=long_df,
-            index_col=self.index_col1,
-            columns_col=self.index_col2,
-            values_col=self.value_col,
-            index_vals=df_data_complete.index_vals,
-            column_vals=df_data_complete.index_vals,
-        )
+        wide_df = pd_utils.long_to_wide_infill(matrix=long_df)
         pd.testing.assert_frame_equal(
             wide_df,
             expected_wide,

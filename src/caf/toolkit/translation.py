@@ -590,12 +590,7 @@ def pandas_long_matrix_zone_translation(
     matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
 
     # Convert to wide to translate
-    wide_mat = pd_utils.long_to_wide_infill(
-        df=matrix,
-        index_col=index_col_1_name,
-        columns_col=index_col_2_name,
-        values_col=values_col,
-    )
+    wide_mat = pd_utils.long_to_wide_infill(matrix=matrix)
 
     translated_wide_mat = pandas_matrix_zone_translation(
         matrix=wide_mat,
@@ -1002,15 +997,7 @@ def pandas_single_vector_zone_translation(
 
     # ## PREP AND TRANSLATE ## #
     # Square the translation
-    translation = pd_utils.long_to_wide_infill(
-        df=translation,
-        index_col=translation_from_col,
-        columns_col=translation_to_col,
-        values_col=translation_factors_col,
-        index_vals=from_unique_index,
-        column_vals=to_unique_index,
-        infill=translate_infill,
-    )
+    translation = pd_utils.long_to_wide_infill(matrix=translation, infill=translate_infill)
 
     # Sort vector and infill 0s
     vector = vector.reindex(
