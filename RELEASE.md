@@ -26,3 +26,4 @@ Below, a brief summary of patches made since the previous version can be found.
   - Added a new method to translate long pandas dataframes
 - New `LogHelper.add_handler` method for adding custom handlers to logger
 - Added a new `cost_utils` function for infilling intrazonal costs of a square matrix
+- Update to `cost_utils.CostDistribution`, which now calculates a weighted average of the bins when generated.
