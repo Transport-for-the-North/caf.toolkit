@@ -329,6 +329,11 @@ class CostDistribution:
             The column of data at `filepath` that contains the number of trips
             of each cost band.
 
+        weighted_avg_col:
+            The column of data at 'filepath' that contains the weighted average
+            cost value of each band. If the read in df does not contain this
+            column, it will default to the avg_col.
+
         Returns
         -------
         cost_distribution:
