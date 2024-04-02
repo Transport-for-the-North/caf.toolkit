@@ -642,3 +642,47 @@ def create_log_bins(
     # Add the first and last item
     bins = np.insert(bins, 0, 0)
     return np.insert(bins, len(bins), final_val)
+
+
+def intrazonal_cost_infill(
+    cost: np.ndarray,
+    multiplier: float = 0.5,
+    min_axis: int = 1,
+) -> np.ndarray:
+    """
+    Infill the intra-zonal costs of a cost matrix.
+
+    The intra-zonal costs are usually the diagonal of a cost matrix. Standard
+    TAG procedure for infilling these costs is to take half the minimum cost
+    for each zone. By default, this function takes the minimum value from each
+    row (ignoring 0s) and multiplies that by 0.5 to get the infill value for
+    each intra-zonal. Note that if any costs already exist for the
+    intra-zonals, they will be overwritten.
+    The diagonal infill is calculated similar to:
+    `cost.min(axis=min_axis * multiplier`
+
+    Parameters
+    ----------
+    cost:
+        The square, 2D cost matrix to infill.
+
+    multiplier:
+        The value to multiply the minimum values by to calculate the infill value.
+
+    min_axis:
+        The axis to calculate the minimum value across.
+
+    Returns
+    -------
+    infilled_cost:
+        A copy of the input `cost`, but with the diagonal infilled.
+    """
+    # Ensure we don't pick up the diagonals or 0s in the minimum check
+    nonzero_cost = np.where(cost == 0, np.inf, cost)
+    np.fill_diagonal(nonzero_cost, np.inf)
+
+    # Infill a copy of cost
+    infill = nonzero_cost.min(axis=min_axis) * multiplier
+    infilled_cost = cost.copy()
+    np.fill_diagonal(infilled_cost, infill)
+    return infilled_cost

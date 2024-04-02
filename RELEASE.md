@@ -25,3 +25,4 @@ Below, a brief summary of patches made since the previous version can be found.
   - Fixed a bug where the columns of an array were not correctly being validated on a pandas matrix translation
   - Added a new method to translate long pandas dataframes
 - New `LogHelper.add_handler` method for adding custom handlers to logger
+- Added a new `cost_utils` function for infilling intrazonal costs of a square matrix
