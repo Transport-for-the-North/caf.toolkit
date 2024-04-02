@@ -487,6 +487,136 @@ def numpy_vector_zone_translation(
     return out_vector
 
 
+def pandas_long_matrix_zone_translation(
+    matrix: pd.DataFrame,
+    index_col_1_name: str,
+    index_col_2_name: str,
+    values_col: str,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    col_translation: Optional[pd.DataFrame] = None,
+    translation_dtype: Optional[np.dtype] = None,
+    index_col_1_out_name: Optional[str] = None,
+    index_col_2_out_name: Optional[str] = None,
+    check_totals: bool = True,
+) -> pd.DataFrame:
+    """Efficiently translates a pandas matrix between index systems.
+
+    Parameters
+    ----------
+    matrix:
+        The matrix to translate, in long format. Must contain columns:
+        [`index_col_1_name`, `index_col_2_name`, `value_col`].
+
+    index_col_1_name:
+        The name of the first column in `matrix` to translate index system.
+
+    index_col_2_name:
+        The name of the second column in `matrix` to translate index system.
+
+    values_col:
+        The name of the column in `matrix` detailing the values to translate.
+
+    translation:
+        A pandas DataFrame defining the weights to use when translating.
+        Needs to contain columns:
+        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
+        When `col_translation` is None, this defines the translation to use
+        for both the rows and columns. When `col_translation` is set, this
+        defines the translation to use for the rows.
+
+    col_translation:
+        A matrix defining the weights to use to translate the columns.
+        Takes an input of the same format as `translation`. When None,
+        `translation` is used as the column translation.
+
+    translation_from_col:
+        The name of the column in `translation` and `col_translation`
+        containing the current index and column values of `matrix`.
+
+    translation_to_col:
+        The name of the column in `translation` and `col_translation`
+        containing the desired output index and column values. This
+        will define the output index and column format.
+
+    translation_factors_col:
+        The name of the column in `translation` and `col_translation`
+        containing the translation weights between `translation_from_col` and
+        `translation_to_col`. Where zone pairs do not exist, they will be
+        infilled with `translate_infill`.
+
+    translation_dtype:
+        The numpy datatype to use to do the translation. If None, then the
+        dtype of `vector` is used. Where such high precision
+        isn't needed, a more memory and time efficient data type can be used.
+
+    check_totals:
+        Whether to check that the input and output matrices sum to the same
+        total.
+
+    index_col_1_out_name:
+        The name to give to `index_col_1_name` on return.
+
+    index_col_2_out_name:
+        The name to give to `index_col_2_name` on return.
+
+    Returns
+    -------
+    translated_matrix:
+        matrix, translated into to_unique_index system.
+
+    Raises
+    ------
+    ValueError:
+        If matrix is not a square array, or if translation any inputs are not
+        the correct format.
+    """
+    # pylint: disable=too-many-arguments, too-many-locals
+    # Init
+    keep_cols = [index_col_1_name, index_col_2_name, values_col]
+    all_cols = matrix.columns.tolist()
+
+    if index_col_1_out_name is None:
+        index_col_1_out_name = index_col_1_name
+    if index_col_2_out_name is None:
+        index_col_2_out_name = index_col_2_name
+
+    # Drop any columns we're not keeping
+    drop_cols = set(all_cols) - set(keep_cols)
+    if len(drop_cols) > 0:
+        warnings.warn(f"Extra columns found in matrix, dropping the following: {drop_cols}")
+    matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
+
+    # Convert to wide to translate
+    wide_mat = pd_utils.long_to_wide_infill(
+        df=matrix,
+        index_col=index_col_1_name,
+        columns_col=index_col_2_name,
+        values_col=values_col,
+    )
+
+    translated_wide_mat = pandas_matrix_zone_translation(
+        matrix=wide_mat,
+        translation=translation,
+        translation_from_col=translation_from_col,
+        translation_to_col=translation_to_col,
+        translation_factors_col=translation_factors_col,
+        col_translation=col_translation,
+        translation_dtype=translation_dtype,
+        check_totals=check_totals,
+    )
+
+    # Convert back
+    return pd_utils.wide_to_long_infill(
+        df=translated_wide_mat,
+        index_col_1_name=index_col_1_out_name,
+        index_col_2_name=index_col_2_out_name,
+        value_col_name=values_col,
+    )
+
+
 def pandas_matrix_zone_translation(
     matrix: pd.DataFrame,
     translation: pd.DataFrame,
@@ -498,6 +628,9 @@ def pandas_matrix_zone_translation(
     check_totals: bool = True,
 ) -> pd.DataFrame:
     """Efficiently translates a pandas matrix between index systems.
+
+    Only works on wide matrices and not long. If translating long matrices,
+    use `pandas_long_matrix_zone_translation` instead.
 
     Parameters
     ----------
