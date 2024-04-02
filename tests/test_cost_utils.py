@@ -359,6 +359,16 @@ class TestCostDistributionClassConstructors:
         cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
 
+    def test_default_weighted_average(self, cost_dist_1d_class):
+        dist_df = cost_utils.CostDistribution(**cost_dist_1d_class.constructor_kwargs).df.drop(
+            "weighted_ave", axis=1
+        )
+        test_dist = cost_utils.CostDistribution(dist_df).df
+        ave_col = test_dist["ave"]
+        weight_col = test_dist["weighted_ave"]
+        weight_col.name = "ave"
+        pd.testing.assert_series_equal(ave_col, weight_col)
+
     @pytest.mark.parametrize(
         "io_str",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
