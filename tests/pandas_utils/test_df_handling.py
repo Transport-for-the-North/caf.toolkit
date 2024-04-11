@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.pandas_utils.df_handling module"""
-import dataclasses
-
 # Built-Ins
-from typing import Any
-from typing import NamedTuple
+import dataclasses
+from typing import Any, NamedTuple
 
 # Third Party
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import toolbox
 from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import toolbox
 
 # pylint: enable=import-error,wrong-import-position
 

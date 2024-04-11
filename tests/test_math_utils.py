@@ -3,17 +3,15 @@
 from __future__ import annotations
 
 # Built-Ins
+import dataclasses
 import math
 import random
-import dataclasses
-
 from typing import Collection
 
 # Third Party
+import numpy as np
 import pytest
 import sparse
-import numpy as np
-
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position

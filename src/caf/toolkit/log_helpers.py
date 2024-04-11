@@ -22,18 +22,13 @@ import getpass
 import logging
 import os
 import platform
-from typing import Any, Iterable, Optional
+from typing import Annotated, Any, Iterable, Optional
 
 # Third Party
 import psutil
-from psutil import _common
 import pydantic
+from psutil import _common
 from pydantic import dataclasses, types
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -69,7 +64,9 @@ class ToolDetails:
     """
 
     name: str
-    version: types.constr(strip_whitespace=True, regex=_SEMVER_REGEX)  # type: ignore
+    version: Annotated[
+        str, types.StringConstraints(strip_whitespace=True, pattern=_SEMVER_REGEX)
+    ]
     homepage: Optional[pydantic.HttpUrl] = None
     source_url: Optional[pydantic.HttpUrl] = None
 

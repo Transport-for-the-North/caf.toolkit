@@ -4,30 +4,20 @@
 See: https://en.wikipedia.org/wiki/Iterative_proportional_fitting
 """
 # Built-Ins
+import itertools
 import logging
 import warnings
-import itertools
-
-from typing import Any
-from typing import Union
-from typing import overload
-from typing import Callable
-from typing import Optional
-from typing import Collection
+from typing import Any, Callable, Collection, Optional, Union, overload
 
 # Third Party
-import tqdm
-import sparse
 import numpy as np
 import pandas as pd
+import sparse
+import tqdm
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
-from caf.toolkit import math_utils
-from caf.toolkit import array_utils
+from caf.toolkit import array_utils, math_utils
 from caf.toolkit import pandas_utils as pd_utils
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)

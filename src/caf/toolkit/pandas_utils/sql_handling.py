@@ -1,4 +1,3 @@
-
 """
 Used for reading sql databases into dataframes.
 
@@ -6,22 +5,26 @@ Currently this is written aimed at NTEM databases. For that reason it only
 works with access databases. This could be extended to work with other databases
 in future, and it is likely that this will be done.
 """
-from caf.toolkit import BaseConfig
-from pathlib import Path
-from typing import Union
-import pyodbc
-import pandas as pd
-from pydantic import validator
+# Built-Ins
 import enum
-import sqlite3
+from pathlib import Path
+from typing import Optional, Union
+
+# Third Party
+import pandas as pd
+import pydantic
+import pyodbc
+
+# Local Imports
+from caf.toolkit import BaseConfig
 
 STRINGTYPENAMES = ("VARCHAR", "TEXT", "MEMO", "DATETIME", "YESNO", "CHARACTER")
 
 
+# pylint: disable=c-extension-no-member
+# pylint confused by pyodbc
 class AggregateFunctions(enum.Enum):
-    """
-    Enumeration of valid aggregate function strings for a sql statement.
-    """
+    """Enumeration of valid aggregate function strings for a sql statement."""
 
     COUNT = "COUNT"
     SUM = "SUM"
@@ -54,16 +57,16 @@ class Column(BaseConfig):
 
     Parameters
     ----------
-
     column_name (str): The name of the column
     groupby_fn: If grouping, the function to groupby for this column.
     """
 
     column_name: str
-    groupby_fn: AggregateFunctions = None
+    groupby_fn: Optional[AggregateFunctions] = None
 
     @property
-    def _groupby_fn(self):
+    def groupby_fn_inner(self):
+        """Return groupby_fn if it exists."""
         if self.groupby_fn is None:
             return self.groupby_fn
         return self.groupby_fn.value
@@ -75,13 +78,12 @@ class TableColumns(BaseConfig):
 
     Parameters
     ----------
-
     table_name (str): The name of the table
     columns(list[Column]): A list of columns to extract from that table.
     """
 
     table_name: str
-    columns: list[Column] = "All"
+    columns: Union[list[Column], str] = "All"
 
 
 class JoinInfo(BaseConfig):
@@ -90,7 +92,6 @@ class JoinInfo(BaseConfig):
 
     Parameters
     ----------
-
     left_table: The name of the left table in the join
     right_table: The name of the right table in the join
     left_column: The join column in the left table
@@ -108,9 +109,7 @@ class JoinInfo(BaseConfig):
 
     @property
     def join_tuple_tuple(self):
-        """
-        Converts to a tuple for use in some other methods.
-        """
+        """Converts to a tuple for use in some other methods."""
         return ((self.left_table, self.left_column), (self.right_table, self.right_column))
 
 
@@ -120,7 +119,6 @@ class WhereInfo(BaseConfig):
 
     Parameters
     ----------
-
     table: The table the column is in
     column: The column being filtered on
     operator: The operator for the where statement (between the column and the
@@ -140,7 +138,6 @@ class MainSqlConf(BaseConfig):
 
     Parameters
     ----------
-
     file: Path to the database file. This can also be a connection to a sqlite
     or access database, but it is expected to receive a path. If a path is
     provided it must be to an access database.
@@ -155,39 +152,46 @@ class MainSqlConf(BaseConfig):
     MUST have groupby_fn included, or an error will occur.
     """
 
-    file: Union[Path, sqlite3.Connection, pyodbc.Connection]
+    file: Union[Path, pyodbc.Connection]
     tables: list[TableColumns]
-    joins: list[JoinInfo] = None
-    wheres: list[WhereInfo] = None
-    groups: list[TableColumns] = None
+    joins: Optional[list[JoinInfo]] = None
+    wheres: Optional[list[WhereInfo]] = None
+    groups: Optional[list[TableColumns]] = None
 
+    # pylint: disable=missing-class-docstring, too-few-public-methods
     class Config:
+        """Allow arbitrary types."""
+
         arbitrary_types_allowed = True
 
-    @validator("groups")
+    # pylint: enable=missing-class-docstring, too-few-public-methods
+    # pylint: disable=no-self-argument
+    @pydantic.field_validator("groups", )
     def groupbys(cls, v, values):
-        """ """
+        """Validate groupby."""
         # Pairs is a list of tuples of table and column name in groups
         if v is None:
             return v
         pairs = []
+        if v is None:
+            return v
         for table in v:
             for column in table.columns:
                 pairs.append((table.table_name, column.column_name))
         # Check joins to add to pairs
-        if "joins" in values.keys():
+        if "joins" in values.data.keys():
             # For join pairs, if left or right is grouped on, add its partner
-            for join in values["joins"]:
+            for join in values.data["joins"]:
                 if join.join_tuple_tuple[0] in pairs:
                     pairs.append(join.join_tuple_tuple[1])
                 elif join.join_tuple_tuple[1] in pairs:
                     pairs.append(join.join_tuple_tuple[0])
 
         # Iterate through all of the columns in tables
-        for table in values["tables"]:
+        for table in values.data["tables"]:
             # All shouldn't be used if grouping
             if table.columns == "All":
-                raise ValueError("All is not a valid option for a table" "when grouping.")
+                raise ValueError("All is not a valid option for a table when grouping.")
             for column in table.columns:
                 # Check that the column isn't being grouped by, and no groupby_fn, raise error
                 if ((table.table_name, column.column_name) not in pairs) and (
@@ -202,9 +206,11 @@ class MainSqlConf(BaseConfig):
                     )
         return v
 
+    # pylint: enable=no-self-argument
+
     @property
-    def conn(self):
-        if isinstance(self.file, (pyodbc.Connection, sqlite3.Connection)):
+    def _conn(self):
+        if isinstance(self.file, pyodbc.Connection):
             return self.file
         return pyodbc.connect(
             f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={self.file}"
@@ -212,19 +218,18 @@ class MainSqlConf(BaseConfig):
 
 
 def connection(file):
+    """Return a connection to a database from your given file path."""
     return pyodbc.connect(f"DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ={file}")
 
 
 class QueryBuilder:
-    """
-    Class for building a sql query and returning a dataframe.
-    """
+    """Class for building a sql query and returning a dataframe."""
 
     def __init__(
         self,
         params: MainSqlConf,
     ):
-        self.cursor = params.conn.cursor()
+        self.cursor = params._conn.cursor()
         self.tables = params.tables
         self.joins = params.joins
         self.where = params.wheres
@@ -232,6 +237,7 @@ class QueryBuilder:
 
     @property
     def table_info(self):
+        """Info about table being returned."""
         tables = [table.table_name for table in self.cursor.tables(tableType="TABLE")]
         file_info = {}
         for tab_name in tables:
@@ -244,6 +250,7 @@ class QueryBuilder:
 
     @property
     def select_string(self):
+        """Select part of sql statement."""
         table_strings = []
         # if self.group is not None:
         for table in self.tables:
@@ -252,8 +259,8 @@ class QueryBuilder:
             else:
                 string = ", ".join(
                     [
-                        f"{column._groupby_fn}([{table.table_name}].[{column.column_name}])"
-                        if column._groupby_fn is not None
+                        f"{column.groupby_fn_inner}([{table.table_name}].[{column.column_name}])"
+                        if column.groupby_fn_inner is not None
                         else f"[{table.table_name}].[{column.column_name}]"
                         for column in table.columns
                     ]
@@ -263,6 +270,7 @@ class QueryBuilder:
 
     @property
     def join_string(self):
+        """Join part of sql statement."""
         join_strings = []
         if self.joins:
             for join in self.joins:
@@ -270,11 +278,11 @@ class QueryBuilder:
                 join_strings.append(join_string)
             join_strings.insert(0, self.joins[0].left_table)
             return "(" * len(self.joins) + " ".join(join_strings)
-        else:
-            return self.tables[0].table_name
+        return self.tables[0].table_name
 
     @property
     def where_string(self):
+        """Where part of sql statement."""
         where_strings = []
         for where in self.where:
             if isinstance(where.match, list):
@@ -295,6 +303,7 @@ class QueryBuilder:
 
     @property
     def group_string(self):
+        """Groupby part of sql statement."""
         table_strings = []
         for table in self.group:
             string = ", ".join(
@@ -304,6 +313,7 @@ class QueryBuilder:
         return ", ".join(table_strings) + ";"
 
     def load_db(self):
+        """Load the data defined by your inputs."""
         query = f"""SELECT {self.select_string}
 FROM {self.join_string}"""
         if self.where is not None:
@@ -323,15 +333,6 @@ FROM {self.join_string}"""
                 for name in table.columns:
                     columns.append(name.column_name)
         df = pd.DataFrame([tuple(row) for row in rows], columns=columns)
-        # Remove duplicated columns from inner joins
-        if self.joins is not None:
-            join_dropper = []
-            for join in self.joins:
-                if (join.how == "inner") or (join.how == "left"):
-                    join_dropper.append(join.right_column)
-                if join.how == "right":
-                    join_dropper.append(join.left_column)
-            df.drop(join_dropper, axis=1, inplace=True)
         if self.group is not None:
             index_cols = []
             for table in self.group:
@@ -339,3 +340,6 @@ FROM {self.join_string}"""
                     index_cols.append(name.column_name)
             df.set_index(index_cols, inplace=True)
         return df
+
+
+# pylint: enable=c-extension-no-member

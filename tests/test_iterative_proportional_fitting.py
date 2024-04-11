@@ -3,27 +3,20 @@
 from __future__ import annotations
 
 # Built-Ins
-import re
 import dataclasses
-
-from typing import Any
-from typing import Optional
-from typing import Callable
-
+import re
+from typing import Any, Callable, Optional
 
 # Third Party
-import pytest
-import sparse
 import numpy as np
 import pandas as pd
-
+import pytest
+import sparse
 from numpy import testing as np_testing
-
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import math_utils
-from caf.toolkit import iterative_proportional_fitting
+from caf.toolkit import iterative_proportional_fitting, math_utils
 
 # pylint: enable=import-error,wrong-import-position
 
