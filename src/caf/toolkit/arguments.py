@@ -43,7 +43,7 @@ class TypeAnnotationWarning(UserWarning):
 
 
 def getenv_bool(name: str, default: bool) -> bool:
-    """Gets environment variable and converts to a boolean.
+    """Get environment variable and converts to a boolean.
 
     Normalizes the variable value by converting to lowercase
     and stripping whitespace before bool conversion.
