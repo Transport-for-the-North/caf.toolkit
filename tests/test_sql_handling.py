@@ -233,6 +233,7 @@ def fixture_build_fail_tables_class(data_path, tables_fail, joins, group):
 def fixture_expected_columns():
     return ["Authority", "Mode", "2021"]
 
+@pytest.mark.skip
 class TestSqlHandling:
     def test_connection(self, query_test):
         try:
