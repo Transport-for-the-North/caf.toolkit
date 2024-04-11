@@ -74,6 +74,8 @@ def getenv_bool(name: str, default: bool) -> bool:
     false_str = ("false", "no", "n", "0")
 
     value = value.strip().lower()
+    if value == "":
+        return default
     if value in true_str:
         return True
     if value in false_str:

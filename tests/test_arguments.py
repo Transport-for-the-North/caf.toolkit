@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import os
 import pathlib
 
 # Third Party
@@ -84,3 +85,41 @@ class TestReplaceUnion:
         """Test `_replace_union` function works as expected."""
         # pylint: disable=protected-access
         assert arguments._replace_union(annotation) == expected
+
+
+class TestGetenvBool:
+    """Tests for the `getenv_bool` function."""
+
+    _variable_name = "TEST_TOOLKIT_ENV_VARIABLE"
+
+    def test_default(self):
+        """Test that the default parameter is correctly returned."""
+        os.environ[self._variable_name] = ""
+
+        assert arguments.getenv_bool(self._variable_name, True)
+        assert not arguments.getenv_bool(self._variable_name, False)
+
+    @pytest.mark.parametrize("value", ["TRUE", "Yes", "y", "1", "true  "])
+    def test_true(self, value: str):
+        """Test the possible values for True."""
+        os.environ[self._variable_name] = value
+        assert arguments.getenv_bool(self._variable_name, False)
+
+    @pytest.mark.parametrize("value", ["false", "no", "n", "0", "FALSE", "n "])
+    def test_false(self, value: str):
+        """Test the possible values for False."""
+        os.environ[self._variable_name] = value
+        assert not arguments.getenv_bool(self._variable_name, True)
+
+    @pytest.mark.parametrize("value", ["10", "01", "wrong", "t", "f"])
+    def test_invalid(self, value: str):
+        """Test an invalid value raises the correct error."""
+        pattern = (
+            r"unexpected value (.*) for '.*' env "
+            r"variable should be one of the following:\n"
+            r" For true: .*\n For false: .*"
+        )
+        os.environ[self._variable_name] = value
+
+        with pytest.raises(ValueError, match=pattern):
+            arguments.getenv_bool(self._variable_name, False)
