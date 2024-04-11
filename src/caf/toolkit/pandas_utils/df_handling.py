@@ -408,6 +408,7 @@ def long_product_infill(
     data: pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
+    index_dict: dict[str, list] = None
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
 
@@ -429,6 +430,13 @@ def long_product_infill(
         'infill' is set to anything other than zero, this must be set to False
         or an error will be raised.
 
+    index_dict:
+        Define expected values in indices. This dict will form the index of the
+        infilled Series. The keys of this dict must match the names of the index
+        levels in your input Series, and all values in the input Series must
+        be included in this dict. If this is left as None, the infilled index
+        will simply be the product of all values in the current index.
+
     Returns
     -------
     infilled_df:
@@ -440,12 +448,19 @@ def long_product_infill(
     TypeError:
         If none of the non-index columns are numeric and `check_totals` is True
     """
-    indices = {}
-    for ind in data.index.names:
-        vals = data.index.get_level_values(ind).unique()
-        indices[ind] = vals
+    if index_dict is None:
+        index_dict = {}
+        for ind in data.index.names:
+            vals = data.index.get_level_values(ind).unique()
+            index_dict[ind] = vals
 
-    full_ind = pd.MultiIndex.from_product(indices.values(), names=indices.keys())
+    else:
+        mismatch = [i for i in data.index.names if i not in index_dict.keys()]
+        if len(mismatch) > 0:
+            raise ValueError(f"{mismatch} levels were found in the input data, "
+                             f"but not in index_dict.")
+
+    full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
     filler = pd.DataFrame(data=[infill] * len(full_ind), index=full_ind, columns=["infill"])
 
     joined = filler.join(data, how="left")
@@ -483,7 +498,7 @@ def long_to_wide_infill(
     unstack_level:
         The level to unstack from the index. This can either be an int, i.e. the
         ordinal level of the multiindex to unstack, or a string, i.e. the name of
-        the index level to unstack.
+        the index level to unstack. See pd.DataFrame.unstack().
 
     check_totals:
         Whether to check if the totals are almost equal before and after the
@@ -521,8 +536,6 @@ def long_to_wide_infill(
 
 def wide_to_long_infill(
     df: pd.DataFrame,
-    infill: Any = 0,
-    check_totals: bool = False,
 ) -> pd.DataFrame:
     """Convert a matrix from wide to long format, infilling missing values.
 
@@ -532,13 +545,6 @@ def wide_to_long_infill(
         The dataframe, in wide format, to convert to long. The index of `df`
         must be the values that are to become `index_col_1_name`, and the
         columns of `df` will be melted to become `index_col_2_name`.
-
-    infill:
-        The value to use to infill any missing cells in the return DataFrame.
-
-    check_totals:
-        Whether to check if the totals are almost equal before and after the
-        conversion.
 
     Returns
     -------
@@ -558,18 +564,7 @@ def wide_to_long_infill(
             "zones and matching the columns."
         )
 
-    stacked = df.stack(future_stack=True).fillna(infill)
-
-    if check_totals is True:
-        diff = stacked.sum() - df.sum().sum()
-        if diff != 0:
-            raise ValueError(
-                "The matrix total has changed while stacking, with "
-                f"difference {diff}. If you have set an infill "
-                f"value other than zero this is likely the reason. "
-                f"If you expect this, set 'check_totals' to False "
-                f"and run again."
-            )
+    stacked = df.stack(future_stack=True)
 
     return stacked
 
@@ -607,8 +602,8 @@ def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
     --------
     long_to_wide_infill()
     """
-    df = long_to_wide_infill(**kwargs)
-    return df.values
+    df = long_to_wide_infill(*args, **kwargs)
+    return df.to_numpy()
 
 
 def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
