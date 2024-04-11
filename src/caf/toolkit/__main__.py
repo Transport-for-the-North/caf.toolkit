@@ -23,7 +23,7 @@ from caf.toolkit import arguments, config_base, log_helpers, translation
 ##### CONSTANTS #####
 
 LOG = logging.getLogger(__name__)
-
+_TRACEBACK = arguments.getenv_bool("TOOLKIT_TRACEBACK", False)
 
 ##### CLASSES & FUNCTIONS #####
 
@@ -180,7 +180,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
     matrix_class = arguments.ModelArguments(MatrixTranslationArgs)
     matrix_class.add_subcommands(
         subparsers,
-        "matrix_translate",
+        "matrix-translate",
         help="translate a matrix file to a new zoning system",
         description="Translate a matrix file to a new zoning system, using"
         " given translation lookup file. Matrix CSV file should be in the"
@@ -191,7 +191,15 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
     # Print help if no arguments are given
     args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
 
-    return args.dataclass_parse_func(args)
+    try:
+        params = args.dataclass_parse_func(args)
+    except (pydantic.ValidationError, FileNotFoundError) as exc:
+        if _TRACEBACK:
+            raise
+        # Switch to raising SystemExit as this doesn't include traceback
+        raise SystemExit(str(exc)) from exc
+
+    return params
 
 
 def main():
@@ -212,7 +220,14 @@ def main():
                 message=r".*column positions are given instead of names.*",
                 category=UserWarning,
             )
-            parameters.run()
+
+            try:
+                parameters.run()
+            except Exception as exc:
+                if _TRACEBACK:
+                    raise
+                # Switch to raising SystemExit as this doesn't include traceback
+                raise SystemExit(str(exc)) from exc
 
 
 if __name__ == "__main__":
