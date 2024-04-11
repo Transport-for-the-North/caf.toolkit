@@ -235,6 +235,7 @@ def fixture_expected_columns():
 
 @pytest.mark.skip
 class TestSqlHandling:
+    @pytest.mark.skip
     def test_connection(self, query_test):
         try:
             query_test.load_db()
@@ -242,6 +243,7 @@ class TestSqlHandling:
             raise ConnectionError(f"connection to db failed - {e}")
         assert True
 
+    @pytest.mark.skip
     def test_columns(self, query_test, expected_columns):
         read = query_test.load_db().reset_index()
 
@@ -251,29 +253,31 @@ class TestSqlHandling:
             else:
                 raise ValueError(f"expected {col} in output got {read.columns}")
 
+    @pytest.mark.skip
     def test_fail_join(self, fail_join_test):
         with pytest.raises(pyodbc.ProgrammingError) as e_info:
             fail_join_test.load_db()
-        
+
+    @pytest.mark.skip
     def test_fail_join(self, data_path, tables_fail, joins, group):
          with pytest.raises(ValueError) as e_info:
             conf = sql_handling.MainSqlConf(
                 file= data_path / "testing_ntem_db.mdb", tables=tables_fail, joins=joins, groups=group
             )
             sql_handling.QueryBuilder(conf)
-        
+
 
     def test_fail_group(self, data_path, tables, joins, group_fail):
-        
+
         with pytest.raises(ValueError) as e_info:
             conf = sql_handling.MainSqlConf(
                 file=data_path / "testing_ntem_db.mdb", tables=tables, joins=joins, groups=group_fail
             )
             sql_handling.QueryBuilder(conf)
 
-    
+
     def test_fail_data(self, data_path, tables, joins, group):
-        
+
         with pytest.raises(pyodbc.Error) as e_info:
             conf = sql_handling.MainSqlConf(
                 file=data_path / "Isaac_Scott_puts_the_milk_in_first.mdb", tables=tables, joins=joins, groups=group
