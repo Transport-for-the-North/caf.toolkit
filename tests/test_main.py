@@ -65,7 +65,7 @@ def fix_matrix_translate_config(
 class TestParseArgs:
     """Test `parse_args` function to make sure it returns the correct arguments."""
 
-    @pytest.mark.parametrize("type_", ["translate", "matrix_translate"])
+    @pytest.mark.parametrize("type_", ["translate", "matrix-translate"])
     def test_min_parameters(self, dummy_files: dict[str, pathlib.Path], type_) -> None:
         """Testing running with bare minimum arguments."""
         sys.argv = [
@@ -80,7 +80,7 @@ class TestParseArgs:
                 data_file=dummy_files["data_file"],
                 translation_file=dummy_files["translation_file"],
             )
-        elif type_ == "matrix_translate":
+        elif type_ == "matrix-translate":
             expected = MatrixTranslationArgs(
                 data_file=dummy_files["data_file"],
                 translation_file=dummy_files["translation_file"],
@@ -96,7 +96,7 @@ class TestParseArgs:
         "fixture, name",
         [
             ("translate_config", "translate-config"),
-            ("matrix_translate_config", "matrix_translate-config"),
+            ("matrix_translate_config", "matrix-translate-config"),
         ],
     )
     def test_load_config(self, request: pytest.FixtureRequest, fixture, name):
@@ -159,7 +159,7 @@ class TestParseArgs:
         # Testing abreviated names too
         sys.argv = [
             "caf.toolkit",
-            "matrix_translate",
+            "matrix-translate",
             "--o",
             str(expected.output_file),
             "--from_column",
