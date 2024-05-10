@@ -164,8 +164,8 @@ class CostDistribution:
             should be the same shape as cost_matrix
 
         cost_matrix: np.ndarray
-            A matrix of cost relating to matrix. This matrix
-            should be the same shape as matrix
+            A matrix of cost relating to `matrix`. `cost_matrix`
+            should be the same shape as `matrix`
 
         bin_edges: list[float] | np.ndarray
             Defines a monotonically increasing array of bin edges, including the
@@ -177,17 +177,31 @@ class CostDistribution:
         np.ndarray
             An array to be passed into a dataframe as a column.
         """
+        # Init and checks
+        bin_edges = bin_edges.tolist() if isinstance(bin_edges, np.ndarray) else bin_edges
+        if matrix.shape != cost_matrix.shape:
+            raise ValueError(
+                f"`matrix` and `cost_matrix` need to be the same shape. Got:\n"
+                f"{matrix.shape=}\n"
+                f"{cost_matrix.shape=}\n"
+            )
+
+        # Calculate distance weighted demand
         df = pd.DataFrame(
             {
                 "cost": pd.DataFrame(cost_matrix).stack(),
                 "demand": pd.DataFrame(matrix).stack(),
             }
         )
-        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
         df["weighted"] = df["cost"] * df["demand"]
+
+        # Calculate the weighted average
+        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
         grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
-        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
         grouped["averages"] = grouped["weighted"] / grouped["demand"]
+
+        # Infill any missing values with bin midpoint
+        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
         return grouped["averages"].fillna(grouped["bin_centres"].astype("float")).to_numpy()
 
     @classmethod
