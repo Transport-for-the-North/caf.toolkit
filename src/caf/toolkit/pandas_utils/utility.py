@@ -2,7 +2,7 @@
 """Basic utility functions for pandas objects."""
 # Built-Ins
 import typing
-from typing import Any, Sequence
+from typing import Sequence
 
 # Third Party
 import numpy as np

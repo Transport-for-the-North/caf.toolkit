@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Optional, TypedDict, TypeVar
+from typing import Any, Literal, Optional, TypedDict, TypeVar
 
 # Third Party
 import numpy as np
@@ -1129,7 +1129,7 @@ def pandas_multi_vector_zone_translation(
     # Convert data dtypes if needed
     if translation_dtype is None:
         translation_dtype = np.promote_types(
-            translation[translation_factors_col].dtype, vector.to_numpy().dtype
+            translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
         )
     assert translation_dtype is not None
 
@@ -1376,6 +1376,7 @@ def matrix_translation_from_file(
     translation_from_column: int | str,
     translation_to_column: int | str,
     translation_factors_column: int | str,
+    format_: Literal["square", "long"] = "long",
 ) -> None:
     """Translate zoning system of matrix CSV file.
 
@@ -1406,7 +1407,9 @@ def matrix_translation_from_file(
     """
     # TODO(MB) Handle square format CSVs, and deal with too-many-locals
     # pylint: disable=too-many-locals
-    format_ = "long"
+    if format_ == "square":
+        raise NotImplementedError("Square matrices are not yet supported.")
+
     _validate_column_name_parameters(
         locals(),
         "matrix_values_column",
