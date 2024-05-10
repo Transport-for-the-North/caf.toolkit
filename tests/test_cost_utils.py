@@ -4,20 +4,16 @@ from __future__ import annotations
 
 # Built-Ins
 import dataclasses
-
 from typing import Any
 
-import pandas as pd
-
 # Third Party
-import pytest
 import numpy as np
-
+import pandas as pd
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import cost_utils
-from caf.toolkit import math_utils
+from caf.toolkit import cost_utils, math_utils
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -45,6 +41,9 @@ class CostDistFnResults:
             self.normalised_distribution = np.zeros_like(self.distribution)
         else:
             self.normalised_distribution = self.distribution / self.distribution.sum()
+            self.weighted_avg = cost_utils.CostDistribution.calculate_weighted_averages(
+                matrix=self.matrix, cost_matrix=self.cost_matrix, bin_edges=self.bin_edges
+            )
 
 
 @dataclasses.dataclass
@@ -76,6 +75,7 @@ class CostDistClassResults(CostDistFnResults):
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
+    weighted_avg_col: str = "weighted_ave"
 
     def __post_init__(self):
         super().__post_init__()
@@ -87,6 +87,7 @@ class CostDistClassResults(CostDistFnResults):
                 self.max_col: self.max_bounds,
                 self.avg_col: self.avg_bounds,
                 self.trips_col: self.distribution,
+                self.weighted_avg_col: self.weighted_avg,
             }
         )
         self.normalised_df = pd.DataFrame(
@@ -95,6 +96,7 @@ class CostDistClassResults(CostDistFnResults):
                 self.max_col: self.max_bounds,
                 self.avg_col: self.avg_bounds,
                 self.trips_col: self.normalised_distribution,
+                self.weighted_avg_col: self.weighted_avg,
             }
         )
 
@@ -119,6 +121,7 @@ class CostDistClassResults(CostDistFnResults):
             self.max_col: "max",
             self.avg_col: "ave",
             self.trips_col: "trips",
+            self.weighted_avg_col: "weighted_ave",
         }
         return self.df.rename(columns=naming_dict)
 
@@ -355,6 +358,16 @@ class TestCostDistributionClassConstructors:
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
+
+    def test_default_weighted_average(self, cost_dist_1d_class):
+        dist_df = cost_utils.CostDistribution(**cost_dist_1d_class.constructor_kwargs).df.drop(
+            "weighted_ave", axis=1
+        )
+        test_dist = cost_utils.CostDistribution(dist_df).df
+        ave_col = test_dist["ave"]
+        weight_col = test_dist["weighted_ave"]
+        weight_col.name = "ave"
+        pd.testing.assert_series_equal(ave_col, weight_col)
 
     @pytest.mark.parametrize(
         "io_str",
@@ -884,3 +897,142 @@ class TestDynamicCostDistribution:
         result, bins = cost_utils.dynamic_cost_distribution(**cost_dist.get_kwargs())
         np.testing.assert_almost_equal(result, cost_dist.distribution)
         np.testing.assert_almost_equal(bins, cost_dist.bin_edges)
+
+
+class TestIntrazonalCostInfill:
+    """Tests for the intrazonal_cost_infill function"""
+
+    @dataclasses.dataclass
+    class IzResults:
+        """Inputs and expected results for intrazonal_cost_infill()"""
+
+        # Inputs
+        cost_matrix: np.ndarray
+        multiplier: float
+        min_axis: int
+
+        # Results
+        result: np.ndarray
+
+        def get_kwargs(self) -> dict[str, Any]:
+            return {
+                "cost": self.cost_matrix,
+                "multiplier": self.multiplier,
+                "min_axis": self.min_axis,
+            }
+
+    @pytest.fixture(name="normal_array", scope="class")
+    def fixture_normal_array(self):
+        """Create a simple test with no edge cases"""
+        cost_matrix = np.array(
+            [
+                [54.0, 72.0, 61.0, 97.0, 72.0],
+                [41.0, 84.0, 98.0, 32.0, 32.0],
+                [4.0, 33.0, 67.0, 14.0, 26.0],
+                [73.0, 46.0, 14.0, 8.0, 51.0],
+                [2.0, 14.0, 58.0, 53.0, 40.0],
+            ]
+        )
+        result = np.array(
+            [
+                [61.0, 72.0, 61.0, 97.0, 72.0],
+                [41.0, 32.0, 98.0, 32.0, 32.0],
+                [4.0, 33.0, 4.0, 14.0, 26.0],
+                [73.0, 46.0, 14.0, 14.0, 51.0],
+                [2.0, 14.0, 58.0, 53.0, 2.0],
+            ]
+        )
+        return self.IzResults(
+            cost_matrix=cost_matrix,
+            multiplier=1,
+            min_axis=1,
+            result=result,
+        )
+
+    @pytest.fixture(name="min_axis_array", scope="class")
+    def fixture_min_axis_array(self, normal_array):
+        """Test for min across columns (different min_axis)."""
+        result = np.array(
+            [
+                [2.0, 72.0, 61.0, 97.0, 72.0],
+                [41.0, 14.0, 98.0, 32.0, 32.0],
+                [4.0, 33.0, 14.0, 14.0, 26.0],
+                [73.0, 46.0, 14.0, 14.0, 51.0],
+                [2.0, 14.0, 58.0, 53.0, 26.0],
+            ]
+        )
+        return self.IzResults(
+            cost_matrix=normal_array.cost_matrix,
+            multiplier=1,
+            min_axis=0,
+            result=result,
+        )
+
+    @pytest.fixture(name="zeroes_array", scope="class")
+    def fixture_zeroes_array(self, normal_array):
+        """zero values should be returned in-place, expect in diagonal.
+
+        Zero values should not count towards the minimum check.
+        """
+        idx = (np.array([0, 0, 2, 4, 4]), np.array([0, 1, 1, 2, 4]))
+        non_diag_idx = (np.array([0, 2, 4]), np.array([1, 1, 2]))
+
+        cost_matrix = normal_array.cost_matrix.copy()
+        cost_matrix[idx] = 0
+
+        result = normal_array.result.copy()
+        result[non_diag_idx] = 0
+
+        return self.IzResults(
+            cost_matrix=cost_matrix,
+            multiplier=normal_array.multiplier,
+            min_axis=normal_array.min_axis,
+            result=result,
+        )
+
+    @pytest.fixture(name="inf_array", scope="class")
+    def fixture_inf_array(self, normal_array):
+        """Inf values should be returned in-place, expect in diagonal."""
+        idx = (np.array([0, 0, 2, 4, 4]), np.array([0, 1, 1, 2, 4]))
+        non_diag_idx = (np.array([0, 2, 4]), np.array([1, 1, 2]))
+
+        cost_matrix = normal_array.cost_matrix.copy()
+        cost_matrix[idx] = np.inf
+
+        result = normal_array.result.copy()
+        result[non_diag_idx] = np.inf
+
+        return self.IzResults(
+            cost_matrix=cost_matrix,
+            multiplier=normal_array.multiplier,
+            min_axis=normal_array.min_axis,
+            result=result,
+        )
+
+    @pytest.mark.parametrize(
+        "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
+    )
+    def test_correct_result(self, io_str: str, request):
+        """Test that the correct results are achieved"""
+        io: TestIntrazonalCostInfill.IzResults = request.getfixturevalue(io_str)
+        result = cost_utils.intrazonal_cost_infill(**io.get_kwargs())
+        np.testing.assert_almost_equal(result, io.result)
+
+    @pytest.mark.parametrize(
+        "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
+    )
+    @pytest.mark.parametrize("multiplier", [0, 0.5, 2])
+    def test_different_multiplier(self, io_str: str, multiplier: float, request):
+        """Test that the multiplier is being applied correctly."""
+        io: TestIntrazonalCostInfill.IzResults = request.getfixturevalue(io_str)
+
+        # Calculate the new result
+        new_diag = np.diagonal(io.result) * multiplier
+        expected_result = io.result.copy()
+        np.fill_diagonal(expected_result, new_diag)
+
+        # Calculate and test the result
+        result = cost_utils.intrazonal_cost_infill(
+            **io.get_kwargs() | {"multiplier": multiplier}
+        )
+        np.testing.assert_almost_equal(result, expected_result)

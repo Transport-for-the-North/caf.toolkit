@@ -22,18 +22,14 @@ import getpass
 import logging
 import os
 import platform
-from typing import Any, Iterable, Optional
+import warnings
+from typing import Annotated, Any, Iterable, Optional
 
 # Third Party
 import psutil
-from psutil import _common
 import pydantic
+from psutil import _common
 from pydantic import dataclasses, types
-
-# Local Imports
-# pylint: disable=import-error,wrong-import-position
-
-# pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -51,6 +47,12 @@ _SEMVER_REGEX = (
 
 
 # # # CLASSES # # #
+
+
+class LoggingWarning(Warning):
+    """Warnings from the `LogHelper` and other toolkit logging functionality."""
+
+
 @dataclasses.dataclass
 class ToolDetails:
     """Information about the current tool.
@@ -69,7 +71,9 @@ class ToolDetails:
     """
 
     name: str
-    version: types.constr(strip_whitespace=True, regex=_SEMVER_REGEX)  # type: ignore
+    version: Annotated[
+        str, types.StringConstraints(strip_whitespace=True, pattern=_SEMVER_REGEX)
+    ]
     homepage: Optional[pydantic.HttpUrl] = None
     source_url: Optional[pydantic.HttpUrl] = None
 
@@ -264,17 +268,39 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
-            handler = get_console_handler()
-            self.logger.addHandler(handler)
+            self.add_console_handler()
 
         if log_file is not None:
-            handler = get_file_handler(log_file)
-            self.logger.addHandler(handler)
+            self.add_file_handler(log_file)
 
-        self.write_instantiate_message()
+        if len(self.logger.handlers) > 0:
+            self.write_instantiate_message()
+        else:
+            warnings.warn(
+                "LogHelper initialised without any logging handlers, "
+                "`logging.basicConfig` will be called with default parameters "
+                "at first log attempt if no handlers are added before that.",
+                LoggingWarning,
+            )
 
         if warning_capture:
             self.capture_warnings()
+
+    def add_handler(self, handler: logging.Handler) -> None:
+        """Add custom `handler` to the logger.
+
+        This will also add handler to the warnings logger if
+        warnings capture is enabled.
+
+        Parameters
+        ----------
+        handler : logging.Handler
+            Handler to add.
+        """
+        self.logger.addHandler(handler)
+
+        if self._warning_logger is not None:
+            self._warning_logger.addHandler(handler)
 
     def add_console_handler(
         self,
@@ -302,10 +328,7 @@ class LogHelper:
         `get_console_handler`
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
-        self.logger.addHandler(handler)
-
-        if self._warning_logger is not None:
-            self._warning_logger.addHandler(handler)
+        self.add_handler(handler)
 
     def add_file_handler(
         self,
@@ -338,10 +361,7 @@ class LogHelper:
         `get_file_handler`
         """
         handler = get_file_handler(log_file, fh_format, datetime_format, log_level)
-        self.logger.addHandler(handler)
-
-        if self._warning_logger is not None:
-            self._warning_logger.addHandler(handler)
+        self.add_handler(handler)
 
     def capture_warnings(self) -> None:
         """Capture warnings using logging.

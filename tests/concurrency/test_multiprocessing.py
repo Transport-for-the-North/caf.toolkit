@@ -1,24 +1,18 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.concurrency.multiprocessing module"""
 # Built-Ins
+import multiprocessing as mp
 import os
 import time
-import multiprocessing as mp
-
-from typing import Any
-from typing import Iterable
-from typing import Callable
-from typing import NamedTuple
+from typing import Any, Callable, Iterable, NamedTuple
 
 # Third Party
-import pytest
 import numpy as np
-
+import pytest
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
-from caf.toolkit import toolbox
-from caf.toolkit import concurrency
+from caf.toolkit import concurrency, toolbox
 
 # pylint: enable=import-error,wrong-import-position
 

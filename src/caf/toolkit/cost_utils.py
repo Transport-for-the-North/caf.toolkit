@@ -6,26 +6,21 @@ from __future__ import annotations
 import copy
 import logging
 import os
-
-from typing import Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # Third Party
-import pydantic
 import numpy as np
 import pandas as pd
+import pydantic
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
-# pylint: enable=import-error,wrong-import-position
-
 if TYPE_CHECKING:
-    from dataclasses import dataclass
+    from dataclasses import dataclass  # isort:skip
 else:
-    from pydantic.dataclasses import dataclass
+    from pydantic.dataclasses import dataclass  # isort:skip
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -58,6 +53,9 @@ class CostDistribution:
 
     band_share_vals:
         Band share values for each of the cost distribution bins.
+
+    weighted_avg_vals:
+        Weighted average values for each of the cost distribution bins.
     """
 
     df: pd.DataFrame
@@ -67,35 +65,40 @@ class CostDistribution:
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
+    weighted_avg_col: str = "weighted_ave"
 
     # Ideas
     units: str = "km"
 
-    @pydantic.root_validator
-    def check_df_col_names(cls, values):  # pylint:disable=no-self-argument
+    @pydantic.model_validator(mode="after")
+    def check_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
         # init
         col_names = ["min_col", "max_col", "avg_col", "trips_col"]
-        cols = {k: v for k, v in values.items() if k in col_names}
-        df = values.get("df")
+        cols = {k: getattr(self, k) for k in col_names}
 
         # Check columns are in df
         err_cols = {}
         for col_name, col_val in cols.items():
-            if col_val not in df:
+            if col_val not in self.df:
                 err_cols.update({col_name: col_val})
+
+        # Add in the weighted_avg_col if not already in df
+        cols.update({"weighted_avg_col": getattr(self, "weighted_avg_col")})
+        if self.weighted_avg_col not in self.df.columns:
+            self.df[self.weighted_avg_col] = self.df[self.avg_col]
 
         # Throw error if missing columns found
         if err_cols != dict():
             raise ValueError(
                 "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
-                f"With the following in the Df: {df.columns}"
+                f"With the following in the Df: {self.df.columns}"
             )
 
         # Tidy up df
-        values["df"] = pd_utils.reindex_cols(df, cols.values())
-        return values
+        self.df = pd_utils.reindex_cols(self.df, list(cols.values()))
+        return self
 
     def __len__(self):
         """Get the number of bins in this cost distribution."""
@@ -146,6 +149,46 @@ class CostDistribution:
         """Band share values for each of the cost distribution bins."""
         trip_vals = self.trip_vals
         return trip_vals / np.sum(trip_vals)
+
+    @staticmethod
+    def calculate_weighted_averages(
+        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: list[float] | np.ndarray
+    ):
+        """
+        Calculate weighted averages of bins in a cost distribution.
+
+        Parameters
+        ----------
+        matrix: np.ndarray
+            The matrix to calculate the cost distribution for. This matrix
+            should be the same shape as cost_matrix
+
+        cost_matrix: np.ndarray
+            A matrix of cost relating to matrix. This matrix
+            should be the same shape as matrix
+
+        bin_edges: list[float] | np.ndarray
+            Defines a monotonically increasing array of bin edges, including the
+            rightmost edge, allowing for non-uniform bin widths. This argument
+            is passed straight into `numpy.histogram`
+
+        Returns
+        -------
+        np.ndarray
+            An array to be passed into a dataframe as a column.
+        """
+        df = pd.DataFrame(
+            {
+                "cost": pd.DataFrame(cost_matrix).stack(),
+                "demand": pd.DataFrame(matrix).stack(),
+            }
+        )
+        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
+        df["weighted"] = df["cost"] * df["demand"]
+        grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
+        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
+        grouped["averages"] = grouped["weighted"] / grouped["demand"]
+        return grouped["averages"].fillna(grouped["bin_centres"].astype("float")).to_numpy()
 
     @classmethod
     def from_data(
@@ -200,6 +243,8 @@ class CostDistribution:
             matrix=matrix, cost_matrix=cost_matrix, bin_edges=bin_edges
         )
 
+        averages = cls.calculate_weighted_averages(matrix, cost_matrix, bin_edges)
+
         # Covert data into instance of this class
         df = pd.DataFrame(
             {
@@ -207,6 +252,7 @@ class CostDistribution:
                 cls.max_col: bin_edges[1:],
                 cls.avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
                 cls.trips_col: distribution,
+                cls.weighted_avg_col: averages,
             }
         )
         return CostDistribution(df=df)
@@ -258,6 +304,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "ave",
         trips_col: str = "trips",
+        weighted_avg_col: str = "weighted_ave",
     ) -> CostDistribution:
         """Build an instance from a file on disk.
 
@@ -282,6 +329,11 @@ class CostDistribution:
             The column of data at `filepath` that contains the number of trips
             of each cost band.
 
+        weighted_avg_col:
+            The column of data at 'filepath' that contains the weighted average
+            cost value of each band. If the read in df does not contain this
+            column, it will default to the avg_col.
+
         Returns
         -------
         cost_distribution:
@@ -289,13 +341,14 @@ class CostDistribution:
         """
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not the location of a file.")
-        use_cols = [min_col, max_col, avg_col, trips_col]
+        use_cols = [min_col, max_col, avg_col, trips_col, weighted_avg_col]
         return CostDistribution(
             df=pd.read_csv(filepath, usecols=use_cols),
             min_col=min_col,
             max_col=max_col,
             avg_col=avg_col,
             trips_col=trips_col,
+            weighted_avg_col=weighted_avg_col,
         )
 
     def __validate_similar_bin_edges(self, other: CostDistribution) -> None:
@@ -648,3 +701,47 @@ def create_log_bins(
     # Add the first and last item
     bins = np.insert(bins, 0, 0)
     return np.insert(bins, len(bins), final_val)
+
+
+def intrazonal_cost_infill(
+    cost: np.ndarray,
+    multiplier: float = 0.5,
+    min_axis: int = 1,
+) -> np.ndarray:
+    """
+    Infill the intra-zonal costs of a cost matrix.
+
+    The intra-zonal costs are usually the diagonal of a cost matrix. Standard
+    TAG procedure for infilling these costs is to take half the minimum cost
+    for each zone. By default, this function takes the minimum value from each
+    row (ignoring 0s) and multiplies that by 0.5 to get the infill value for
+    each intra-zonal. Note that if any costs already exist for the
+    intra-zonals, they will be overwritten.
+    The diagonal infill is calculated similar to:
+    `cost.min(axis=min_axis * multiplier`
+
+    Parameters
+    ----------
+    cost:
+        The square, 2D cost matrix to infill.
+
+    multiplier:
+        The value to multiply the minimum values by to calculate the infill value.
+
+    min_axis:
+        The axis to calculate the minimum value across.
+
+    Returns
+    -------
+    infilled_cost:
+        A copy of the input `cost`, but with the diagonal infilled.
+    """
+    # Ensure we don't pick up the diagonals or 0s in the minimum check
+    nonzero_cost = np.where(cost == 0, np.inf, cost)
+    np.fill_diagonal(nonzero_cost, np.inf)
+
+    # Infill a copy of cost
+    infill = nonzero_cost.min(axis=min_axis) * multiplier
+    infilled_cost = cost.copy()
+    np.fill_diagonal(infilled_cost, infill)
+    return infilled_cost

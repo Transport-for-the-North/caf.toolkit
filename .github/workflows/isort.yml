@@ -1,4 +1,4 @@
-name: Black Formatting
+name: Isort Formatting
 
 on:
   push:
@@ -11,4 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: psf/black@stable
+      - uses: isort/isort-action@v1
+        with:
+            requirements-files: "requirements.txt requirements_dev.txt"

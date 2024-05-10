@@ -1,25 +1,17 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
-import warnings
 import functools
+import warnings
+from typing import Any, Generator, Mapping, Optional, Collection
 
-from typing import Any
-from typing import Mapping
-from typing import Collection
-from typing import Optional
-from typing import Generator
 
 # Third Party
 import numpy as np
 import pandas as pd
 
 # Local Imports
-# pylint: disable=import-error,wrong-import-position
-from caf.toolkit import toolbox
-from caf.toolkit import math_utils
-
-# pylint: enable=import-error,wrong-import-position
+from caf.toolkit import math_utils, toolbox
 
 # # # CONSTANTS # # #
 
@@ -409,8 +401,7 @@ def chunk_df(
     except (ValueError, TypeError):
         return
 
-    for item in iterator:
-        yield item
+    yield from iterator
 
 
 # pylint: disable=too-many-branches
