@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
-import typing
-
 # Built-Ins
-from typing import Any
-from typing import Sequence
+import typing
+from typing import Any, Sequence
 
 # Third Party
 import numpy as np

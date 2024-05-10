@@ -3,8 +3,7 @@
 # Built-Ins
 import functools
 import warnings
-from typing import Any, Generator, Mapping, Optional, Collection
-
+from typing import Any, Collection, Generator, Mapping, Optional
 
 # Third Party
 import numpy as np
