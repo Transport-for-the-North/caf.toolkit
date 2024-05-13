@@ -467,14 +467,14 @@ def long_product_infill(
     for col, vals in index_dict.items():
         # Initialise any missing values
         if toolbox.is_none_like(vals):
-            index_dict[col] = df[col].unique()
+            index_dict[col] = set(df[col])
             vals = index_dict[col]
 
         assert vals is not None  # Assert for MyPY
 
         # Make sure we're not dropping too much.
         # Indication of problems in arguments.
-        missing_idx = set(vals) - set(df[col].unique().tolist())
+        missing_idx = set(vals) - set(df[col].unique())
         if len(missing_idx) >= len(vals) * 0.9:
             warnings.warn(
                 f"Almost all values given for column {col} for not exist in "
@@ -578,8 +578,8 @@ def long_to_wide_infill(
         If none of the `values_col` is not numeric and `check_totals` is True
     """
     # Init
-    index_vals = df[index_col].unique().tolist() if index_vals is None else index_vals
-    column_vals = df[columns_col].unique().tolist() if column_vals is None else column_vals
+    index_vals = list(set(df[index_col])) if index_vals is None else index_vals
+    column_vals = list(set(df[columns_col])) if column_vals is None else column_vals
     df = reindex_cols(df, [index_col, columns_col, values_col])
 
     index_dict: dict[str, list[Any]] = {index_col: index_vals, columns_col: column_vals}
