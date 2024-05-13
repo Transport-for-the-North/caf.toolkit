@@ -454,7 +454,7 @@ def long_product_infill(
     orig_col_totals = dict()
     for col in val_cols:
         if pd.api.types.is_numeric_dtype(df[col]):
-            orig_col_totals[col] = df[col].values.sum()
+            orig_col_totals[col] = df[col].to_numpy().sum()
 
     # Validate we can check totals if been told to
     if check_totals and orig_col_totals == dict():
@@ -509,7 +509,7 @@ def long_product_infill(
 
     # Check and warn / error about each column
     for col, orig_total in orig_col_totals.items():
-        after_total = df[col].values.sum()
+        after_total = df[col].to_numpy().sum()
 
         if not math_utils.is_almost_equal(after_total, orig_total):
             final_msg = msg.format(orig_total=orig_total, after_total=after_total)
