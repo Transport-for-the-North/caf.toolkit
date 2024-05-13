@@ -1314,7 +1314,8 @@ def vector_translation_from_file(
         Name, or position, of column in translation containing the
         splitting factors.
     """
-    # TODO(MB) Add optional from / to unique index parameters,
+    # TODO(MB) Add optional from / to unique index parameters, deal with too many locals
+    # pylint: disable=too-many-locals
     # otherwise infer from translation file
     _validate_column_name_parameters(
         locals(),
