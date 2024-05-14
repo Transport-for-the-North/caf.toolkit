@@ -1196,10 +1196,11 @@ def pandas_multi_vector_zone_translation(
 
     # trans_vector should now contain the correct index level if an error hasn't
     # been raised
+    factors = indexed_translation[translation_factors_col].squeeze()
+    if not isinstance(factors, pd.Series):
+        raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
-        .groupby(level=[translation_to_col] + ind_names)
-        .sum()
+        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
     )
 
     if check_totals:
