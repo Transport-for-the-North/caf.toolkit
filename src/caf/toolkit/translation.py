@@ -585,7 +585,9 @@ def pandas_long_matrix_zone_translation(
         # Drop any columns we're not keeping
         drop_cols = set(all_cols) - set(keep_cols)
         if len(drop_cols) > 0:
-            warnings.warn(f"Extra columns found in matrix, dropping the following: {drop_cols}")
+            warnings.warn(
+                f"Extra columns found in matrix, dropping the following: {drop_cols}"
+            )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         matrix = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
 
@@ -604,11 +606,9 @@ def pandas_long_matrix_zone_translation(
     )
 
     # Convert back
-    out_mat = pd_utils.wide_to_long_infill(
-        df=translated_wide_mat
-    )
+    out_mat = pd_utils.wide_to_long_infill(df=translated_wide_mat)
     if index_col_2_out_name is not None:
-         out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
+        out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
 
     return out_mat
 
@@ -795,11 +795,6 @@ def pandas_vector_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: Optional[list[Any]] = None,
-    to_unique_index: Optional[list[Any]] = None,
-    translation_dtype: Optional[np.dtype] = None,
-    vector_infill: float = 0.0,
-    translate_infill: float = 0.0,
     check_totals: bool = True,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
@@ -1204,8 +1199,6 @@ def vector_translation_from_file(
         translation_from_col=from_col,
         translation_to_col=to_col,
         translation_factors_col=factors_col,
-        from_unique_index=lookup[from_col].unique().tolist(),
-        to_unique_index=lookup[to_col].unique().tolist(),
     )
 
     translated.to_csv(output_path)

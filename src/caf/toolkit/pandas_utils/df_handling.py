@@ -2,15 +2,14 @@
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
 import functools
-import warnings
-from typing import Any, Generator, Mapping, Optional
+from typing import Any, Generator
 
 # Third Party
 import numpy as np
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import math_utils, toolbox
+from caf.toolkit import toolbox
 
 # # # CONSTANTS # # #
 
@@ -408,7 +407,7 @@ def long_product_infill(
     data: pd.Series | pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] = None
+    index_dict: dict[str, list] = None,
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
 
@@ -457,19 +456,22 @@ def long_product_infill(
     else:
         mismatch = [i for i in data.index.names if i not in index_dict.keys()]
         if len(mismatch) > 0:
-            raise ValueError(f"{mismatch} levels were found in the input data, "
-                             f"but not in index_dict.")
+            raise ValueError(
+                f"{mismatch} levels were found in the input data, " f"but not in index_dict."
+            )
 
     full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
     if len(full_ind.names) == 1:
         full_ind = full_ind.get_level_values(0)
-    filler = pd.DataFrame(data=['dummy'] * len(full_ind), index=full_ind, columns=["dummy"])
+    filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
     # check there's an overlap
     overlap = data.index.intersection(filler.index)
     if len(overlap) == 0:
-        raise ValueError("There is no intersection between the index of the "
-                         "input data and the full index provided.")
+        raise ValueError(
+            "There is no intersection between the index of the "
+            "input data and the full index provided."
+        )
 
     joined = filler.join(data, how="left")
     # For this infill to be valid all data should be the same type
@@ -482,8 +484,9 @@ def long_product_infill(
         if dtype.to_list() == [dtype[0]] * len(dtype):
             dtype = dtype[0]
         else:
-            raise TypeError("All columns of the input data must have the same,"
-                            " type for this to work.")
+            raise TypeError(
+                "All columns of the input data must have the same type for this to work."
+            )
     # ints can be cast to floats in join
     filled = joined.fillna(infill)[selector].astype(dtype)
 
@@ -511,7 +514,7 @@ def long_to_wide_infill(
     unstack_level: str | int = -1,
     check_totals: bool = False,
     correct_cols: list = None,
-    correct_ind: list = None
+    correct_ind: list = None,
 ) -> pd.DataFrame:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
@@ -551,8 +554,10 @@ def long_to_wide_infill(
         )
     if correct_cols is not None:
         if correct_ind is not None:
-            ind_dict = {matrix.index.names[0]: correct_ind,
-                        matrix.index.names[1]: correct_cols}
+            ind_dict = {
+                matrix.index.names[0]: correct_ind,
+                matrix.index.names[1]: correct_cols,
+            }
             matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
     unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
     if check_totals is True:
@@ -572,7 +577,7 @@ def wide_to_long_infill(
     out_name: str = None,
     correct_cols: list = None,
     correct_ind: list = None,
-    infill: any = None
+    infill: any = None,
 ) -> pd.DataFrame:
     """Convert a matrix from wide to long format, infilling missing values.
 
@@ -602,13 +607,15 @@ def wide_to_long_infill(
         )
 
     stacked = df.stack(future_stack=True)
-    stacked.name = 'val'
+    stacked.name = "val"
     if out_name is not None:
         stacked.name = out_name
     if correct_ind is not None:
         if correct_cols is not None:
-            ind_dict = {stacked.index.names[0]: correct_ind,
-                        stacked.index.names[1]: correct_cols}
+            ind_dict = {
+                stacked.index.names[0]: correct_ind,
+                stacked.index.names[1]: correct_cols,
+            }
             stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
 
     return stacked
