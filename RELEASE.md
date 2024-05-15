@@ -20,3 +20,9 @@ there.
 Below, a brief summary of patches made since the previous version can be found.
 
 ### Next Release Notes
+
+This release updated the long_to_wide/wide_to_long methods in df_handling to work 
+more efficiently. It also simplifies some translations.
+
+ - Pandas vector translations now all work natively in pandas, rather than falling back to numpy for single vector translations
+ - Various pandas conversion methods also work natively in pandas rather than falling back to numpy. They also use multiindexing and in some cases enforce this.
