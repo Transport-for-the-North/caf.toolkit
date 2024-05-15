@@ -405,7 +405,7 @@ def chunk_df(
 
 # pylint: disable=too-many-branches
 def long_product_infill(
-    data: pd.Series,
+    data: pd.Series | pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
     index_dict: dict[str, list] = None
@@ -461,13 +461,39 @@ def long_product_infill(
                              f"but not in index_dict.")
 
     full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
-    filler = pd.DataFrame(data=[infill] * len(full_ind), index=full_ind, columns=["infill"])
+    if len(full_ind.names) == 1:
+        full_ind = full_ind.get_level_values(0)
+    filler = pd.DataFrame(data=['dummy'] * len(full_ind), index=full_ind, columns=["dummy"])
+
+    # check there's an overlap
+    overlap = data.index.intersection(filler.index)
+    if len(overlap) == 0:
+        raise ValueError("There is no intersection between the index of the "
+                         "input data and the full index provided.")
 
     joined = filler.join(data, how="left")
-    filled = joined[data.name].fillna(joined["infill"]).squeeze()
+    # For this infill to be valid all data should be the same type
+    if isinstance(data, pd.Series):
+        selector = data.name
+        dtype = data.dtypes
+    else:
+        selector = data.columns
+        dtype = data.dtypes
+        if dtype.to_list() == [dtype[0]] * len(dtype):
+            dtype = dtype[0]
+        else:
+            raise TypeError("All columns of the input data must have the same,"
+                            " type for this to work.")
+    # ints can be cast to floats in join
+    filled = joined.fillna(infill)[selector].astype(dtype)
 
     if check_totals is True:
-        diff = data.sum() - filled.sum()
+        if isinstance(data, pd.Series):
+            diff = data.sum() - filled.sum()
+        elif len(data.columns) == 1:
+            diff = data.squeeze().sum() - filled.squeeze().sum()
+        else:
+            diff = data.sum().sum() - filled.sum().sum()
         if diff != 0:
             raise ValueError(
                 "The total has changed in infilling. If "
@@ -484,6 +510,8 @@ def long_to_wide_infill(
     infill: Any = 0,
     unstack_level: str | int = -1,
     check_totals: bool = False,
+    correct_cols: list = None,
+    correct_ind: list = None
 ) -> pd.DataFrame:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
@@ -521,6 +549,11 @@ def long_to_wide_infill(
             "input. Generally this will be two index levels, one "
             "for origin/production and another for destination/attraction."
         )
+    if correct_cols is not None:
+        if correct_ind is not None:
+            ind_dict = {matrix.index.names[0]: correct_ind,
+                        matrix.index.names[1]: correct_cols}
+            matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
     unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
     if check_totals is True:
         diff = unstacked.sum().sum() - matrix.sum()
@@ -536,6 +569,10 @@ def long_to_wide_infill(
 
 def wide_to_long_infill(
     df: pd.DataFrame,
+    out_name: str = None,
+    correct_cols: list = None,
+    correct_ind: list = None,
+    infill: any = None
 ) -> pd.DataFrame:
     """Convert a matrix from wide to long format, infilling missing values.
 
@@ -565,6 +602,14 @@ def wide_to_long_infill(
         )
 
     stacked = df.stack(future_stack=True)
+    stacked.name = 'val'
+    if out_name is not None:
+        stacked.name = out_name
+    if correct_ind is not None:
+        if correct_cols is not None:
+            ind_dict = {stacked.index.names[0]: correct_ind,
+                        stacked.index.names[1]: correct_cols}
+            stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
 
     return stacked
 
