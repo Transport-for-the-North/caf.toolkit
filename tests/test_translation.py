@@ -1355,12 +1355,6 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
-
-        # Need to enforce types so this works in linux
-        # if sys.platform.startswith("linux"):
-        #     if any(x in ["int32", "int64"] for x in result.dtypes):
-        #         result = result.astype(pd_mat.expected_result.dtypes[1])
-
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     def test_additional_index(self, pd_matrix_str: str, check_totals: bool, request):
