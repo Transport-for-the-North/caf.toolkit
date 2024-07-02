@@ -25,3 +25,5 @@ Below, a brief summary of patches made since the previous version can be found.
   messages, by default only error text is output without the traceback
 - Added `arguments.getenv_bool` function which gets an env variable and converts to bool
   with expected true (true, yes, y and 1) and false (false, no, n and 0) values
+- Bug fixes
+  - Removed all uses of `np.find_common_type()` as it is deprecated in newer versions of numpy 
