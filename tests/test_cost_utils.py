@@ -458,10 +458,9 @@ class TestCostDistributionClassConstructors:
         """Test that the constructor can be called correctly from file"""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
 
+        input_and_results_df = input_and_results.df
         if drop_weighted:
-            input_and_results_df = input_and_results.df.drop(columns="weighted_ave")
-        else:
-            input_and_results_df = input_and_results.df
+            input_and_results_df = input_and_results_df.drop(columns="weighted_ave")
 
         # Create path and write out df
         filepath = tmp_path / "tld.csv"
