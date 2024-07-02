@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
 # Built-Ins
+import typing
 from typing import Sequence
 
 # Third Party
@@ -13,6 +14,7 @@ import pandas as pd
 
 
 # # # FUNCTIONS # # #
+@typing.no_type_check
 def cast_to_common_type(
     items_to_cast: Sequence[pd.Series],
 ) -> list[pd.Series]:
@@ -34,6 +36,7 @@ def cast_to_common_type(
     cast_items:
         All of the items passed in, cast to a common datatype
     """
+    # TODO(BT): Figure out how to do these type hints properly
     # Simple case
     base_dtype = items_to_cast[0].dtype
     if all(x.dtype == base_dtype for x in items_to_cast):

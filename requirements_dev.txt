@@ -9,6 +9,9 @@ mypy_extensions>=1.0.0
 pydocstyle[toml]>=6.1.1
 pylint>=2.14.5
 
+# Type stubs
+pandas-stubs>=2.0.0
+
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0

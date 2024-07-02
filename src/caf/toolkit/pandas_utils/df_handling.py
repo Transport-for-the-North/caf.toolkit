@@ -3,7 +3,7 @@
 # Built-Ins
 import functools
 import warnings
-from typing import Any, Generator, Mapping, Optional
+from typing import Any, Collection, Generator, Mapping, Optional
 
 # Third Party
 import numpy as np
@@ -245,7 +245,7 @@ def reindex_and_groupby_sum(
 def filter_df_mask(
     df: pd.DataFrame,
     df_filter: dict[str, Any],
-) -> pd.DataFrame:
+) -> pd.Series:
     """
     Generate a mask for filtering a pandas DataFrame by a filter.
 
@@ -406,7 +406,7 @@ def chunk_df(
 # pylint: disable=too-many-branches
 def long_product_infill(
     df: pd.DataFrame,
-    index_dict: Mapping[str, Optional[list[Any]]],
+    index_dict: Mapping[str, Optional[Collection[Any]]],
     infill: Any = 0,
     check_totals: bool = False,
 ) -> pd.DataFrame:
@@ -454,7 +454,7 @@ def long_product_infill(
     orig_col_totals = dict()
     for col in val_cols:
         if pd.api.types.is_numeric_dtype(df[col]):
-            orig_col_totals[col] = df[col].values.sum()
+            orig_col_totals[col] = df[col].to_numpy().sum()
 
     # Validate we can check totals if been told to
     if check_totals and orig_col_totals == dict():
@@ -467,15 +467,14 @@ def long_product_infill(
     for col, vals in index_dict.items():
         # Initialise any missing values
         if toolbox.is_none_like(vals):
-            index_dict[col] = df[col].unique()
+            index_dict[col] = set(df[col])
             vals = index_dict[col]
 
-        # Assert for MyPY
-        assert vals is not None
+        assert vals is not None  # Assert for MyPY
 
         # Make sure we're not dropping too much.
         # Indication of problems in arguments.
-        missing_idx = set(vals) - set(df[col].unique().tolist())
+        missing_idx = set(vals) - set(df[col].unique())
         if len(missing_idx) >= len(vals) * 0.9:
             warnings.warn(
                 f"Almost all values given for column {col} for not exist in "
@@ -488,6 +487,7 @@ def long_product_infill(
     if len(index_dict) == 1:
         name = list(index_dict.keys())[0]
         vals = index_dict[name]
+        assert vals is not None  # Assert for MyPY
         new_index = pd.Index(name=name, data=vals)
     else:
         new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
@@ -509,7 +509,7 @@ def long_product_infill(
 
     # Check and warn / error about each column
     for col, orig_total in orig_col_totals.items():
-        after_total = df[col].values.sum()
+        after_total = df[col].to_numpy().sum()
 
         if not math_utils.is_almost_equal(after_total, orig_total):
             final_msg = msg.format(orig_total=orig_total, after_total=after_total)
@@ -578,11 +578,11 @@ def long_to_wide_infill(
         If none of the `values_col` is not numeric and `check_totals` is True
     """
     # Init
-    index_vals = df[index_col].unique() if index_vals is None else index_vals
-    column_vals = df[columns_col].unique() if column_vals is None else column_vals
+    index_vals = list(set(df[index_col])) if index_vals is None else index_vals
+    column_vals = list(set(df[columns_col])) if column_vals is None else column_vals
     df = reindex_cols(df, [index_col, columns_col, values_col])
 
-    index_dict = {index_col: index_vals, columns_col: column_vals}
+    index_dict: dict[str, list[Any]] = {index_col: index_vals, columns_col: column_vals}
     df = long_product_infill(
         df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
     )
@@ -676,7 +676,7 @@ def wide_to_long_infill(
     return df
 
 
-def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
+def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
     Similar to the `long_to_wide_infill()` function, but returns a numpy array
