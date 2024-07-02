@@ -451,16 +451,21 @@ class TestCostDistributionClassConstructors:
         )
 
     @pytest.mark.parametrize(
-        "io_str",
-        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+        "io_str", ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"]
     )
-    def test_correct_from_file(self, io_str: str, request, tmp_path):
+    @pytest.mark.parametrize("drop_weighted", [True, False])
+    def test_correct_from_file(self, io_str: str, request, tmp_path, drop_weighted: bool):
         """Test that the constructor can be called correctly from file"""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
 
+        if drop_weighted:
+            input_and_results_df = input_and_results.df.drop(columns="weighted_ave")
+        else:
+            input_and_results_df = input_and_results.df
+
         # Create path and write out df
         filepath = tmp_path / "tld.csv"
-        input_and_results.df.to_csv(filepath, index=False)
+        input_and_results_df.to_csv(filepath, index=False)
 
         # Load in and assert
         cost_dist = cost_utils.CostDistribution.from_file(
@@ -470,9 +475,13 @@ class TestCostDistributionClassConstructors:
             avg_col=input_and_results.avg_col,
             trips_col=input_and_results.trips_col,
         )
+        if drop_weighted:
+            input_and_results_df[input_and_results.weighted_avg_col] = input_and_results_df[
+                input_and_results.avg_col
+            ]
         pd.testing.assert_frame_equal(
             cost_dist.df,
-            input_and_results.df,
+            input_and_results_df,
             check_dtype=False,
         )
 
