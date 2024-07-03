@@ -198,15 +198,16 @@ def read_csv_matrix(
     elif format_ == "long":
         matrix = read_csv(path, index_col=kwargs.pop("index_col", [0, 1]), **kwargs)
 
-        matrix = matrix.unstack()
+        # Matrix has MultiIndex so this returns a DataFrame
+        matrix = matrix.unstack()  # type: ignore
         matrix.columns = matrix.columns.droplevel(0)
 
     else:
         raise ValueError(f"unknown format {format_}")
 
-    # Attempt to convert to integers
-    matrix.columns = pd.to_numeric(matrix.columns, errors="ignore", downcast="integer")
-    matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")
+    # Attempt to convert to integers, which should work fine for pandas Index
+    matrix.columns = pd.to_numeric(matrix.columns, errors="ignore", downcast="integer")  # type: ignore[call-overload]
+    matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")  # type: ignore[call-overload]
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
     if not matrix.index.equals(matrix.columns):

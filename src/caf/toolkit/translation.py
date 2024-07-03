@@ -1478,7 +1478,8 @@ def matrix_translation_from_file(
     translated.columns.name = matrix.columns.name
 
     if format_ == "long":
-        translated = translated.stack().to_frame()
+        # Stack is returning a Series, MyPy is wrong
+        translated = translated.stack().to_frame()  # type: ignore[operator]
 
         # Get name of value column
         if isinstance(matrix_values_column, str):
