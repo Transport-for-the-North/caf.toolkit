@@ -66,6 +66,7 @@ def to_numeric(
     **kwargs,
 ) -> np.ndarray: ...
 
+
 @overload
 def to_numeric(
     arg: pd.Index,
@@ -73,6 +74,7 @@ def to_numeric(
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
 ) -> pd.Index: ...
+
 
 @overload
 def to_numeric(
