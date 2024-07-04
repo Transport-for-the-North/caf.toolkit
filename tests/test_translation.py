@@ -1653,8 +1653,8 @@ class TestVectorTranslationFromFile:
         result = io.read_csv(
             output_path, index_col=vector_file_translation.translation_to_column
         )
-        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
-        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        result.index = pd.to_numeric(result.index, downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, downcast="unsigned")
         pd.testing.assert_frame_equal(
             result,
             vector_file_translation.expected,
@@ -1683,8 +1683,8 @@ class TestMatrixTranslationFromFile:
 
         assert output_path.is_file(), "translated matrix not created"
         result = io.read_csv_matrix(output_path, format_="long")
-        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
-        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        result.index = pd.to_numeric(result.index, downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, downcast="unsigned")
         pd.testing.assert_frame_equal(
             result,
             matrix_file_translation.expected,
