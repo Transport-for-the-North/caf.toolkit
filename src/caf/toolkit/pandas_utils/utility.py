@@ -60,12 +60,19 @@ def cast_to_common_type(
 
 @overload
 def to_numeric(
-    arg: pd.Index | np.ndarray | Sequence,
+    arg: np.ndarray | Sequence,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
 ) -> np.ndarray: ...
 
+@overload
+def to_numeric(
+    arg: pd.Index,
+    errors: Literal["ignore", "raise", "coerce"] = "raise",
+    downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
+    **kwargs,
+) -> pd.Index: ...
 
 @overload
 def to_numeric(
@@ -81,7 +88,7 @@ def to_numeric(
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
-) -> pd.Series | np.ndarray:
+) -> pd.Series | pd.Index | np.ndarray:
     """Convert argument to numeric type.
 
     Wraps `pandas.to_numeric` and adds option to ignore errors.
@@ -102,9 +109,9 @@ def to_numeric(
 
     Returns
     -------
-    pd.Series | np.ndarray
+    pd.Series | pd.Index | np.ndarray
         Numeric if parsing succeeded. Return type depends on input.
-        Series if Series, otherwise ndarray.
+        Series if Series, Index if Index, otherwise ndarray.
 
     See Also
     --------
@@ -116,7 +123,7 @@ def to_numeric(
     try:
         return pd.to_numeric(arg, downcast=downcast, **kwargs)
     except ValueError:
-        if isinstance(arg, pd.Series):
+        if isinstance(arg, (pd.Series, pd.Index)):
             return arg
 
         return np.array(arg)
