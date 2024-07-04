@@ -60,7 +60,7 @@ def cast_to_common_type(
 
 @overload
 def to_numeric(
-    arg: np.ndarray | Sequence,
+    arg: np.ndarray,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
@@ -86,7 +86,7 @@ def to_numeric(
 
 
 def to_numeric(
-    arg,
+    arg: pd.Series | pd.Index | np.ndarray,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
@@ -97,7 +97,7 @@ def to_numeric(
 
     Parameters
     ----------
-    arg : scalar, list, tuple, 1-d array, Series or Index
+    arg : 1-d array, Series or Index
         Argument to be converted.
     errors : {'ignore', 'raise','coerce'}, default 'raise'
         - If 'raise', then invalid parsing will raise an exception.
@@ -120,10 +120,10 @@ def to_numeric(
     pd.to_numeric
     """
     if errors != "ignore":
-        return pd.to_numeric(arg, errors=errors, downcast=downcast, **kwargs)
+        return pd.to_numeric(arg, errors=errors, downcast=downcast, **kwargs)  # type: ignore[arg-type]
 
     try:
-        return pd.to_numeric(arg, downcast=downcast, **kwargs)
+        return pd.to_numeric(arg, downcast=downcast, **kwargs)  # type: ignore[arg-type]
     except ValueError:
         if isinstance(arg, (pd.Series, pd.Index)):
             return arg
