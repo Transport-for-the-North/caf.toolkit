@@ -14,6 +14,9 @@ from typing import Literal
 # Third Party
 import pandas as pd
 
+# Local Imports
+from caf.toolkit.pandas_utils import utility
+
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 
@@ -206,14 +209,8 @@ def read_csv_matrix(
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    try:
-        matrix.columns = pd.to_numeric(matrix.columns, downcast="integer")  # type: ignore[call-overload]
-    except ValueError:
-        pass
-    try:
-        matrix.index = pd.to_numeric(matrix.index, downcast="integer")  # type: ignore[call-overload]
-    except ValueError:
-        pass
+    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
     if not matrix.index.equals(matrix.columns):
