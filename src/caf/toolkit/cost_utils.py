@@ -65,7 +65,7 @@ class CostDistribution:
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
-    weighted_avg_col: str = "weighted_ave"
+    weighted_avg_col: Optional[str] = "weighted_ave"
 
     # Ideas
     units: str = "km"
@@ -355,9 +355,13 @@ class CostDistribution:
         """
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not the location of a file.")
-        use_cols = [min_col, max_col, avg_col, trips_col, weighted_avg_col]
+        use_cols = [min_col, max_col, avg_col, trips_col]
+        df = pd.read_csv(filepath)
+        if weighted_avg_col in df.columns:
+            use_cols.append(weighted_avg_col)
+
         return CostDistribution(
-            df=pd.read_csv(filepath, usecols=use_cols),
+            df=df[use_cols],
             min_col=min_col,
             max_col=max_col,
             avg_col=avg_col,
