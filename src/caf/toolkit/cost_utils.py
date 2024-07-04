@@ -195,7 +195,7 @@ class CostDistribution:
         )
         df["weighted"] = df["cost"] * df["demand"]
 
-        # Calculate the weighted average
+        # Calculate the weighted average by bin
         df["bin"] = pd.cut(df["cost"], bins=bin_edges)
         grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
         grouped["averages"] = grouped["weighted"] / grouped["demand"]
