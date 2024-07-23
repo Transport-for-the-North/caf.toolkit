@@ -4,7 +4,7 @@
 import logging
 import operator
 import warnings
-from typing import Any, Callable, Optional, Collection
+from typing import Any, Callable, Collection, Optional
 
 # Third Party
 import numpy as np
