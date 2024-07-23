@@ -42,13 +42,12 @@ def get_wide_mask(
     index_select: Optional[list[Any]] = None,
     join_fn: Callable = operator.and_,
 ) -> np.ndarray:
-    """
-    Generate an index/column mask for a wide Pandas matrix.
+    """Generate an index/column mask for a wide Pandas matrix.
 
     Helper function to make selecting combinations of zones in a wide matrix
     easier. The index and column selections can be set individually using
-     `col_select` and `index_select`, or set to the same value using
-     `selection`.
+    `col_select` and `index_select`, or set to the same value using
+    `selection`.
 
     Parameters
     ----------
@@ -77,7 +76,7 @@ def get_wide_mask(
 
     Returns
     -------
-    mask:
+    np.ndarray:
         A mask of True and False values. Will be the same shape as `df`.
 
     See Also
@@ -103,7 +102,7 @@ def get_wide_mask(
            [False, False, False, False],
            [False, False, False, False]])
 
-     It's possible to select differently for the index and columns
+    It's possible to select differently for the index and columns
 
     >>> get_wide_mask(df, col_select=[0, 1], index_select=[1, 2, 3])
     array([[False, False, False, False],
@@ -112,7 +111,7 @@ def get_wide_mask(
            [ True,  True, False, False]])
 
     The operator for joining the column and index selections can also be changed
-    
+
     >>> get_wide_mask(df, selection=[0, 1], join_fn=operator.or_)
     array([[ True,  True,  True,  True],
            [ True,  True,  True,  True],
@@ -165,29 +164,6 @@ def get_wide_internal_only_mask(
 
     To extract values from the given df perform `df * mask`.
 
-    Internal zones in travel demand matrices tend to be the first in the matrix
-    >>> df = pd.DataFrame(np.full((4, 4), 5))
-    >>> df
-       0  1  2  3
-    0  5  5  5  5
-    1  5  5  5  5
-    2  5  5  5  5
-    3  5  5  5  5
-    >>> mask = get_wide_internal_only_mask(df, selection=[0, 1])
-    >>> mask
-    array([[ True,  True, False, False],
-           [ True,  True, False, False],
-           [False, False, False, False],
-           [False, False, False, False]])
-
-    Values can be extracted using multiplication
-    >>> df * mask
-       0  1  2  3
-    0  5  5  0  0
-    1  5  5  0  0
-    2  0  0  0  0
-    3  0  0  0  0
-
     Parameters
     ----------
     df:
@@ -205,6 +181,34 @@ def get_wide_internal_only_mask(
     --------
     :func:`get_wide_mask`
     :func:`get_wide_all_external_mask`
+
+    Examples
+    --------
+    Internal zones in travel demand matrices tend to be the first in the matrix
+
+    >>> df = pd.DataFrame(np.full((4, 4), 5))
+    >>> df
+       0  1  2  3
+    0  5  5  5  5
+    1  5  5  5  5
+    2  5  5  5  5
+    3  5  5  5  5
+
+    >>> mask = get_wide_internal_only_mask(df, selection=[0, 1])
+    >>> mask
+    array([[ True,  True, False, False],
+           [ True,  True, False, False],
+           [False, False, False, False],
+           [False, False, False, False]])
+
+    Values can be extracted using multiplication
+
+    >>> df * mask
+       0  1  2  3
+    0  5  5  0  0
+    1  5  5  0  0
+    2  0  0  0  0
+    3  0  0  0  0
     """
     return get_wide_mask(df=df, selection=selection, join_fn=operator.and_)
 
@@ -221,29 +225,6 @@ def get_wide_all_external_mask(
     "external_to_internal", and "internal to external" area.
 
     To extract values from the given df perform `df * mask`.
-
-    External zones in travel demand matrices tend to be the last in the matrix
-    >>> df = pd.DataFrame(np.full((4, 4), 5))
-    >>> df
-       0  1  2  3
-    0  5  5  5  5
-    1  5  5  5  5
-    2  5  5  5  5
-    3  5  5  5  5
-    >>> mask = get_wide_all_external_mask(df, selection=[2, 3])
-    >>> mask
-    array([[False, False,  True,  True],
-           [False, False,  True,  True],
-           [ True,  True,  True,  True],
-           [ True,  True,  True,  True]])
-
-    Values can be extracted using multiplication
-    >>> df * mask
-       0  1  2  3
-    0  0  0  5  5
-    1  0  0  5  5
-    2  5  5  5  5
-    3  5  5  5  5
 
     Parameters
     ----------
@@ -262,6 +243,34 @@ def get_wide_all_external_mask(
     --------
     :func:`get_wide_mask`
     :func:`get_wide_internal_only_mask`
+
+    Examples
+    --------
+    External zones in travel demand matrices tend to be the last in the matrix
+
+    >>> df = pd.DataFrame(np.full((4, 4), 5))
+    >>> df
+       0  1  2  3
+    0  5  5  5  5
+    1  5  5  5  5
+    2  5  5  5  5
+    3  5  5  5  5
+
+    >>> mask = get_wide_all_external_mask(df, selection=[2, 3])
+    >>> mask
+    array([[False, False,  True,  True],
+           [False, False,  True,  True],
+           [ True,  True,  True,  True],
+           [ True,  True,  True,  True]])
+
+    Values can be extracted using multiplication
+
+    >>> df * mask
+       0  1  2  3
+    0  0  0  5  5
+    1  0  0  5  5
+    2  5  5  5  5
+    3  5  5  5  5
     """
     return get_wide_mask(df=df, selection=selection, join_fn=operator.or_)
 
@@ -278,20 +287,6 @@ def wide_matrix_internal_external_report(
     internal-internal, internal-external, external-internal, external-external.
     Row and columns totals are also presented.
 
-    >>> df = pd.DataFrame(np.arange(25).reshape(5, 5))
-    >>> df
-        0   1   2   3   4
-    0   0   1   2   3   4
-    1   5   6   7   8   9
-    2  10  11  12  13  14
-    3  15  16  17  18  19
-    4  20  21  22  23  24
-    >>> wide_matrix_internal_external_report(df, [0, 1, 2], [3, 4])
-              internal  external  total
-    internal      54.0      51.0  105.0
-    external     111.0      84.0  195.0
-    total        165.0     135.0  300.0
-
     Parameters
     ----------
     df:
@@ -307,6 +302,23 @@ def wide_matrix_internal_external_report(
     -------
     report:
         A report of internal and external demand in df.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame(np.arange(25).reshape(5, 5))
+    >>> df
+        0   1   2   3   4
+    0   0   1   2   3   4
+    1   5   6   7   8   9
+    2  10  11  12  13  14
+    3  15  16  17  18  19
+    4  20  21  22  23  24
+
+    >>> wide_matrix_internal_external_report(df, [0, 1, 2], [3, 4])
+              internal  external  total
+    internal      54.0      51.0  105.0
+    external     111.0      84.0  195.0
+    total        165.0     135.0  300.0
     """
     # Warn if overlap of internal and external selection
     if len(overlap := set(int_selection) & set(ext_selection)):
