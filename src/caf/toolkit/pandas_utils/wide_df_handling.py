@@ -50,34 +50,6 @@ def get_wide_mask(
      `col_select` and `index_select`, or set to the same value using
      `selection`.
 
-    Typical usage for travel demand matrices
-    >>> df = pd.DataFrame(np.arange(16).reshape(4, 4))
-    >>> df
-        0   1   2   3
-    0   0   1   2   3
-    1   4   5   6   7
-    2   8   9  10  11
-    3  12  13  14  15
-    >>> get_wide_mask(df, selection=[0, 1])
-    array([[ True,  True, False, False],
-           [ True,  True, False, False],
-           [False, False, False, False],
-           [False, False, False, False]])
-
-     It's possible to select differently for the index and columns
-    >>> get_wide_mask(df, col_select=[0, 1], index_select=[1, 2, 3])
-    array([[False, False, False, False],
-           [ True,  True, False, False],
-           [ True,  True, False, False],
-           [ True,  True, False, False]])
-
-    The operator for joining the column and index selections can also be changed
-    >>> get_wide_mask(df, selection=[0, 1], join_fn=operator.or_)
-    array([[ True,  True,  True,  True],
-           [ True,  True,  True,  True],
-           [ True,  True, False, False],
-           [ True,  True, False, False]])
-
     Parameters
     ----------
     df:
@@ -112,6 +84,40 @@ def get_wide_mask(
     --------
     :func:`get_wide_internal_only_mask`
     :func:`get_wide_all_external_mask`
+
+    Examples
+    --------
+    Typical usage for travel demand matrices
+
+    >>> df = pd.DataFrame(np.arange(16).reshape(4, 4))
+    >>> df
+        0   1   2   3
+    0   0   1   2   3
+    1   4   5   6   7
+    2   8   9  10  11
+    3  12  13  14  15
+
+    >>> get_wide_mask(df, selection=[0, 1])
+    array([[ True,  True, False, False],
+           [ True,  True, False, False],
+           [False, False, False, False],
+           [False, False, False, False]])
+
+     It's possible to select differently for the index and columns
+
+    >>> get_wide_mask(df, col_select=[0, 1], index_select=[1, 2, 3])
+    array([[False, False, False, False],
+           [ True,  True, False, False],
+           [ True,  True, False, False],
+           [ True,  True, False, False]])
+
+    The operator for joining the column and index selections can also be changed
+    
+    >>> get_wide_mask(df, selection=[0, 1], join_fn=operator.or_)
+    array([[ True,  True,  True,  True],
+           [ True,  True,  True,  True],
+           [ True,  True, False, False],
+           [ True,  True, False, False]])
     """
     # Validate input args
     if selection is None:
