@@ -65,7 +65,7 @@ class CostDistribution:
     max_col: str = "max"
     avg_col: str = "ave"
     trips_col: str = "trips"
-    weighted_avg_col: str = "weighted_ave"
+    weighted_avg_col: Optional[str] = "weighted_ave"
 
     # Ideas
     units: str = "km"
@@ -117,12 +117,12 @@ class CostDistribution:
     @property
     def min_vals(self) -> np.ndarray:
         """Minimum values of the cost distribution bin edges."""
-        return self.df[self.min_col].values
+        return self.df[self.min_col].to_numpy()
 
     @property
     def max_vals(self) -> np.ndarray:
         """Maximum values of the cost distribution in edges."""
-        return self.df[self.max_col].values
+        return self.df[self.max_col].to_numpy()
 
     @property
     def bin_edges(self) -> np.ndarray:
@@ -137,12 +137,12 @@ class CostDistribution:
     @property
     def avg_vals(self) -> np.ndarray:
         """Average values for each of the cost distribution bins."""
-        return self.df[self.avg_col].values
+        return self.df[self.avg_col].to_numpy()
 
     @property
     def trip_vals(self) -> np.ndarray:
         """Trip values for each of the cost distribution bins."""
-        return self.df[self.trips_col].values
+        return self.df[self.trips_col].to_numpy()
 
     @property
     def band_share_vals(self) -> np.ndarray:
@@ -164,8 +164,8 @@ class CostDistribution:
             should be the same shape as cost_matrix
 
         cost_matrix: np.ndarray
-            A matrix of cost relating to matrix. This matrix
-            should be the same shape as matrix
+            A matrix of cost relating to `matrix`. `cost_matrix`
+            should be the same shape as `matrix`
 
         bin_edges: list[float] | np.ndarray
             Defines a monotonically increasing array of bin edges, including the
@@ -177,17 +177,31 @@ class CostDistribution:
         np.ndarray
             An array to be passed into a dataframe as a column.
         """
+        # Init and checks
+        bin_edges = bin_edges.tolist() if isinstance(bin_edges, np.ndarray) else bin_edges
+        if matrix.shape != cost_matrix.shape:
+            raise ValueError(
+                f"`matrix` and `cost_matrix` need to be the same shape. Got:\n"
+                f"{matrix.shape=}\n"
+                f"{cost_matrix.shape=}\n"
+            )
+
+        # Calculate distance weighted demand
         df = pd.DataFrame(
             {
                 "cost": pd.DataFrame(cost_matrix).stack(),
                 "demand": pd.DataFrame(matrix).stack(),
             }
         )
-        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
         df["weighted"] = df["cost"] * df["demand"]
+
+        # Calculate the weighted average by bin
+        df["bin"] = pd.cut(df["cost"], bins=bin_edges)
         grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
-        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
         grouped["averages"] = grouped["weighted"] / grouped["demand"]
+
+        # Infill any missing values with bin midpoint
+        grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
         return grouped["averages"].fillna(grouped["bin_centres"].astype("float")).to_numpy()
 
     @classmethod
@@ -341,9 +355,13 @@ class CostDistribution:
         """
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not the location of a file.")
-        use_cols = [min_col, max_col, avg_col, trips_col, weighted_avg_col]
+        use_cols = [min_col, max_col, avg_col, trips_col]
+        df = pd.read_csv(filepath)
+        if weighted_avg_col in df.columns:
+            use_cols.append(weighted_avg_col)
+
         return CostDistribution(
-            df=pd.read_csv(filepath, usecols=use_cols),
+            df=df[use_cols],
             min_col=min_col,
             max_col=max_col,
             avg_col=avg_col,
