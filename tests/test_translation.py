@@ -153,7 +153,7 @@ class PandasTranslation:
         ret_val = pd.DataFrame(ret_val)
         ret_val[self.translation_from_col] = self.from_col.max() + 1
         ret_val[self.translation_factors_col] = 0
-        ret_val[self.translation_factors_col][0] = 1
+        ret_val.loc[0, self.translation_factors_col] = 1
         return ret_val.reindex(
             columns=[
                 self.translation_from_col,
