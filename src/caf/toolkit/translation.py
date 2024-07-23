@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Optional, TypedDict, TypeVar
+from typing import Any, Literal, Optional, TypedDict, TypeVar
 
 # Third Party
 import numpy as np
@@ -1020,7 +1020,7 @@ def pandas_single_vector_zone_translation(
 
     # Translate and return
     translated = numpy_vector_zone_translation(
-        vector=vector.values,
+        vector=vector.to_numpy(),
         translation=translation.values,
         translation_dtype=translation_dtype,
         check_totals=check_totals,
@@ -1129,7 +1129,7 @@ def pandas_multi_vector_zone_translation(
     # Convert data dtypes if needed
     if translation_dtype is None:
         translation_dtype = np.promote_types(
-            translation[translation_factors_col].dtype, vector.to_numpy().dtype
+            translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
         )
     assert translation_dtype is not None
 
@@ -1196,10 +1196,11 @@ def pandas_multi_vector_zone_translation(
 
     # trans_vector should now contain the correct index level if an error hasn't
     # been raised
+    factors = indexed_translation[translation_factors_col].squeeze()
+    if not isinstance(factors, pd.Series):
+        raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(indexed_translation[translation_factors_col].squeeze(), axis="index")
-        .groupby(level=[translation_to_col] + ind_names)
-        .sum()
+        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
     )
 
     if check_totals:
@@ -1314,7 +1315,8 @@ def vector_translation_from_file(
         Name, or position, of column in translation containing the
         splitting factors.
     """
-    # TODO(MB) Add optional from / to unique index parameters,
+    # TODO(MB) Add optional from / to unique index parameters, deal with too many locals
+    # pylint: disable=too-many-locals
     # otherwise infer from translation file
     _validate_column_name_parameters(
         locals(),
@@ -1353,14 +1355,30 @@ def vector_translation_from_file(
         translation_to_column,
         translation_factors_column,
     )
+    to_unique_index = lookup[to_col].unique()
+    if isinstance(to_unique_index, np.ndarray):
+        to_unique_index_list = to_unique_index.tolist()
+    else:
+        raise TypeError(
+            "to_col should refer to columns in the "
+            "translation vector containing valid unique indices."
+        )
+    from_unique_index = lookup[from_col].unique()
+    if isinstance(from_unique_index, np.ndarray):
+        from_unique_index_list = from_unique_index.tolist()
+    else:
+        raise TypeError(
+            "from_col should refer to columns in the "
+            "translation vector containing valid unique indices."
+        )
     translated = pandas_vector_zone_translation(
         vector,
         lookup,
         translation_from_col=from_col,
         translation_to_col=to_col,
         translation_factors_col=factors_col,
-        from_unique_index=lookup[from_col].unique().tolist(),
-        to_unique_index=lookup[to_col].unique().tolist(),
+        from_unique_index=from_unique_index_list,
+        to_unique_index=to_unique_index_list,
     )
 
     translated.to_csv(output_path)
@@ -1376,6 +1394,7 @@ def matrix_translation_from_file(
     translation_from_column: int | str,
     translation_to_column: int | str,
     translation_factors_column: int | str,
+    format_: Literal["square", "long"] = "long",
 ) -> None:
     """Translate zoning system of matrix CSV file.
 
@@ -1406,7 +1425,9 @@ def matrix_translation_from_file(
     """
     # TODO(MB) Handle square format CSVs, and deal with too-many-locals
     # pylint: disable=too-many-locals
-    format_ = "long"
+    if format_ == "square":
+        raise NotImplementedError("Square matrices are not yet supported.")
+
     _validate_column_name_parameters(
         locals(),
         "matrix_values_column",
@@ -1457,7 +1478,8 @@ def matrix_translation_from_file(
     translated.columns.name = matrix.columns.name
 
     if format_ == "long":
-        translated = translated.stack().to_frame()
+        # Stack is returning a Series, MyPy is wrong
+        translated = translated.stack().to_frame()  # type: ignore[operator]
 
         # Get name of value column
         if isinstance(matrix_values_column, str):
