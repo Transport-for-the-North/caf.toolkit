@@ -2,9 +2,8 @@
 """Helper functions for handling pandas DataFrames."""
 # Built-Ins
 import functools
-import operator
 import warnings
-from typing import Any, Collection, Generator, Mapping, Optional, Callable
+from typing import Any, Collection, Generator, Mapping, Optional
 
 # Third Party
 import numpy as np
@@ -320,89 +319,6 @@ def filter_df(
             )
 
     return return_df
-
-
-def get_wide_mask(df: pd.DataFrame,
-                  selection: list[Any] = None,
-                  col_select: list[Any] = None,
-                  index_select: list[Any] = None,
-                  join_fn: Callable = operator.and_
-                  ) -> np.ndarray:
-    """
-    Generate an index/column mask for a wide matrix.
-
-    Helper function to make selecting combinations of zones in a wide matrix
-    eaiser. The index and column selections can be set individually using
-     `col_select` and `index_select`, or set to the same value using
-     `selection`.
-
-    Parameters
-    ----------
-    df:
-        The dataframe to generate the mask for.
-
-    selection:
-        The IDs to select in both the columns and index. If this value
-        is set it will overwrite anything passed into `col_select` and
-        `index_select`.
-
-    col_select:
-        The IDs to select in the columns. This value is ignored if
-        `selection` is set.
-
-    index_select:
-        The IDs to select in the index. This value is ignored if
-        `selection` is set.
-
-    join_fn:
-        Individual masks are generated for the index and columns. This
-        function is used to combine the two masks. By default, a bitwise AND
-        is used, meaning the final mask will only return `True` where both
-        the index and column masks overlap. See pythons builtin operator
-        library for more built-in options.
-
-    Returns
-    -------
-    mask:
-        A mask of true and false values. Will be the same shape as df.
-    """
-    # Validate input args
-    if selection is None:
-        if col_select is None or index_select is None:
-            raise ValueError(
-                "If zones is not set, both col_select and row_zones need "
-                "to be set."
-            )
-    else:
-        col_select = selection
-        index_select = selection
-
-    # Try and cast to the correct types for rows/cols
-    try:
-        # Assume columns are strings if they are an object
-        col_dtype = df.columns.dtype
-        col_dtype = str if col_dtype == object else col_dtype
-        col_select = np.array(col_select, col_dtype)
-    except ValueError as exc:
-        raise ValueError(
-            "Cannot cast the col_select to the required dtype to match the "
-            f"dtype of the given df columns. Tried to cast to: {df.columns.dtype}"
-        ) from exc
-
-    try:
-        index_select = np.array(index_select, df.index.dtype)
-    except ValueError as exc:
-        raise ValueError(
-            "Cannot cast the index_select to the required dtype to match the "
-            f"dtype of the given df index. Tried to cast to: {df.index.dtype}"
-        ) from exc
-
-    # Create square masks for the rows and cols
-    col_mask = np.broadcast_to(df.columns.isin(col_select), df.shape)
-    index_mask = np.broadcast_to(df.index.isin(index_select), df.shape).T
-
-    # Combine to get the full mask
-    return join_fn(col_mask, index_mask)
 
 
 def str_join_cols(
