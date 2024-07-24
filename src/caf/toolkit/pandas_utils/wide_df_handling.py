@@ -132,7 +132,9 @@ def get_wide_mask(
 
     # Validate matrix shape
     if len(df.shape) != 2 or df.shape[0] != df.shape[1]:
-        raise ValueError(f"Only square matrices with 2 dimensions are supported. Got: {df.shape}")
+        raise ValueError(
+            f"Only square matrices with 2 dimensions are supported. Got: {df.shape}"
+        )
 
     # Try match dtypes in rows and cols
     if df.columns.dtype != type(col_select):
