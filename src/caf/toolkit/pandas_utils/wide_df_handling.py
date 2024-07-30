@@ -314,6 +314,12 @@ def wide_matrix_internal_external_report(
     report:
         A report of internal and external demand in df.
 
+    Warns
+    -----
+    UserWarning:
+        If `internal_selection` and `external_selection` do not contain all the values
+        listed in `df`, OR they have overlapping values - leading to double counting.
+
     Examples
     --------
     >>> df = pd.DataFrame(np.arange(25).reshape(5, 5))
