@@ -124,7 +124,10 @@ def get_wide_mask(
     if select is None:
         if col_select is None or index_select is None:
             raise ValueError(
-                "If selection is not set, both col_select and row_zones need to be set."
+                "If selection is not set, both col_select and row_zones need to be set. "
+                "If you're interested in this function being able to filter on just rows "
+                "or columns, please register your interest by commenting on this issue: "
+                "https://github.com/Transport-for-the-North/caf.toolkit/issues/131"
             )
     else:
         col_select = select
