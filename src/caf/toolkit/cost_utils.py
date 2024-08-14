@@ -41,14 +41,15 @@ class CostDistribution:
     avg_vals:
         Average values for each of the cost distribution bins.
 
+    weighted_avg_vals:
+        Weighted average values for each of the cost distribution bins.
+
     trip_vals:
         Trip values for each of the cost distribution bins.
 
     band_share_vals:
         Band share values for each of the cost distribution bins.
 
-    weighted_avg_vals:
-        Weighted average values for each of the cost distribution bins.
     """
 
     # Ideas
@@ -63,6 +64,43 @@ class CostDistribution:
         trips_col: str = "trips",
         weighted_avg_col: Optional[str] = None,
     ):
+        """
+
+        Alternate constructors are available in the See Also section
+
+        Parameters
+        ----------
+        df:
+            A DataFrame containing the cost distribution data. Must have columns
+            named: `min_col`, `max_col`, `avg_col`, `trips_col`.
+
+        min_col:
+            The name of the columns in `df` that contains the minimum bound
+            value for each row.
+
+        max_col:
+            The name of the columns in `df` that contains the maximum bound
+            value for each row.
+
+        avg_col:
+            The name of the columns in `df` that contains the middle bound
+
+        trips_col:
+            The name of the columns in `df` that contains the value for each
+            row.
+
+        weighted_avg_col:
+            The name of the columns in `df` that contains the weighted average
+            value for each row. If available, this is different from `avg_col`
+            as it takes into account this distribution of values within each
+            bound when calculating averages.
+
+        See Also
+        --------
+        :func: CostDistribution.from_data
+        :func: CostDistribution.from_data_no_bins
+        :func: CostDistribution.from_file
+        """
         self.df = df
 
         # Keep as private. These shouldn't be needed outside of this class
