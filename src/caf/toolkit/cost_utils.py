@@ -27,7 +27,6 @@ LOG = logging.getLogger(__name__)
 
 
 # # # CLASSES # # #
-@dataclass(config={"arbitrary_types_allowed": True})  # type: ignore # pylint: disable=used-before-assignment, unexpected-keyword-arg
 class CostDistribution:
     """Distribution of cost values between variable bounds.
 
@@ -58,46 +57,66 @@ class CostDistribution:
         Weighted average values for each of the cost distribution bins.
     """
 
-    df: pd.DataFrame
-
-    # Default arguments
-    min_col: str = "min"
-    max_col: str = "max"
-    avg_col: str = "ave"
-    trips_col: str = "trips"
-    weighted_avg_col: Optional[str] = "weighted_ave"
-
     # Ideas
     units: str = "km"
 
-    @pydantic.model_validator(mode="after")
-    def check_df_col_names(self) -> CostDistribution:
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        min_col: str = "min",
+        max_col: str = "max",
+        avg_col: str = "avg",
+        trips_col: str = "trips",
+        weighted_avg_col: Optional[str] = None,
+    ):
+        self.df = df
+
+        # Keep as private. These shouldn't be needed outside of this class
+        self.__min_col = min_col
+        self.__max_col = max_col
+        self.__avg_col = avg_col
+        self.__trips_col = trips_col
+
+        if weighted_avg_col is None:
+            weighted_avg_col = "weighted_avg"
+        self.__weighted_avg_col = weighted_avg_col
+
+        self._validate_df_col_names()
+
+    def _validate_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
         # init
-        col_names = ["min_col", "max_col", "avg_col", "trips_col"]
-        cols = {k: getattr(self, k) for k in col_names}
+        # col_names = ["__min_col", "__max_col", "__avg_col", "__trips_col"]
+        # cols = {k: getattr(self, k) for k in col_names}
+
+        req_cols = {
+            "min_col": self.__min_col,
+            "max_col": self.__max_col,
+            "avg_col": self.__avg_col,
+            "trips_col": self.__trips_col,
+        }
 
         # Check columns are in df
         err_cols = {}
-        for col_name, col_val in cols.items():
+        for col_name, col_val in req_cols.items():
             if col_val not in self.df:
                 err_cols.update({col_name: col_val})
 
         # Add in the weighted_avg_col if not already in df
-        cols.update({"weighted_avg_col": getattr(self, "weighted_avg_col")})
-        if self.weighted_avg_col not in self.df.columns:
-            self.df[self.weighted_avg_col] = self.df[self.avg_col]
+        req_cols.update({"weighted_avg_col": self.__weighted_avg_col})
+        if self.__weighted_avg_col not in self.df.columns.to_list():
+            self.df[self.__weighted_avg_col] = self.df[self.__avg_col]
 
         # Throw error if missing columns found
         if err_cols != dict():
             raise ValueError(
                 "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
-                f"With the following in the Df: {self.df.columns}"
+                f"With the following in the DataFrame: {self.df.columns}"
             )
 
         # Tidy up df
-        self.df = pd_utils.reindex_cols(self.df, list(cols.values()))
+        self.df = pd_utils.reindex_cols(self.df, list(req_cols.values()))
         return self
 
     def __len__(self):
@@ -117,12 +136,12 @@ class CostDistribution:
     @property
     def min_vals(self) -> np.ndarray:
         """Minimum values of the cost distribution bin edges."""
-        return self.df[self.min_col].to_numpy()
+        return self.df[self.__min_col].to_numpy()
 
     @property
     def max_vals(self) -> np.ndarray:
         """Maximum values of the cost distribution in edges."""
-        return self.df[self.max_col].to_numpy()
+        return self.df[self.__max_col].to_numpy()
 
     @property
     def bin_edges(self) -> np.ndarray:
@@ -137,12 +156,17 @@ class CostDistribution:
     @property
     def avg_vals(self) -> np.ndarray:
         """Average values for each of the cost distribution bins."""
-        return self.df[self.avg_col].to_numpy()
+        return self.df[self.__avg_col].to_numpy()
+
+    @property
+    def weighted_avg_vals(self) -> np.ndarray:
+        """Weighted average values for each of the cost distribution bins."""
+        return self.df[self.__weighted_avg_col].to_numpy()
 
     @property
     def trip_vals(self) -> np.ndarray:
         """Trip values for each of the cost distribution bins."""
-        return self.df[self.trips_col].to_numpy()
+        return self.df[self.__trips_col].to_numpy()
 
     @property
     def band_share_vals(self) -> np.ndarray:
@@ -262,14 +286,14 @@ class CostDistribution:
         # Covert data into instance of this class
         df = pd.DataFrame(
             {
-                cls.min_col: bin_edges[:-1],
-                cls.max_col: bin_edges[1:],
-                cls.avg_col: (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
-                cls.trips_col: distribution,
-                cls.weighted_avg_col: averages,
+                "min": bin_edges[:-1],
+                "max": bin_edges[1:],
+                "avg": (np.array(bin_edges[:-1]) + np.array(bin_edges[1:])) / 2,
+                "trips": distribution,
+                "weighted_avg": averages,
             }
         )
-        return CostDistribution(df=df)
+        return CostDistribution(df=df, min_col="min", max_col="max", avg_col="avg", trips_col="trips", weighted_avg_col="weighted_avg",)
 
     @staticmethod
     def from_data_no_bins(
@@ -316,9 +340,9 @@ class CostDistribution:
         filepath: os.PathLike,
         min_col: str = "min",
         max_col: str = "max",
-        avg_col: str = "ave",
+        avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: str = "weighted_ave",
+        weighted_avg_col: Optional[str] = None,
     ) -> CostDistribution:
         """Build an instance from a file on disk.
 
@@ -353,15 +377,17 @@ class CostDistribution:
         cost_distribution:
             An instance containing the data at filepath.
         """
+        # Validate the path
         if not os.path.isfile(filepath):
             raise ValueError(f"'{filepath}' is not the location of a file.")
+
+        # Determine which columns to read in
         use_cols = [min_col, max_col, avg_col, trips_col]
-        df = pd.read_csv(filepath)
-        if weighted_avg_col in df.columns:
+        if weighted_avg_col is not None:
             use_cols.append(weighted_avg_col)
 
         return CostDistribution(
-            df=df[use_cols],
+            df=pd.read_csv(filepath, usecols=use_cols),
             min_col=min_col,
             max_col=max_col,
             avg_col=avg_col,
@@ -417,7 +443,7 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        new_distribution.df[new_distribution.trips_col] = trip_vals
+        new_distribution.df[new_distribution.__trips_col] = trip_vals
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
