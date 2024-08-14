@@ -89,10 +89,6 @@ class CostDistribution:
 
     def _validate_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
-        # init
-        # col_names = ["__min_col", "__max_col", "__avg_col", "__trips_col"]
-        # cols = {k: getattr(self, k) for k in col_names}
-
         req_cols = {
             "min_col": self.__min_col,
             "max_col": self.__max_col,
@@ -454,7 +450,9 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        new_distribution.df[new_distribution.__trips_col] = trip_vals   # pylint: disable=protected-access
+        new_distribution.df[new_distribution.__trips_col] = (
+            trip_vals  # pylint: disable=protected-access
+        )
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
