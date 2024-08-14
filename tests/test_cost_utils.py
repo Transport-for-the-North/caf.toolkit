@@ -373,7 +373,9 @@ class TestCostDistributionClassConstructors:
 
     def test_default_weighted_average(self, cost_dist_1d_class):
         """Test that the weighted_avg col is set to the same as avg when not given"""
-        got = cost_utils.CostDistribution(**cost_dist_1d_class.constructor_kwargs_no_weighted_avg)
+        got = cost_utils.CostDistribution(
+            **cost_dist_1d_class.constructor_kwargs_no_weighted_avg
+        )
         expected = cost_dist_1d_class.df[cost_dist_1d_class.avg_col]
         np.testing.assert_almost_equal(expected, got.weighted_avg_vals)
 
@@ -486,7 +488,12 @@ class TestCostDistributionClassConstructors:
     @pytest.mark.parametrize(
         "io_str", ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"]
     )
-    def test_correct_from_file_no_weighted(self, io_str: str, request, tmp_path, ):
+    def test_correct_from_file_no_weighted(
+        self,
+        io_str: str,
+        request,
+        tmp_path,
+    ):
         """Test that the constructor can be called correctly from file without weighted_avg col"""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
 
@@ -505,7 +512,9 @@ class TestCostDistributionClassConstructors:
 
         # We expect the result to just copy the avg col to weighted_avg
         expected_df = input_and_results.df
-        expected_df[input_and_results.weighted_avg_col] = expected_df[input_and_results.avg_col]
+        expected_df[input_and_results.weighted_avg_col] = expected_df[
+            input_and_results.avg_col
+        ]
 
         # We only really care about the values here, so compare numpy arrays instead
         np.testing.assert_almost_equal(expected_df.to_numpy(), result.df.to_numpy())

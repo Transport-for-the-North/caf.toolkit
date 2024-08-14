@@ -6,21 +6,15 @@ from __future__ import annotations
 import copy
 import logging
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 # Third Party
 import numpy as np
 import pandas as pd
-import pydantic
 
 # Local Imports
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass  # isort:skip
-else:
-    from pydantic.dataclasses import dataclass  # isort:skip
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -293,7 +287,14 @@ class CostDistribution:
                 "weighted_avg": averages,
             }
         )
-        return CostDistribution(df=df, min_col="min", max_col="max", avg_col="avg", trips_col="trips", weighted_avg_col="weighted_avg",)
+        return CostDistribution(
+            df=df,
+            min_col="min",
+            max_col="max",
+            avg_col="avg",
+            trips_col="trips",
+            weighted_avg_col="weighted_avg",
+        )
 
     @staticmethod
     def from_data_no_bins(
@@ -443,7 +444,7 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        new_distribution.df[new_distribution.__trips_col] = trip_vals
+        new_distribution.df[new_distribution.__trips_col] = trip_vals   # pylint: disable=protected-access
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
