@@ -22,35 +22,7 @@ LOG = logging.getLogger(__name__)
 
 # # # CLASSES # # #
 class CostDistribution:
-    """Distribution of cost values between variable bounds.
-
-    Attributes
-    ----------
-    df:
-        The raw Pandas DataFrame containing the cost distribution data.
-
-    min_vals:
-        Minimum values of the cost distribution bin edges.
-
-    max_vals:
-        Maximum values of the cost distribution bin edges.
-
-    bin_edges:
-        Bin edges for the cost distribution.
-
-    avg_vals:
-        Average values for each of the cost distribution bins.
-
-    weighted_avg_vals:
-        Weighted average values for each of the cost distribution bins.
-
-    trip_vals:
-        Trip values for each of the cost distribution bins.
-
-    band_share_vals:
-        Band share values for each of the cost distribution bins.
-
-    """
+    """Distribution of cost values between variable bounds."""
 
     # Ideas
     units: str = "km"
