@@ -22,7 +22,43 @@ LOG = logging.getLogger(__name__)
 
 # # # CLASSES # # #
 class CostDistribution:
-    """Distribution of cost values between variable bounds."""
+    """Distribution of cost values between variable bounds.
+
+    Alternate constructors are available in the See Also section
+
+    Parameters
+    ----------
+    df:
+        A DataFrame containing the cost distribution data. Must have columns
+        named: `min_col`, `max_col`, `avg_col`, `trips_col`.
+
+    min_col:
+        The name of the columns in `df` that contains the minimum bound
+        value for each row.
+
+    max_col:
+        The name of the columns in `df` that contains the maximum bound
+        value for each row.
+
+    avg_col:
+        The name of the columns in `df` that contains the middle bound
+
+    trips_col:
+        The name of the columns in `df` that contains the value for each
+        row.
+
+    weighted_avg_col:
+        The name of the columns in `df` that contains the weighted average
+        value for each row. If available, this is different from `avg_col`
+        as it takes into account this distribution of values within each
+        bound when calculating averages.
+
+    See Also
+    --------
+    :func:`from_data`
+    :func:`from_data_no_bins`
+    :func:`from_file`
+    """
 
     # Ideas
     units: str = "km"
@@ -36,43 +72,6 @@ class CostDistribution:
         trips_col: str = "trips",
         weighted_avg_col: Optional[str] = None,
     ):
-        """
-
-        Alternate constructors are available in the See Also section
-
-        Parameters
-        ----------
-        df:
-            A DataFrame containing the cost distribution data. Must have columns
-            named: `min_col`, `max_col`, `avg_col`, `trips_col`.
-
-        min_col:
-            The name of the columns in `df` that contains the minimum bound
-            value for each row.
-
-        max_col:
-            The name of the columns in `df` that contains the maximum bound
-            value for each row.
-
-        avg_col:
-            The name of the columns in `df` that contains the middle bound
-
-        trips_col:
-            The name of the columns in `df` that contains the value for each
-            row.
-
-        weighted_avg_col:
-            The name of the columns in `df` that contains the weighted average
-            value for each row. If available, this is different from `avg_col`
-            as it takes into account this distribution of values within each
-            bound when calculating averages.
-
-        See Also
-        --------
-        :func: CostDistribution.from_data
-        :func: CostDistribution.from_data_no_bins
-        :func: CostDistribution.from_file
-        """
         self.df = df
 
         # Keep as private. These shouldn't be needed outside of this class
@@ -450,9 +449,8 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        new_distribution.df[new_distribution.__trips_col] = (
-            trip_vals  # pylint: disable=protected-access
-        )
+        # pylint: disable-next=protected-access
+        new_distribution.df[new_distribution.__trips_col] = trip_vals
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
