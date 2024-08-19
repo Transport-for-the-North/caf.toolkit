@@ -29,19 +29,19 @@ class CostDistribution:
     Parameters
     ----------
     df:
-        A DataFrame containing the cost distribution data. Must have columns
+        A DataFrame containing the binned cost distribution data. Must have columns
         named: `min_col`, `max_col`, `avg_col`, `trips_col`.
 
     min_col:
-        The name of the columns in `df` that contains the minimum bound
+        The name of the columns in `df` that contains the lower bin edge
         value for each row.
 
     max_col:
-        The name of the columns in `df` that contains the maximum bound
+        The name of the columns in `df` that contains the upper bin edge
         value for each row.
 
     avg_col:
-        The name of the columns in `df` that contains the middle bound
+        The name of the columns in `df` that contains the centre of the bin
 
     trips_col:
         The name of the columns in `df` that contains the value for each
