@@ -70,7 +70,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: str = "weighted_avg",
+        weighted_avg_col: Optional[str] = None,
     ):
         self.df = df
 
@@ -79,6 +79,9 @@ class CostDistribution:
         self.__max_col = max_col
         self.__avg_col = avg_col
         self.__trips_col = trips_col
+
+        if weighted_avg_col is None:
+            weighted_avg_col = "weighted_avg"
         self.__weighted_avg_col = weighted_avg_col
 
         self._validate_df_col_names()
