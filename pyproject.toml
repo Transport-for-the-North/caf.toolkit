@@ -51,6 +51,9 @@ Homepage = "https://github.com/Transport-for-the-North/caf.toolkit"
 Source = "https://github.com/Transport-for-the-North/caf.toolkit"
 Documentation = "http://caftoolkit.rtfd.io/"
 
+[project.scripts]
+"caf.toolkit" = "caf.toolkit.__main__:main"
+
 # Packaging options
 [tool.setuptools.packages.find]
 where = ["src"]
