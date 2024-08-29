@@ -1195,22 +1195,7 @@ def vector_translation_from_file(
         translation_to_column,
         translation_factors_column,
     )
-    to_unique_index = lookup[to_col].unique()
-    if isinstance(to_unique_index, np.ndarray):
-        to_unique_index_list = to_unique_index.tolist()
-    else:
-        raise TypeError(
-            "to_col should refer to columns in the "
-            "translation vector containing valid unique indices."
-        )
-    from_unique_index = lookup[from_col].unique()
-    if isinstance(from_unique_index, np.ndarray):
-        from_unique_index_list = from_unique_index.tolist()
-    else:
-        raise TypeError(
-            "from_col should refer to columns in the "
-            "translation vector containing valid unique indices."
-        )
+
     translated = pandas_vector_zone_translation(
         vector,
         lookup,

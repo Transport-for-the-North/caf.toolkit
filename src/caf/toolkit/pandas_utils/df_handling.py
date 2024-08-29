@@ -3,7 +3,6 @@
 # Built-Ins
 import functools
 from typing import Any, Generator
-import warnings
 
 # Third Party
 import numpy as np
@@ -408,7 +407,7 @@ def long_product_infill(
     data: pd.Series | pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] = None,
+    index_dict: dict[str, list] | None = None,
 ) -> pd.DataFrame:
     """Infill columns with a complete product of one another.
 
@@ -462,8 +461,6 @@ def long_product_infill(
             )
 
     full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
-    if len(full_ind.names) == 1:
-        full_ind = full_ind.get_level_values(0)
     filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
     # check there's an overlap
@@ -514,8 +511,8 @@ def long_to_wide_infill(
     infill: Any = 0,
     unstack_level: str | int = -1,
     check_totals: bool = False,
-    correct_cols: list = None,
-    correct_ind: list = None,
+    correct_cols: list | None = None,
+    correct_ind: list | None = None,
 ) -> pd.DataFrame:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
@@ -573,13 +570,12 @@ def long_to_wide_infill(
     return unstacked
 
 
-
 def wide_to_long_infill(
     df: pd.DataFrame,
-    out_name: str = None,
-    correct_cols: list = None,
-    correct_ind: list = None,
-    infill: any = None,
+    out_name: str | None = None,
+    correct_cols: list | None = None,
+    correct_ind: list | None = None,
+    infill: Any = None,
 ) -> pd.DataFrame:
     """Convert a matrix from wide to long format, infilling missing values.
 
