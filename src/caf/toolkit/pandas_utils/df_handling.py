@@ -3,6 +3,7 @@
 # Built-Ins
 import functools
 from typing import Any, Generator
+import warnings
 
 # Third Party
 import numpy as np
@@ -244,7 +245,7 @@ def reindex_and_groupby_sum(
 def filter_df_mask(
     df: pd.DataFrame,
     df_filter: dict[str, Any],
-) -> pd.DataFrame:
+) -> pd.Series:
     """
     Generate a mask for filtering a pandas DataFrame by a filter.
 
@@ -572,6 +573,7 @@ def long_to_wide_infill(
     return unstacked
 
 
+
 def wide_to_long_infill(
     df: pd.DataFrame,
     out_name: str = None,
@@ -621,7 +623,7 @@ def wide_to_long_infill(
     return stacked
 
 
-def long_df_to_wide_ndarray(*args, **kwargs) -> pd.DataFrame:
+def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
     Similar to the `long_to_wide_infill()` function, but returns a numpy array

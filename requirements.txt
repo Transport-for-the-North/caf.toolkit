@@ -1,7 +1,7 @@
 # Required libraries
 numpy>=1.19.0
-pandas>=1.4.0
-sparse>=0.13.0
+pandas>=2.0.0
+sparse>=0.15.4
 tqdm>=4.50.2
 pydantic>=2.5.0
 strictyaml>=1.6

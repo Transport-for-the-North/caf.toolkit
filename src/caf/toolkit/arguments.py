@@ -8,6 +8,7 @@ from __future__ import annotations
 # Built-Ins
 import argparse
 import logging
+import os
 import pathlib
 import re
 import warnings
@@ -39,6 +40,52 @@ _ARG_TYPE_LOOKUP: dict[str, type] = {
 
 class TypeAnnotationWarning(UserWarning):
     """Warning for issues parsing type annotations for CLI arguments."""
+
+
+def getenv_bool(name: str, default: bool) -> bool:
+    """Get environment variable and converts to a boolean.
+
+    Normalizes the variable value by converting to lowercase
+    and stripping whitespace before bool conversion.
+
+    Parameters
+    ----------
+    name : str
+        Name of the environment variable.
+    default : bool
+        Default value for the environment variable.
+
+    Returns
+    -------
+    bool
+        True for: 'true', 'yes', 'y' or '1'.
+        False for: 'false', 'no', 'n' or '0'.
+
+    Raises
+    ------
+    ValueError
+        If the environment variable has an unexpected value.
+    """
+    value = os.getenv(name, default)
+    if isinstance(value, bool):
+        return value
+
+    true_str = ("true", "yes", "y", "1")
+    false_str = ("false", "no", "n", "0")
+
+    value = value.strip().lower()
+    if value == "":
+        return default
+    if value in true_str:
+        return True
+    if value in false_str:
+        return False
+
+    raise ValueError(
+        f"unexpected value ({value!r}) for '{name}' env "
+        "variable should be one of the following:\n"
+        f" For true: {true_str}\n For false: {false_str}"
+    )
 
 
 def _parse_types(type_str: str) -> tuple[type, bool]:

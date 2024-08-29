@@ -73,9 +73,9 @@ class CostDistClassResults(CostDistFnResults):
     # Inputs
     min_col: str = "min"
     max_col: str = "max"
-    avg_col: str = "ave"
+    avg_col: str = "avg"
     trips_col: str = "trips"
-    weighted_avg_col: str = "weighted_ave"
+    weighted_avg_col: str = "weighted_avg"
 
     def __post_init__(self):
         super().__post_init__()
@@ -111,6 +111,18 @@ class CostDistClassResults(CostDistFnResults):
             "max_col": self.max_col,
             "avg_col": self.avg_col,
             "trips_col": self.trips_col,
+            "weighted_avg_col": self.weighted_avg_col,
+        }
+
+    @property
+    def constructor_kwargs_no_weighted_avg(self) -> dict[str, Any]:
+        """A kwarg dictionary for calling CostDistribution constructor."""
+        return {
+            "df": self.df.drop(columns=[self.weighted_avg_col]),
+            "min_col": self.min_col,
+            "max_col": self.max_col,
+            "avg_col": self.avg_col,
+            "trips_col": self.trips_col,
         }
 
     @property
@@ -119,9 +131,9 @@ class CostDistClassResults(CostDistFnResults):
         naming_dict = {
             self.min_col: "min",
             self.max_col: "max",
-            self.avg_col: "ave",
+            self.avg_col: "avg",
             self.trips_col: "trips",
-            self.weighted_avg_col: "weighted_ave",
+            self.weighted_avg_col: "weighted_avg",
         }
         return self.df.rename(columns=naming_dict)
 
@@ -360,14 +372,12 @@ class TestCostDistributionClassConstructors:
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
 
     def test_default_weighted_average(self, cost_dist_1d_class):
-        dist_df = cost_utils.CostDistribution(**cost_dist_1d_class.constructor_kwargs).df.drop(
-            "weighted_ave", axis=1
+        """Test that the weighted_avg col is set to the same as avg when not given"""
+        got = cost_utils.CostDistribution(
+            **cost_dist_1d_class.constructor_kwargs_no_weighted_avg
         )
-        test_dist = cost_utils.CostDistribution(dist_df).df
-        ave_col = test_dist["ave"]
-        weight_col = test_dist["weighted_ave"]
-        weight_col.name = "ave"
-        pd.testing.assert_series_equal(ave_col, weight_col)
+        expected = cost_dist_1d_class.df[cost_dist_1d_class.avg_col]
+        np.testing.assert_almost_equal(expected, got.weighted_avg_vals)
 
     @pytest.mark.parametrize(
         "io_str",
@@ -451,30 +461,63 @@ class TestCostDistributionClassConstructors:
         )
 
     @pytest.mark.parametrize(
-        "io_str",
-        ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
+        "io_str", ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"]
     )
     def test_correct_from_file(self, io_str: str, request, tmp_path):
         """Test that the constructor can be called correctly from file"""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        expected_df = input_and_results.df
+
+        # Create path and write out df
+        filepath = tmp_path / "tld.csv"
+        expected_df.to_csv(filepath, index=False)
+
+        # Load back in using constructor
+        result = cost_utils.CostDistribution.from_file(
+            filepath=filepath,
+            min_col=input_and_results.min_col,
+            max_col=input_and_results.max_col,
+            avg_col=input_and_results.avg_col,
+            trips_col=input_and_results.trips_col,
+            weighted_avg_col=input_and_results.weighted_avg_col,
+        )
+
+        # We only really care about the values here, so compare numpy arrays instead
+        np.testing.assert_almost_equal(expected_df.to_numpy(), result.df.to_numpy())
+
+    @pytest.mark.parametrize(
+        "io_str", ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"]
+    )
+    def test_correct_from_file_no_weighted(
+        self,
+        io_str: str,
+        request,
+        tmp_path,
+    ):
+        """Test that the constructor can be called correctly from file without weighted_avg col"""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
 
         # Create path and write out df
         filepath = tmp_path / "tld.csv"
         input_and_results.df.to_csv(filepath, index=False)
 
-        # Load in and assert
-        cost_dist = cost_utils.CostDistribution.from_file(
+        # Load back in, but pretend the weighted avg col doesn't exist
+        result = cost_utils.CostDistribution.from_file(
             filepath=filepath,
             min_col=input_and_results.min_col,
             max_col=input_and_results.max_col,
             avg_col=input_and_results.avg_col,
             trips_col=input_and_results.trips_col,
         )
-        pd.testing.assert_frame_equal(
-            cost_dist.df,
-            input_and_results.df,
-            check_dtype=False,
-        )
+
+        # We expect the result to just copy the avg col to weighted_avg
+        expected_df = input_and_results.df
+        expected_df[input_and_results.weighted_avg_col] = expected_df[
+            input_and_results.avg_col
+        ]
+
+        # We only really care about the values here, so compare numpy arrays instead
+        np.testing.assert_almost_equal(expected_df.to_numpy(), result.df.to_numpy())
 
 
 @pytest.mark.usefixtures("cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols")
@@ -511,6 +554,15 @@ class TestCostDistributionClassProperties:
         np.testing.assert_almost_equal(cost_dist.n_bins, n_bins)
 
     def test_avg_vals(self, io_str: str, request):
+        """Test correct functionality."""
+        input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
+        cost_dist = input_and_results.cost_dist_instance
+
+        bin_edges = input_and_results.bin_edges
+        avg_vals = (bin_edges[:-1] + bin_edges[1:]) / 2
+        np.testing.assert_almost_equal(cost_dist.avg_vals, avg_vals)
+
+    def test_weighted_avg_vals(self, io_str: str, request):
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance

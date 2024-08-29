@@ -7,3 +7,4 @@ pandas_utils sub package
     df_handling
     numpy_conversions
     utility
+    wide_df_handling

@@ -153,7 +153,7 @@ class PandasTranslation:
         ret_val = pd.DataFrame(ret_val)
         ret_val[self.translation_from_col] = self.from_col.max() + 1
         ret_val[self.translation_factors_col] = 0
-        ret_val[self.translation_factors_col][0] = 1
+        ret_val.loc[0, self.translation_factors_col] = 1
         return ret_val.reindex(
             columns=[
                 self.translation_from_col,
@@ -693,7 +693,8 @@ def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatri
             [16, 6, 14],
             [10, 6, 14],
             [19, 11, 23],
-        ]
+        ],
+        dtype=np.int32,
     )
     return NumpyMatrixResults(
         mat=mat,
@@ -1352,12 +1353,6 @@ class TestPandasMatrixParams:
         result = translation.pandas_matrix_zone_translation(
             **pd_mat.input_kwargs(check_totals=check_totals)
         )
-
-        # Need to enforce types so this works in linux
-        if sys.platform.startswith("linux"):
-            if any(x in ["int32", "int64"] for x in result.dtypes):
-                result = result.astype(pd_mat.expected_result.dtypes[1])
-
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     def test_additional_index(self, pd_matrix_str: str, check_totals: bool, request):
@@ -1657,8 +1652,8 @@ class TestVectorTranslationFromFile:
         result = io.read_csv(
             output_path, index_col=vector_file_translation.translation_to_column
         )
-        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
-        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        result.index = pd.to_numeric(result.index, downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, downcast="unsigned")
         pd.testing.assert_frame_equal(
             result,
             vector_file_translation.expected,
@@ -1687,8 +1682,8 @@ class TestMatrixTranslationFromFile:
 
         assert output_path.is_file(), "translated matrix not created"
         result = io.read_csv_matrix(output_path, format_="long")
-        result.index = pd.to_numeric(result.index, errors="ignore", downcast="unsigned")
-        result.columns = pd.to_numeric(result.columns, errors="ignore", downcast="unsigned")
+        result.index = pd.to_numeric(result.index, downcast="unsigned")
+        result.columns = pd.to_numeric(result.columns, downcast="unsigned")
         pd.testing.assert_frame_equal(
             result,
             matrix_file_translation.expected,
