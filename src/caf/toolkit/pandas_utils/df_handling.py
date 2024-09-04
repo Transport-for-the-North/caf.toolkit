@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
+
+from __future__ import annotations
+
 # Built-Ins
 import functools
 from typing import Any, Generator
