@@ -183,7 +183,7 @@ class PandasVectorResults:
         self.vector = pd.Series(data=np_vector)
         self.vector.index += 1
         self.expected_result = pd.Series(data=np_expected_result)
-        self.expected_result.index.name = 'to_zone_id'
+        self.expected_result.index.name = "to_zone_id"
         self.expected_result.index += 1
 
         # Base from / to zones on translation
@@ -1083,7 +1083,6 @@ class TestPandasMultiVector:
             with pytest.warns(UserWarning, match=msg):
                 translation.pandas_multi_vector_zone_translation(**kwargs)
 
-
     @pytest.mark.parametrize(
         "pd_vector_str",
         ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
@@ -1507,7 +1506,11 @@ class TestLongPandasMatrixParams:
             index_col_1_out_name="Origin", index_col_2_out_name="Destination"
         )
         result = translation.pandas_long_matrix_zone_translation(
-            **pd_mat.input_kwargs(check_totals=check_totals, index_col_1_out_name='Origin', index_col_2_out_name='Destination')
+            **pd_mat.input_kwargs(
+                check_totals=check_totals,
+                index_col_1_out_name="Origin",
+                index_col_2_out_name="Destination",
+            )
         )
 
         # Dtypes are checked in TestPandasMatrixParams.test_correct_results test. Ignore here.
@@ -1522,7 +1525,7 @@ class TestLongPandasMatrixParams:
         """Test a warning is raised when there are additional columns."""
         pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
         new_mat = pd_mat.df.copy().to_frame().reset_index()
-        new_mat.columns = ['production', 'attraction', 'values']
+        new_mat.columns = ["production", "attraction", "values"]
         new_mat["extra_col"] = 0
 
         msg = "Extra columns found in matrix"

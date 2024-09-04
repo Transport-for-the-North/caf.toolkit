@@ -339,8 +339,8 @@ class TestLongProductInfill:
         expected_data = data.copy()
         expected_data.append([3, infill_val, infill_val])
 
-        df = pd.DataFrame(data=data, columns=col_names).set_index('idx1')
-        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index('idx1')
+        df = pd.DataFrame(data=data, columns=col_names).set_index("idx1")
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index("idx1")
 
         # Check
         df = pd_utils.long_product_infill(
@@ -370,8 +370,10 @@ class TestLongProductInfill:
             [2, 4, "b"],
         ]
 
-        df = pd.DataFrame(data=data, columns=col_names).set_index(['idx1', 'idx2'])
-        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index(['idx1', 'idx2'])
+        df = pd.DataFrame(data=data, columns=col_names).set_index(["idx1", "idx2"])
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index(
+            ["idx1", "idx2"]
+        )
 
         # Check
         df = pd_utils.long_product_infill(
@@ -393,7 +395,7 @@ class TestLongProductInfill:
         # Init
         infill_val = 100
         col_names = ["idx1", "idx2", "idx3", "col1"]
-        index_dict = {"idx1": ["a", "b"], "idx2": ["c", "d"], 'idx3': ['z']}
+        index_dict = {"idx1": ["a", "b"], "idx2": ["c", "d"], "idx3": ["z"]}
 
         # Build the input and expected dataframes
         data = [["a", "c", "z", 1], ["b", "d", "z", 3]]
@@ -404,8 +406,16 @@ class TestLongProductInfill:
             ["b", "d", "z", 3],
         ]
 
-        df = pd.DataFrame(data=data, columns=col_names).set_index(['idx1', 'idx2', 'idx3']).squeeze()
-        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index(['idx1', 'idx2', 'idx3']).squeeze()
+        df = (
+            pd.DataFrame(data=data, columns=col_names)
+            .set_index(["idx1", "idx2", "idx3"])
+            .squeeze()
+        )
+        expected_df = (
+            pd.DataFrame(data=expected_data, columns=col_names)
+            .set_index(["idx1", "idx2", "idx3"])
+            .squeeze()
+        )
 
         df = pd_utils.long_product_infill(
             data=df,
@@ -427,7 +437,7 @@ class TestLongProductInfill:
             [2, 3, "d"],
             [2, 4, "a"],
         ]
-        df = pd.DataFrame(data=data, columns=col_names).set_index(['idx1', 'idx2'])
+        df = pd.DataFrame(data=data, columns=col_names).set_index(["idx1", "idx2"])
 
         # Check
         generated_df = pd_utils.long_product_infill(
@@ -449,7 +459,7 @@ class TestLongProductInfill:
             [2, 3, "c"],
             [2, 4, "d"],
         ]
-        df = pd.DataFrame(data=data, columns=col_names).set_index(['idx1', 'idx2'])
+        df = pd.DataFrame(data=data, columns=col_names).set_index(["idx1", "idx2"])
 
         # Check
         with pytest.raises(TypeError):
@@ -473,7 +483,7 @@ class TestLongProductInfill:
             [2, 3, 76.4],
             [2, 4, 59.5],
         ]
-        df = pd.DataFrame(data=data, columns=col_names).set_index(['idx1', 'idx2'])
+        df = pd.DataFrame(data=data, columns=col_names).set_index(["idx1", "idx2"])
 
         # Check
         if check_totals:
@@ -494,7 +504,7 @@ class TestLongProductInfill:
 
         # Build the input dataframe
         data = [[100, "a"]]
-        df = pd.DataFrame(data=data, columns=col_names).set_index('idx1')
+        df = pd.DataFrame(data=data, columns=col_names).set_index("idx1")
 
         # Test for warning
         with pytest.raises(ValueError):
@@ -568,7 +578,9 @@ class TestLongWideConversions:
 
     def test_long_to_wide_full(self, df_data_complete: DfData):
         """Test long -> wide conversion with no add/del cols"""
-        wide_df = pd_utils.long_to_wide_infill(matrix=df_data_complete.long.set_index(['idx1','idx2']).squeeze())
+        wide_df = pd_utils.long_to_wide_infill(
+            matrix=df_data_complete.long.set_index(["idx1", "idx2"]).squeeze()
+        )
         pd.testing.assert_frame_equal(wide_df, df_data_complete.wide)
 
     def test_long_to_wide_missing(self, df_data_complete: DfData):
@@ -579,7 +591,7 @@ class TestLongWideConversions:
         # Remove some random data
         long_df = df_data_complete.long.copy()
         mask = (long_df[self.index_col1] == 2) | (long_df[self.index_col2] == 2)
-        long_df = long_df[~mask].copy().set_index(['idx1','idx2']).squeeze()
+        long_df = long_df[~mask].copy().set_index(["idx1", "idx2"]).squeeze()
 
         # Create the expected output
         expected_wide = df_data_complete.wide.copy()
@@ -587,10 +599,9 @@ class TestLongWideConversions:
         expected_wide.loc[2, :] = infill_val
 
         # Check
-        wide_df = pd_utils.long_to_wide_infill(matrix=long_df,
-                                               correct_cols=[1, 2, 3],
-                                               correct_ind=[1, 2, 3],
-                                               infill=0)
+        wide_df = pd_utils.long_to_wide_infill(
+            matrix=long_df, correct_cols=[1, 2, 3], correct_ind=[1, 2, 3], infill=0
+        )
         pd.testing.assert_frame_equal(
             wide_df,
             expected_wide,
@@ -599,11 +610,10 @@ class TestLongWideConversions:
 
     def test_wide_to_long_full(self, df_data_complete: DfData):
         """Test wide -> long conversion with no add/del cols"""
-        long_df = pd_utils.wide_to_long_infill(
-            df=df_data_complete.wide,
-            out_name='val'
+        long_df = pd_utils.wide_to_long_infill(df=df_data_complete.wide, out_name="val")
+        pd.testing.assert_series_equal(
+            long_df, df_data_complete.long.set_index(["idx1", "idx2"]).squeeze()
         )
-        pd.testing.assert_series_equal(long_df, df_data_complete.long.set_index(['idx1','idx2']).squeeze())
 
     def test_wide_to_long_missing(self, df_data_complete: DfData):
         """Test that missing indexes are added back in correctly"""
@@ -621,18 +631,15 @@ class TestLongWideConversions:
 
         # Check
         long_df = pd_utils.wide_to_long_infill(
-            df=wide_df,
-            correct_ind=[1, 2, 3],
-            correct_cols=[1, 2, 3],
-            infill=0
+            df=wide_df, correct_ind=[1, 2, 3], correct_cols=[1, 2, 3], infill=0
         )
-        pd.testing.assert_series_equal(long_df, exp_long.set_index(['idx1', 'idx2']).squeeze())
+        pd.testing.assert_series_equal(long_df, exp_long.set_index(["idx1", "idx2"]).squeeze())
 
     def test_long_df_to_wide_ndarray(self, df_data_complete: DfData):
         """Test function is a numpy wrapper around long_to_wide_infill"""
         # Init
         kwargs = {
-            "matrix": df_data_complete.long.set_index(['idx1', 'idx2']),
+            "matrix": df_data_complete.long.set_index(["idx1", "idx2"]),
         }
 
         # Check
