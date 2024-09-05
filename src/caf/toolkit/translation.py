@@ -994,7 +994,47 @@ def pandas_multi_vector_zone_translation(
     # set index for translation
     indexed_translation = translation.set_index([translation_from_col, translation_to_col])
 
-    # Correct index for vector
+    # Fixing indices for the zone translation
+    ind_names, vector, translation = _multi_vector_trans_index(
+        vector, translation, translation_from_col, translation_from
+    )
+
+    # trans_vector should now contain the correct index level if an error hasn't
+    # been raised
+    factors = indexed_translation[translation_factors_col].squeeze()
+    if not isinstance(factors, pd.Series):
+        raise TypeError("Input translation vector is probably the wrong shape.")
+    translated = (
+        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
+    )
+
+    if check_totals:
+        overall_diff = translated.sum().sum() - vector.sum().sum()
+        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
+            warnings.warn(
+                "Some values seem to have been dropped. The difference "
+                f"total is {overall_diff} (translated - original)."
+            )
+
+    # Sometimes we need to remove the index name to make sure the same style of
+    # dataframe is returned as that which came in
+    if vector.index.name is None:
+        translated.index.name = None
+
+    # Make sure the output has the same name as input series
+    if isinstance(vector, pd.Series):
+        translated.name = vector.name
+
+    return translated
+
+
+def _multi_vector_trans_index(
+    vector: pd.DataFrame | pd.Series,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_from: np.ndarray,
+) -> tuple[list[str], pd.DataFrame | pd.Series, pd.DataFrame]:
+    """Create correct index for `pandas_multi_vector_zone_translation`."""
     if isinstance(vector.index, pd.MultiIndex):
         ind_names = list(vector.index.names)
         if translation_from_col in ind_names:
@@ -1039,33 +1079,7 @@ def pandas_multi_vector_zone_translation(
         vector.index.names = [translation_from_col]
         ind_names = []
 
-    # trans_vector should now contain the correct index level if an error hasn't
-    # been raised
-    factors = indexed_translation[translation_factors_col].squeeze()
-    if not isinstance(factors, pd.Series):
-        raise TypeError("Input translation vector is probably the wrong shape.")
-    translated = (
-        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
-    )
-
-    if check_totals:
-        overall_diff = translated.sum().sum() - vector.sum().sum()
-        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
-            warnings.warn(
-                "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original)."
-            )
-
-    # Sometimes we need to remove the index name to make sure the same style of
-    # dataframe is returned as that which came in
-    if vector.index.name is None:
-        translated.index.name = None
-
-    # Make sure the output has the same name as input series
-    if isinstance(vector, pd.Series):
-        translated.name = vector.name
-
-    return translated
+    return ind_names, vector, translation
 
 
 def _load_translation(
