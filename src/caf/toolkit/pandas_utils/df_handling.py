@@ -601,7 +601,7 @@ def wide_to_long_infill(
     correct_cols: list | None = None,
     correct_ind: list | None = None,
     infill: Any = None,
-) -> pd.DataFrame:
+) -> pd.Series:
     """Convert a matrix from wide to long format, infilling missing values.
 
     Parameters
@@ -641,9 +641,7 @@ def wide_to_long_infill(
             }
             stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
 
-    if isinstance(stacked, pd.Series):
-        stacked = stacked.to_frame()
-
+    assert isinstance(stacked, pd.Series)
     return stacked
 
 
