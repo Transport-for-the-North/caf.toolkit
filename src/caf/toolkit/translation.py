@@ -897,7 +897,7 @@ def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
 
 
 def pandas_multi_vector_zone_translation(
-    vector: pd.DataFrame,
+    vector: pd.DataFrame | pd.Series,
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
@@ -978,7 +978,12 @@ def pandas_multi_vector_zone_translation(
         to_type=translation_dtype,
         arr_name="vector",
     )
-    vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
+
+    if isinstance(vector, pd.Series):
+        vector = pd.Series(index=vector.index, name=vector.name, data=new_values)
+    else:
+        vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
+
     translation[translation_factors_col] = _convert_dtypes(
         arr=translation[translation_factors_col].to_numpy(),
         to_type=translation_dtype,
@@ -1055,6 +1060,10 @@ def pandas_multi_vector_zone_translation(
     # dataframe is returned as that which came in
     if vector.index.name is None:
         translated.index.name = None
+
+    # Make sure the output has the same name as input series
+    if isinstance(vector, pd.Series):
+        translated.name = vector.name
 
     return translated
 

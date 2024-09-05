@@ -261,6 +261,33 @@ class PandasMultiVectorResults:
 
 
 @dataclasses.dataclass
+class PandasMultiVectorSeriesResults(PandasMultiVectorResults):
+    """Collection of I/O data for a pandas multi-vector Series translation"""
+
+    np_vector: dataclasses.InitVar[np.ndarray]
+    np_expected_result: dataclasses.InitVar[np.ndarray]
+    translation: PandasTranslation
+    translation_dtype: Optional[np.dtype] = None
+
+    vector: pd.Series = dataclasses.field(init=False)
+    expected_result: pd.Series = dataclasses.field(init=False)
+    from_unique_index: list[Any] = dataclasses.field(init=False)
+    to_unique_index: list[Any] = dataclasses.field(init=False)
+
+    n_cols = 1
+
+    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray):
+        """Convert numpy objects to pandas"""
+        super().__post_init__(np_vector, np_expected_result)
+        self.vector = self.vector.iloc[:, 0]
+        self.expected_result = self.expected_result.iloc[:, 0]
+
+    def get_similar_vector(self, data: np.ndarray):
+        """Create a vector in the same shape as this one from a 1d array."""
+        return super().get_similar_vector(data).iloc[:, 0]
+
+
+@dataclasses.dataclass
 class PandasMatrixResults:
     """Collection of I/O data for a pandas matrix translation"""
 
@@ -565,6 +592,19 @@ def fixture_pd_multi_vector_split(
 ) -> PandasVectorResults:
     """Generate a splitting vector, translation, and results"""
     return PandasMultiVectorResults(
+        np_vector=np_vector_split.vector,
+        np_expected_result=np_vector_split.expected_result,
+        translation=simple_pd_float_translation,
+    )
+
+
+@pytest.fixture(name="pd_multi_vector_series", scope="class")
+def fixture_pd_multi_vector_series(
+    np_vector_split: NumpyVectorResults,
+    simple_pd_float_translation: PandasTranslation,
+) -> PandasVectorResults:
+    """Generate a splitting vector, translation, and results for Series."""
+    return PandasMultiVectorSeriesResults(
         np_vector=np_vector_split.vector,
         np_expected_result=np_vector_split.expected_result,
         translation=simple_pd_float_translation,
@@ -1085,7 +1125,7 @@ class TestPandasMultiVector:
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
     )
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
@@ -1102,11 +1142,14 @@ class TestPandasMultiVector:
         result = translation.pandas_multi_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
-        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+        if isinstance(pd_vector.expected_result, pd.DataFrame):
+            pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+        else:
+            pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
     )
     def test_additional_vector_index(self, pd_vector_str: str, request):
         """Check a warning is raised when there are missing translation indexes."""
@@ -1125,11 +1168,15 @@ class TestPandasMultiVector:
             result = translation.pandas_multi_vector_zone_translation(
                 **(kwargs | {"vector": new_vector})
             )
-        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+
+        if isinstance(pd_vector.expected_result, pd.DataFrame):
+            pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+        else:
+            pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
     )
     def test_additional_translation_index(self, pd_vector_str: str, request):
         """Check that additional translation values are ignored."""
@@ -1144,11 +1191,17 @@ class TestPandasMultiVector:
         result = translation.pandas_multi_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans})
         )
-        pd.testing.assert_frame_equal(result, pd_vector.expected_result, check_dtype=False)
+
+        if isinstance(pd_vector.expected_result, pd.DataFrame):
+            pd.testing.assert_frame_equal(result, pd_vector.expected_result, check_dtype=False)
+        else:
+            pd.testing.assert_series_equal(
+                result, pd_vector.expected_result, check_dtype=False
+            )
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split"],
+        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
     )
     def test_check_allow_similar_types(
         self,
@@ -1162,7 +1215,11 @@ class TestPandasMultiVector:
         result = translation.pandas_multi_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans.df})
         )
-        pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+
+        if isinstance(pd_vector.expected_result, pd.DataFrame):
+            pd.testing.assert_frame_equal(result, pd_vector.expected_result)
+        else:
+            pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
     def test_indexing_error(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
         """Check that an error is thrown when the index is not unique."""
