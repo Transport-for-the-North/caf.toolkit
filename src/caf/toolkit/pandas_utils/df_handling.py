@@ -5,7 +5,8 @@ from __future__ import annotations
 
 # Built-Ins
 import functools
-from typing import Any, Generator
+from collections.abc import Hashable
+from typing import Any, Generator, overload
 
 # Third Party
 import numpy as np
@@ -405,13 +406,29 @@ def chunk_df(
     yield from iterator
 
 
-# pylint: disable=too-many-branches
+@overload
 def long_product_infill(
-    data: pd.Series | pd.DataFrame,
+    data: pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
     index_dict: dict[str, list] | None = None,
-) -> pd.DataFrame:
+) -> pd.DataFrame: ...
+@overload
+def long_product_infill(
+    data: pd.Series,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.Series: ...
+
+
+# pylint: disable=too-many-branches
+def long_product_infill(
+    data: pd.DataFrame | pd.Series,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.DataFrame | pd.Series:
     """Infill columns with a complete product of one another.
 
     Infills missing values of df in `index_dict.keys()` columns by generating
@@ -454,7 +471,7 @@ def long_product_infill(
         index_dict = {}
         for ind in data.index.names:
             vals = data.index.get_level_values(ind).unique()
-            index_dict[ind] = vals
+            index_dict[ind] = vals.tolist()
 
     else:
         mismatch = [i for i in data.index.names if i not in index_dict.keys()]
@@ -480,13 +497,12 @@ def long_product_infill(
     joined = filler.join(data, how="left")
     # For this infill to be valid all data should be the same type
     if isinstance(data, pd.Series):
-        selector = data.name
-        dtype = data.dtypes
+        selector: pd.Index[str] | Hashable | None = data.name
+        dtype = data.dtype
     else:
         selector = data.columns
-        dtype = data.dtypes
-        if dtype.to_list() == [dtype[0]] * len(dtype):
-            dtype = dtype[0]
+        if all(i == data.dtypes[0] for i in data.dtypes):
+            dtype = data.dtypes[0]
         else:
             raise TypeError(
                 "All columns of the input data must have the same type for this to work."
@@ -498,6 +514,9 @@ def long_product_infill(
         if isinstance(data, pd.Series):
             diff = data.sum() - filled.sum()
         elif len(data.columns) == 1:
+            # If data is a dataframe then select would be a list
+            # of column names so filled would be a dataframe
+            assert isinstance(filled, pd.DataFrame)
             diff = data.squeeze().sum() - filled.squeeze().sum()
         else:
             diff = data.sum().sum() - filled.sum().sum()
@@ -621,6 +640,9 @@ def wide_to_long_infill(
                 stacked.index.names[1]: correct_cols,
             }
             stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
+
+    if isinstance(stacked, pd.Series):
+        stacked = stacked.to_frame()
 
     return stacked
 

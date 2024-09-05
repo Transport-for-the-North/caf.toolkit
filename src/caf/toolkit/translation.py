@@ -590,6 +590,7 @@ def pandas_long_matrix_zone_translation(
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         matrix = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
+        assert isinstance(matrix, pd.Series)
 
     # Convert to wide to translate
     wide_mat = pd_utils.long_to_wide_infill(matrix=matrix)
@@ -608,6 +609,8 @@ def pandas_long_matrix_zone_translation(
     # Convert back
     out_mat = pd_utils.wide_to_long_infill(df=translated_wide_mat)
     if index_col_2_out_name is not None:
+        # Check at the start of function makes sure if one is not None, both are
+        assert index_col_1_out_name is not None
         out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
 
     return out_mat
@@ -872,7 +875,7 @@ def pandas_vector_zone_translation(
     )
 
 
-def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
+def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
     """Warn when zones are missing from vector.
 
     Produces RuntimeWarning detailing the number of missing rows and
