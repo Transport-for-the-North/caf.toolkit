@@ -463,7 +463,10 @@ def long_product_infill(
                 f"{mismatch} levels were found in the input data, " f"but not in index_dict."
             )
 
-    full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+    if len(data.index.names) == 1:
+        full_ind = pd.Index(index_dict[data.index.name], name=data.index.name)
+    else:
+        full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
     filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
     # check there's an overlap
