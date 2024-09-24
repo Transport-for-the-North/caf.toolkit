@@ -88,33 +88,36 @@ class CostDistribution:
         self._validate_df_values()
 
     def _validate_df_values(self) -> CostDistribution:
-        """sense check the values provided for the distribution
-        """
+        """sense check the values provided for the distribution"""
         basic_numerical_checks = {
-            "min column": self.min_vals,  
-            "max column": self.max_vals,  
+            "min column": self.min_vals,
+            "max column": self.max_vals,
             "trips": self.trip_vals,
-            "average distance": self.avg_vals,   
+            "average distance": self.avg_vals,
         }
 
         for name, check in basic_numerical_checks.items():
-            if (check<0).any():
+            if (check < 0).any():
                 LOG.warning(f"Negatives are not allowed in the {name} column")
             if (np.isnan(check)).any():
                 LOG.warning(f"NaNs are not allowed in the {name} column")
             if (np.isinf(check)).any():
                 LOG.warning(f"Inf are not allowed in the {name} column")
 
-
-        if self.min_vals.min()!=0:
-            LOG.warning("Minimum bound in min is not 0, consider recreating the distribution so no short distance trips are missed")
-        
+        if self.min_vals.min() != 0:
+            LOG.warning(
+                "Minimum bound in min is not 0, consider recreating the"
+                " distribution so no short distance trips are missed"
+            )
 
         # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
         gaps = self.min_vals[:-1] != self.max_vals[1:]
         # TODO this will do for now, but this could be made more specific
         if gaps.any():
-            LOG.warning("The bins do not nest (either overlapping or disjoint), there is a risk you will miss trips during your analysis")
+            LOG.warning(
+                "The bins do not nest (either overlapping or disjoint),"
+                " there is a risk you will miss trips during your analysis"
+            )
 
         zero_width = gaps = self.min_vals == self.max_vals
 
@@ -122,10 +125,6 @@ class CostDistribution:
             LOG.warning("Bins in the distribution have zero, review if this makes sense")
 
         return self
-
-
-
-
 
     def _validate_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
