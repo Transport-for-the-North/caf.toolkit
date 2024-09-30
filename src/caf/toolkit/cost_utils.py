@@ -98,11 +98,11 @@ class CostDistribution:
 
         for name, check in basic_numerical_checks.items():
             if (check < 0).any():
-                LOG.warning(f"Negatives are not allowed in the {name} column")
+                raise ValueError(f"Negatives are not allowed in the {name} column")
             if (np.isnan(check)).any():
-                LOG.warning(f"NaNs are not allowed in the {name} column")
+                raise ValueError(f"NaNs are not allowed in the {name} column")
             if (np.isinf(check)).any():
-                LOG.warning(f"Inf are not allowed in the {name} column")
+                raise ValueError(f"Inf are not allowed in the {name} column")
 
         if self.min_vals.min() != 0:
             LOG.warning(
@@ -111,7 +111,7 @@ class CostDistribution:
             )
 
         # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
-        gaps = self.min_vals[:-1] != self.max_vals[1:]
+        gaps = self.max_vals[:-1] != self.min_vals[1:]
         # TODO this will do for now, but this could be made more specific
         if gaps.any():
             LOG.warning(
