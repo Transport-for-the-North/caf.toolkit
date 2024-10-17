@@ -190,20 +190,11 @@ class PandasVectorResults:
         self.from_unique_index = self.translation.unique_from
         self.to_unique_index = self.translation.unique_to
 
-    def input_kwargs(
-        self,
-        check_totals: bool = True,
-        vector_infill: float = 0,
-        translate_infill: float = 0,
-    ) -> dict[str, Any]:
+    def input_kwargs(self, check_totals: bool = True) -> dict[str, Any]:
         """Return a dictionary of key-word arguments"""
         return {
             "vector": self.vector,
-            "from_unique_index": self.from_unique_index,
-            "to_unique_index": self.to_unique_index,
             "translation_dtype": self.translation_dtype,
-            "vector_infill": vector_infill,
-            "translate_infill": translate_infill,
             "check_totals": check_totals,
         } | self.translation.to_kwargs()
 
@@ -248,8 +239,6 @@ class PandasMultiVectorResults:
         """Return a dictionary of key-word arguments"""
         return {
             "vector": self.vector,
-            # "from_unique_index": self.from_unique_index,
-            # "to_unique_index": self.to_unique_index,
             "translation_dtype": self.translation_dtype,
             "check_totals": check_totals,
         } | self.translation.to_kwargs()
@@ -963,146 +952,11 @@ class TestNumpyVector:
 
 
 @pytest.mark.usefixtures(
-    "pd_vector_aggregation",
-    "pd_vector_split",
-    "pd_incomplete",
-)
-# class TestPandasVector:
-#     """Tests for caf.toolkit.translation.pandas_single_vector_zone_translation"""
-#
-#     @pytest.mark.parametrize("check_totals", [True, False])
-#     def test_dropped_totals(self, pd_incomplete: PandasVectorResults, check_totals: bool):
-#         """Test for total checking with dropped demand"""
-#         kwargs = pd_incomplete.input_kwargs(check_totals=check_totals)
-#         if not check_totals:
-#             result = translation.pandas_single_vector_zone_translation(**kwargs)
-#             pd.testing.assert_series_equal(
-#                 result, pd_incomplete.expected_result, check_dtype=False
-#             )
-#         else:
-#             msg = "Data lost in translation"
-#             with pytest.warns(UserWarning, match=msg):
-#                 translation.pandas_single_vector_zone_translation(**kwargs)
-#
-#     def test_missing_translation_zones(self, pd_vector_split: PandasVectorResults):
-#         """Check a warning is raised with missing translation from values"""
-#         # make the bad translation
-#         new_trans = pd_vector_split.translation.df.copy()
-#         from_col_name = pd_vector_split.translation.translation_from_col
-#         from_3_mask = new_trans[from_col_name] == 3
-#         new_trans = new_trans[~from_3_mask].copy()
-#
-#         # need to turn off to avoid error
-#         kwargs = pd_vector_split.input_kwargs(check_totals=False)
-#         msg = "Some zones in `vector.index` are missing in `translation`"
-#         with pytest.warns(UserWarning, match=msg):
-#             translation.pandas_single_vector_zone_translation(
-#                 **(kwargs | {"translation": new_trans})
-#             )
-#
-#     def test_missing_unique_zones(self, pd_vector_split: PandasVectorResults):
-#         """Check a warning is raised if from_unique_zones and the vector disagree"""
-#         new_from_unq = pd_vector_split.from_unique_index[:-1]
-#         msg = "zones in `vector.index` have not been defined in `from_unique_zones`"
-#         with pytest.warns(UserWarning, match=msg):
-#             translation.pandas_single_vector_zone_translation(
-#                 **(pd_vector_split.input_kwargs() | {"from_unique_index": new_from_unq})
-#             )
-#
-#     @pytest.mark.parametrize("which", ["from", "to", "both"])
-#     def test_non_unique_index(self, pd_vector_split: PandasVectorResults, which: str):
-#         """Check that an error is thrown when bad unique index args given"""
-#         # Build bad arguments
-#         new_from_unq = pd_vector_split.from_unique_index * 2
-#         new_to_unq = pd_vector_split.to_unique_index * 2
-#
-#         if which == "from":
-#             new_kwargs = {"from_unique_index": new_from_unq}
-#             msg = "Duplicate values found in from_unique_index"
-#         elif which == "to":
-#             new_kwargs = {"to_unique_index": new_to_unq}
-#             msg = "Duplicate values found in to_unique_index"
-#         elif which == "both":
-#             new_kwargs = {
-#                 "from_unique_index": new_from_unq,
-#                 "to_unique_index": new_to_unq,
-#             }
-#             msg = "Duplicate values found in from_unique_index"
-#         else:
-#             raise ValueError("This shouldn't happen! Debug code.")
-#
-#         # Run with errors
-#         with pytest.raises(ValueError, match=msg):
-#             translation.pandas_single_vector_zone_translation(
-#                 **(pd_vector_split.input_kwargs() | new_kwargs)
-#             )
-#
-#     def test_non_vector(self, pd_vector_split: PandasVectorResults):
-#         """Test that an error is thrown when a non-vector is passed in"""
-#         new_vector = pd.DataFrame(pd_vector_split.vector)
-#         new_vector[1] = new_vector[0].copy()
-#         with pytest.raises(ValueError, match="must be a pandas.Series"):
-#             translation.pandas_single_vector_zone_translation(
-#                 **(pd_vector_split.input_kwargs() | {"vector": new_vector})
-#             )
-#
-#     @pytest.mark.parametrize(
-#         "pd_vector_str",
-#         ["pd_vector_aggregation", "pd_vector_split"],
-#     )
-#     def test_series_like(self, pd_vector_str: str, request):
-#         """Test vector-like arrays (empty in 2nd dim)"""
-#         pd_vector = request.getfixturevalue(pd_vector_str)
-#         new_vector = pd.DataFrame(pd_vector.vector)
-#         result = translation.pandas_single_vector_zone_translation(
-#             **(pd_vector.input_kwargs() | {"vector": new_vector})
-#         )
-#         pd.testing.assert_series_equal(result, pd_vector.expected_result, check_names=False)
-#
-#     @pytest.mark.parametrize(
-#         "pd_vector_str",
-#         ["pd_vector_aggregation", "pd_vector_split"],
-#     )
-#     @pytest.mark.parametrize("check_totals", [True, False])
-#     def test_translation_correct(
-#         self,
-#         pd_vector_str: str,
-#         check_totals: bool,
-#         request,
-#     ):
-#         """Test that aggregation and splitting give correct results
-#
-#         Also checks that totals are correctly checked.
-#         """
-#         pd_vector = request.getfixturevalue(pd_vector_str)
-#         result = translation.pandas_single_vector_zone_translation(
-#             **pd_vector.input_kwargs(check_totals=check_totals)
-#         )
-#         pd.testing.assert_series_equal(result, pd_vector.expected_result)
-#
-#     @pytest.mark.parametrize(
-#         "pd_vector_str",
-#         ["pd_vector_aggregation", "pd_vector_split"],
-#     )
-#     def test_check_allow_similar_types(
-#         self,
-#         pd_vector_str: str,
-#         request,
-#     ):
-#         """Test that similar types are allowed in translation and data."""
-#         pd_vector = request.getfixturevalue(pd_vector_str)
-#         new_trans = pd_vector.translation.copy()
-#         new_trans.from_col = new_trans.from_col.astype(np.int32)
-#         result = translation.pandas_single_vector_zone_translation(
-#             **(pd_vector.input_kwargs() | {"translation": new_trans.df})
-#         )
-#         pd.testing.assert_series_equal(result, pd_vector.expected_result)
-
-
-@pytest.mark.usefixtures(
     "pd_multi_vector_aggregation",
     "pd_multi_vector_split",
     "pd_multi_incomplete",
+    "pd_vector_aggregation",
+    "pd_vector_split",
 )
 class TestPandasMultiVector:
     """Tests for caf.toolkit.translation.pandas_multi_vector_zone_translation"""
@@ -1125,7 +979,13 @@ class TestPandasMultiVector:
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
+        [
+            "pd_multi_vector_aggregation",
+            "pd_multi_vector_split",
+            "pd_multi_vector_series",
+            "pd_vector_aggregation",
+            "pd_vector_split",
+        ],
     )
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
@@ -1138,7 +998,9 @@ class TestPandasMultiVector:
 
         Also checks that totals are correctly checked.
         """
-        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+        pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
+            pd_vector_str
+        )
         result = translation.pandas_multi_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
@@ -1176,11 +1038,19 @@ class TestPandasMultiVector:
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
+        [
+            "pd_multi_vector_aggregation",
+            "pd_multi_vector_split",
+            "pd_multi_vector_series",
+            "pd_vector_aggregation",
+            "pd_vector_split",
+        ],
     )
     def test_additional_translation_index(self, pd_vector_str: str, request):
         """Check that additional translation values are ignored."""
-        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+        pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
+            pd_vector_str
+        )
 
         # Add some additional data to the translation
         new_rows = pd_vector.translation.create_dummy_rows()
@@ -1201,7 +1071,13 @@ class TestPandasMultiVector:
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
+        [
+            "pd_multi_vector_aggregation",
+            "pd_multi_vector_split",
+            "pd_multi_vector_series",
+            "pd_vector_aggregation",
+            "pd_vector_split",
+        ],
     )
     def test_check_allow_similar_types(
         self,
@@ -1209,7 +1085,9 @@ class TestPandasMultiVector:
         request,
     ):
         """Test that similar types are allowed in translation and data."""
-        pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
+        pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
+            pd_vector_str
+        )
         new_trans = pd_vector.translation.copy()
         new_trans.from_col = new_trans.from_col.astype(np.int32)
         result = translation.pandas_multi_vector_zone_translation(
