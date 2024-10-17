@@ -581,6 +581,13 @@ def long_to_wide_infill(
             matrix.index.names[1]: correct_cols,
         }
         matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
+
+    if correct_cols is not None or correct_ind is not None:
+        raise ValueError(
+            "cannot infill correct columns without correct"
+            " index, both are required for infilling"
+        )
+
     unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
     if check_totals is True:
         diff = unstacked.sum().sum() - matrix.sum()
