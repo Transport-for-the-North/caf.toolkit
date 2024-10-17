@@ -582,7 +582,7 @@ def long_to_wide_infill(
         }
         matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
 
-    if correct_cols is not None or correct_ind is not None:
+    elif correct_cols is not None or correct_ind is not None:
         raise ValueError(
             "cannot infill correct columns without correct"
             " index, both are required for infilling"
