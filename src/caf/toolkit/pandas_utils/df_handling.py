@@ -439,7 +439,7 @@ def long_product_infill(
     Parameters
     ----------
     data:
-        The data, in Series format, to infill.
+        The data, as a pandas Series or DataFrame, to infill.
 
     infill:
         The value to use to infill any missing cells in the return DataFrame.
@@ -575,13 +575,12 @@ def long_to_wide_infill(
             "input. Generally this will be two index levels, one "
             "for origin/production and another for destination/attraction."
         )
-    if correct_cols is not None:
-        if correct_ind is not None:
-            ind_dict = {
-                matrix.index.names[0]: correct_ind,
-                matrix.index.names[1]: correct_cols,
-            }
-            matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
+    if correct_cols is not None and correct_ind is not None:
+        ind_dict = {
+            matrix.index.names[0]: correct_ind,
+            matrix.index.names[1]: correct_cols,
+        }
+        matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
     unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
     if check_totals is True:
         diff = unstacked.sum().sum() - matrix.sum()
@@ -633,13 +632,12 @@ def wide_to_long_infill(
     stacked.name = "val"
     if out_name is not None:
         stacked.name = out_name
-    if correct_ind is not None:
-        if correct_cols is not None:
-            ind_dict = {
-                stacked.index.names[0]: correct_ind,
-                stacked.index.names[1]: correct_cols,
-            }
-            stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
+    if correct_ind is not None and correct_cols is not None:
+        ind_dict = {
+            stacked.index.names[0]: correct_ind,
+            stacked.index.names[1]: correct_cols,
+        }
+        stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
 
     assert isinstance(stacked, pd.Series)
     return stacked
