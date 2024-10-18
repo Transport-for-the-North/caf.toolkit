@@ -869,7 +869,7 @@ def pandas_vector_zone_translation(
         The numpy datatype to use to do the translation. If None, then the
         dtype of `vector` is used. Where such high precision
         isn't needed, a more memory and time efficient data type can be used.
-    
+
     Returns
     -------
     translated_vector:
