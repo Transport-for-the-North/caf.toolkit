@@ -558,6 +558,14 @@ def long_to_wide_infill(
         Whether to check if the totals are almost equal before and after the
         conversion.
 
+    correct_cols:
+        The correct columns for the resultant dataframe. If this is provided so
+        must 'correct_ind' and vice versa.
+
+    correct_ind:
+        The correct index for the resultant dataframe. If this is provided so
+        must 'correct_cols' and vice versa.
+
     Returns
     -------
     wide_df:
@@ -616,6 +624,19 @@ def wide_to_long_infill(
         The dataframe, in wide format, to convert to long. The index of `df`
         must be the values that are to become `index_col_1_name`, and the
         columns of `df` will be melted to become `index_col_2_name`.
+
+    out_name:
+        The 'name' attribute of the resultant pandas Series. This defaults to
+        'val' if not provided.
+
+    correct_cols:
+        The correct columns of the input matrix.
+
+    correct_ind:
+        The correct index of the input matrix
+
+    infill:
+        Value to infill when the matrix is unstacked.
 
     Returns
     -------
