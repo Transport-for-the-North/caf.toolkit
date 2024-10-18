@@ -959,7 +959,7 @@ class TestNumpyVector:
     "pd_vector_split",
 )
 class TestPandasMultiVector:
-    """Tests for caf.toolkit.translation.pandas_multi_vector_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_vector_zone_translation"""
 
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(
@@ -968,14 +968,14 @@ class TestPandasMultiVector:
         """Test for total checking with dropped demand"""
         kwargs = pd_multi_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
-            result = translation.pandas_multi_vector_zone_translation(**kwargs)
+            result = translation.pandas_vector_zone_translation(**kwargs)
             pd.testing.assert_frame_equal(
                 result, pd_multi_incomplete.expected_result, check_dtype=False
             )
         else:
             msg = "Some values seem to have been dropped"
             with pytest.warns(UserWarning, match=msg):
-                translation.pandas_multi_vector_zone_translation(**kwargs)
+                translation.pandas_vector_zone_translation(**kwargs)
 
     @pytest.mark.parametrize(
         "pd_vector_str",
@@ -1001,7 +1001,7 @@ class TestPandasMultiVector:
         pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
             pd_vector_str
         )
-        result = translation.pandas_multi_vector_zone_translation(
+        result = translation.pandas_vector_zone_translation(
             **pd_vector.input_kwargs(check_totals=check_totals)
         )
         if isinstance(pd_vector.expected_result, pd.DataFrame):
@@ -1027,7 +1027,7 @@ class TestPandasMultiVector:
         msg = "Some zones in `vector.index` have not been defined in `translation`."
         with pytest.warns(UserWarning, match=msg):
             kwargs = pd_vector.input_kwargs(check_totals=False)
-            result = translation.pandas_multi_vector_zone_translation(
+            result = translation.pandas_vector_zone_translation(
                 **(kwargs | {"vector": new_vector})
             )
 
@@ -1058,7 +1058,7 @@ class TestPandasMultiVector:
         new_trans = pd.concat([new_trans, new_rows], ignore_index=True)
 
         # Check that the translation still works as before
-        result = translation.pandas_multi_vector_zone_translation(
+        result = translation.pandas_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans})
         )
 
@@ -1090,7 +1090,7 @@ class TestPandasMultiVector:
         )
         new_trans = pd_vector.translation.copy()
         new_trans.from_col = new_trans.from_col.astype(np.int32)
-        result = translation.pandas_multi_vector_zone_translation(
+        result = translation.pandas_vector_zone_translation(
             **(pd_vector.input_kwargs() | {"translation": new_trans.df})
         )
 
@@ -1106,7 +1106,7 @@ class TestPandasMultiVector:
         new_vector["wrong_2"] = new_vector.index
         new_vector.set_index(["wrong_1", "wrong_2"], inplace=True)
         with pytest.raises(ValueError, match="The input vector is MultiIndexed"):
-            translation.pandas_multi_vector_zone_translation(
+            translation.pandas_vector_zone_translation(
                 **(pd_multi_vector_multiindex.input_kwargs() | {"vector": new_vector})
             )
 
@@ -1123,7 +1123,7 @@ class TestPandasMultiVector:
 
         # Expect a multiindex warning
         with pytest.warns(UserWarning, match="input vector is MultiIndexed"):
-            result = translation.pandas_multi_vector_zone_translation(
+            result = translation.pandas_vector_zone_translation(
                 **(pd_multi_vector_multiindex.input_kwargs() | {"vector": multi_vector})
             )
 

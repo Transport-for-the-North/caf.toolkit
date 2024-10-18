@@ -728,12 +728,12 @@ def pandas_matrix_zone_translation(
         msg = ".*zones will be dropped.*"
         warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
 
-        half_done = pandas_multi_vector_zone_translation(
+        half_done = pandas_vector_zone_translation(
             vector=matrix,
             translation=row_translation,
             **common_kwargs,
         )
-        translated = pandas_multi_vector_zone_translation(
+        translated = pandas_vector_zone_translation(
             vector=half_done.transpose(),
             translation=col_translation,
             **common_kwargs,
@@ -799,6 +799,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str,
     translation_factors_col: str,
     check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
     """Efficiently translate a pandas vector between index systems.
@@ -832,27 +833,14 @@ def pandas_vector_zone_translation(
         Where zone pairs do not exist, they will be infilled with
         `translate_infill`.
 
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system.
+    check_totals:
+        Whether to check that the input and output matrices sum to the same
+        total.
 
     translation_dtype:
         The numpy datatype to use to do the translation. If None, then the
         dtype of `vector` is used. Where such high precision
         isn't needed, a more memory and time efficient data type can be used.
-
-    vector_infill:
-        The value to use to infill any missing vector values.
-
-    translate_infill:
-        The value to use to infill any missing translation factors.
-
-    check_totals:
-        Whether to check that the input and output matrices sum to the same
-        total.
-
     Returns
     -------
     translated_vector:
@@ -863,104 +851,7 @@ def pandas_vector_zone_translation(
     `pandas_single_vector_zone_translation()`
     `pandas_multi_vector_zone_translation()`
     """
-    # if isinstance(vector, pd.DataFrame):
-    #     if len(vector.columns) > 1:
-    return pandas_multi_vector_zone_translation(
-        vector=vector,
-        translation=translation,
-        translation_from_col=translation_from_col,
-        translation_to_col=translation_to_col,
-        translation_factors_col=translation_factors_col,
-        check_totals=check_totals,
-    )
 
-
-def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
-    """Warn when zones are missing from vector.
-
-    Produces RuntimeWarning detailing the number of missing rows and
-    the total value, with count of NaN values in the missing rows.
-    """
-    n_nans = np.sum(vector.loc[missing_rows].isna().to_numpy())
-    n_cells = vector.loc[missing_rows].size
-    total_value_dropped = np.nansum(vector.loc[missing_rows].to_numpy())
-    if vector.index.names[0] is None:
-        index_name = "`vector.index`"
-    else:
-        index_name = f"`vector.index` ({vector.index.names[0]})"
-
-    warnings.warn(
-        f"Some zones in {index_name} have not been defined in "
-        "`translation`. These zones will be dropped before translating.\n"
-        f"Missing rows count: {len(missing_rows)}\n"
-        f"Total value dropped: {total_value_dropped}\n"
-        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
-    )
-    LOG.debug("Missing zones dropped before translation: %s", missing_rows)
-
-
-def pandas_multi_vector_zone_translation(
-    vector: pd.DataFrame | pd.Series,
-    translation: pd.DataFrame,
-    translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    translation_dtype: Optional[np.dtype] = None,
-    check_totals: bool = True,
-) -> pd.DataFrame:
-    """Efficiently translate a multi-column pandas vector between index systems.
-
-    Internally, checks and converts the pandas inputs into numpy arrays
-    and calls `numpy_vector_zone_translation()`. The final output is then
-    converted back into a pandas Series, using the same format as the input.
-
-    Parameters
-    ----------
-    vector:
-        The vector to translate. The index must be the values to be translated.
-        Any further segmentation data (i.e. data which should not be factored
-        or translated) must be either in the columns or part of a MultiIndex.
-        If part of a MultiIndex, the level of the MultiIndex to translate on
-        must be named share a name with translation_from_col.
-
-    translation:
-        A pandas DataFrame defining the weights to translate use when
-        translating.
-        Needs to contain columns:
-        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
-
-    translation_from_col:
-        The name of the column in `translation` containing the current index
-        values of `vector`.
-
-    translation_to_col:
-        The name of the column in `translation` containing the desired output
-        index values. This will define the output index format.
-
-    translation_factors_col:
-        The name of the column in `translation` containing the translation
-        weights between `translation_from_col` and `translation_to_col`.
-        Where zone pairs do not exist, they will be infilled with
-        `translate_infill`.
-
-    translation_dtype:
-        The numpy datatype to use to do the translation. If None, then the
-        dtype of the vector is used. Where such high precision
-        isn't needed, a more memory and time efficient data type can be used.
-
-    check_totals:
-        Whether to check that the input and output matrices sum to the same
-        total.
-
-    Returns
-    -------
-    translated_vector:
-        vector, translated into to_zone system.
-
-    See Also
-    --------
-    .numpy_vector_zone_translation()
-    """
     vector = vector.copy()
     translation = translation.copy()
 
@@ -968,12 +859,11 @@ def pandas_multi_vector_zone_translation(
     # translation. These values will just be dropped.
     translation_from = translation[translation_from_col].unique()
 
-    # ## CONVERT DTYPES ## #
-    # Convert data dtypes if needed
     if translation_dtype is None:
         translation_dtype = np.promote_types(
             translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
         )
+
     assert translation_dtype is not None
 
     new_values = _convert_dtypes(
@@ -1029,6 +919,30 @@ def pandas_multi_vector_zone_translation(
         translated.name = vector.name
 
     return translated
+
+
+def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
+    """Warn when zones are missing from vector.
+
+    Produces RuntimeWarning detailing the number of missing rows and
+    the total value, with count of NaN values in the missing rows.
+    """
+    n_nans = np.sum(vector.loc[missing_rows].isna().to_numpy())
+    n_cells = vector.loc[missing_rows].size
+    total_value_dropped = np.nansum(vector.loc[missing_rows].to_numpy())
+    if vector.index.names[0] is None:
+        index_name = "`vector.index`"
+    else:
+        index_name = f"`vector.index` ({vector.index.names[0]})"
+
+    warnings.warn(
+        f"Some zones in {index_name} have not been defined in "
+        "`translation`. These zones will be dropped before translating.\n"
+        f"Missing rows count: {len(missing_rows)}\n"
+        f"Total value dropped: {total_value_dropped}\n"
+        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+    )
+    LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
 
 def _multi_vector_trans_index(
@@ -1271,6 +1185,8 @@ def matrix_translation_from_file(
     translation_factors_column : int | str
         Name, or position, of column in translation
         containing the splitting factors.
+    format_: Literal["square", "long"] = "long",
+        Whether the matrix is in long or wide format.
     """
     # TODO(MB) Handle square format CSVs, and deal with too-many-locals
     # pylint: disable=too-many-locals
