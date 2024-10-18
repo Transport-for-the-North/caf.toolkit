@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Literal, Optional, TypedDict, TypeVar
+from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -501,7 +501,7 @@ def pandas_long_matrix_zone_translation(
     index_col_1_out_name: Optional[str] = None,
     index_col_2_out_name: Optional[str] = None,
     check_totals: bool = True,
-) -> pd.DataFrame:
+) -> pd.Series:
     """Efficiently translates a pandas matrix between index systems.
 
     Parameters
@@ -791,6 +791,31 @@ def pandas_matrix_zone_translation(
 #     # pylint: disable=too-many-arguments
 #     ...  # pragma: no cover
 
+@overload
+def pandas_vector_zone_translation(
+    vector: pd.Series,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
+) -> pd.Series:
+    # pylint: disable=too-many-arguments
+    ...  # pragma: no cover
+
+@overload
+def pandas_vector_zone_translation(
+    vector: pd.DataFrame,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
+) -> pd.DataFrame:
+    # pylint: disable=too-many-arguments
+    ...  # pragma: no cover
 
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
