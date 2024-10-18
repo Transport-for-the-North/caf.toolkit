@@ -791,6 +791,7 @@ def pandas_matrix_zone_translation(
 #     # pylint: disable=too-many-arguments
 #     ...  # pragma: no cover
 
+
 @overload
 def pandas_vector_zone_translation(
     vector: pd.Series,
@@ -804,6 +805,7 @@ def pandas_vector_zone_translation(
     # pylint: disable=too-many-arguments
     ...  # pragma: no cover
 
+
 @overload
 def pandas_vector_zone_translation(
     vector: pd.DataFrame,
@@ -816,6 +818,7 @@ def pandas_vector_zone_translation(
 ) -> pd.DataFrame:
     # pylint: disable=too-many-arguments
     ...  # pragma: no cover
+
 
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
