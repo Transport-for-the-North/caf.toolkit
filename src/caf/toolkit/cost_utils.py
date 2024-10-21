@@ -111,11 +111,11 @@ class CostDistribution:
 
         for name, check in basic_numerical_checks.items():
             if (check < 0).any():
-                LOG.warning(f"Negatives are not allowed in the {name} column")
+                raise ValueError(f"Negatives are not allowed in the {name} column")
             if (np.isnan(check)).any():
-                LOG.warning(f"NaNs are not allowed in the {name} column")
+                raise ValueError(f"NaNs are not allowed in the {name} column")
             if (np.isinf(check)).any():
-                LOG.warning(f"Inf are not allowed in the {name} column")
+                raise ValueError(f"Inf are not allowed in the {name} column")
 
         if self.min_vals.min() != 0:
             warnings.warn(
@@ -136,7 +136,7 @@ class CostDistribution:
 
         if zero_width.any():
             warnings.warn(
-                "{zero_width.sum()} bins in the distribution have zero width, review if this makes sense"
+                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense"
             )
 
         return self
