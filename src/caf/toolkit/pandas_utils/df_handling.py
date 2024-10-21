@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
+
+from __future__ import annotations
+
 # Built-Ins
 import functools
-import warnings
-from typing import Any, Collection, Generator, Mapping, Optional
+from collections.abc import Hashable
+from typing import Any, Generator, overload
 
 # Third Party
 import numpy as np
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import math_utils, toolbox
+from caf.toolkit import toolbox
 
 # # # CONSTANTS # # #
 
@@ -403,13 +406,29 @@ def chunk_df(
     yield from iterator
 
 
-# pylint: disable=too-many-branches
+@overload
 def long_product_infill(
-    df: pd.DataFrame,
-    index_dict: Mapping[str, Optional[Collection[Any]]],
+    data: pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
-) -> pd.DataFrame:
+    index_dict: dict[str, list] | None = None,
+) -> pd.DataFrame: ...
+@overload
+def long_product_infill(
+    data: pd.Series,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.Series: ...
+
+
+# pylint: disable=too-many-branches
+def long_product_infill(
+    data: pd.DataFrame | pd.Series,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.DataFrame | pd.Series:
     """Infill columns with a complete product of one another.
 
     Infills missing values of df in `index_dict.keys()` columns by generating
@@ -419,21 +438,23 @@ def long_product_infill(
 
     Parameters
     ----------
-    df:
-        The dataframe, in long format, to infill.
-
-    index_dict:
-        A dictionary mapping the columns of `df` to infill, and with what
-        values. Where a None-like value is given, all unique values are taken
-        from `df` in that column.
-        i.e, `df[index_col].unique()` will be used.
+    data:
+        The data, as a pandas Series or DataFrame, to infill.
 
     infill:
         The value to use to infill any missing cells in the return DataFrame.
 
     check_totals:
-        Whether to check if the totals are almost equal before and after the
-        conversion. Can only be performed on numeric columns.
+        Whether to check if the totals are equal before and after infill. If
+        'infill' is set to anything other than zero, this must be set to False
+        or an error will be raised.
+
+    index_dict:
+        Define expected values in indices. This dict will form the index of the
+        infilled Series. The keys of this dict must match the names of the index
+        levels in your input Series, and all values in the input Series must
+        be included in this dict. If this is left as None, the infilled index
+        will simply be the product of all values in the current index.
 
     Returns
     -------
@@ -446,125 +467,104 @@ def long_product_infill(
     TypeError:
         If none of the non-index columns are numeric and `check_totals` is True
     """
-    # Init
-    val_cols = set(df.columns) - set(index_dict.keys())
-    index_dict = dict(index_dict)
+    if index_dict is None:
+        index_dict = {}
+        for ind in data.index.names:
+            vals = data.index.get_level_values(ind).unique()
+            index_dict[ind] = vals.tolist()
 
-    # Get original value column totals where we can
-    orig_col_totals = dict()
-    for col in val_cols:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            orig_col_totals[col] = df[col].to_numpy().sum()
-
-    # Validate we can check totals if been told to
-    if check_totals and orig_col_totals == dict():
-        raise TypeError(
-            "Cannot check totals when none of the value columns of df are "
-            f"numeric. Implied value columns:\n{val_cols}"
-        )
-
-    # Validate the input index columns
-    for col, vals in index_dict.items():
-        # Initialise any missing values
-        if toolbox.is_none_like(vals):
-            index_dict[col] = set(df[col])
-            vals = index_dict[col]
-
-        assert vals is not None  # Assert for MyPY
-
-        # Make sure we're not dropping too much.
-        # Indication of problems in arguments.
-        missing_idx = set(vals) - set(df[col].unique())
-        if len(missing_idx) >= len(vals) * 0.9:
-            warnings.warn(
-                f"Almost all values given for column {col} for not exist in "
-                f"df['{col}']. Are the given data types matching?\n"
-                f"There are {len(missing_idx)} missing values.",
-                category=UserWarning,
+    else:
+        mismatch = [i for i in data.index.names if i not in index_dict.keys()]
+        if len(mismatch) > 0:
+            raise ValueError(
+                f"{mismatch} levels were found in the input data, " f"but not in index_dict."
             )
 
-    # Handle a single index
-    if len(index_dict) == 1:
-        name = list(index_dict.keys())[0]
-        vals = index_dict[name]
-        assert vals is not None  # Assert for MyPY
-        new_index = pd.Index(name=name, data=vals)
+    if len(data.index.names) == 1:
+        full_ind = pd.Index(index_dict[data.index.name], name=data.index.name)
     else:
-        new_index = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+        full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+    filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
-    # Make sure every possible combination exists
-    df = df.set_index(list(index_dict.keys()))
-    df = df.reindex(index=new_index, fill_value=infill).reset_index()
+    # check there's an overlap
+    overlap = data.index.intersection(filler.index)
+    if len(overlap) == 0:
+        raise ValueError(
+            "There is no intersection between the index of the "
+            "input data and the full index provided."
+        )
 
-    # Just return if we can't check totals
-    if len(orig_col_totals) <= 0:
-        return df
+    joined = filler.join(data, how="left")
+    # For this infill to be valid all data should be the same type
+    if isinstance(data, pd.Series):
+        selector: pd.Index[str] | Hashable | None = data.name
+        dtype = data.dtype
+    else:
+        selector = data.columns
+        if all(i == data.dtypes[0] for i in data.dtypes):
+            dtype = data.dtypes[0]
+        else:
+            raise TypeError(
+                "All columns of the input data must have the same type for this to work."
+            )
+    # ints can be cast to floats in join
+    filled = joined.fillna(infill)[selector].astype(dtype)
 
-    #  ## Let the user know if the totals aren't similar ## #
-    msg = (
-        "Values have been dropped when reindexing the given dataframe.\n"
-        "Starting total: {orig_total}\n"
-        "Ending total: {after_total}."
-    )
+    if check_totals is True:
+        if isinstance(data, pd.Series):
+            diff = data.sum() - filled.sum()
+        elif len(data.columns) == 1:
+            # If data is a dataframe then select would be a list
+            # of column names so filled would be a dataframe
+            assert isinstance(filled, pd.DataFrame)
+            diff = data.squeeze().sum() - filled.squeeze().sum()
+        else:
+            diff = data.sum().sum() - filled.sum().sum()
+        if diff != 0:
+            raise ValueError(
+                "The total has changed in infilling. If "
+                "you have set infill to anything other than zero "
+                f"this is likely why. Difference = {diff} (after "
+                "- before."
+            )
 
-    # Check and warn / error about each column
-    for col, orig_total in orig_col_totals.items():
-        after_total = df[col].to_numpy().sum()
-
-        if not math_utils.is_almost_equal(after_total, orig_total):
-            final_msg = msg.format(orig_total=orig_total, after_total=after_total)
-
-            if not check_totals:
-                warnings.warn(final_msg, category=UserWarning)
-            else:
-                raise ValueError(final_msg)
-
-    return df
-
-
-# pylint: enable=too-many-branches
+    return filled
 
 
 def long_to_wide_infill(
-    df: pd.DataFrame,
-    index_col: str,
-    columns_col: str,
-    values_col: str,
-    index_vals: Optional[list[Any]] = None,
-    column_vals: Optional[list[Any]] = None,
+    matrix: pd.Series,
     infill: Any = 0,
+    unstack_level: str | int = -1,
     check_totals: bool = False,
+    correct_cols: list | None = None,
+    correct_ind: list | None = None,
 ) -> pd.DataFrame:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
     Parameters
     ----------
-    df:
-        The dataframe, in long format, to convert to wide.
-
-    index_col:
-        The column of `df` to use as the index of the wide return DataFrame
-
-    columns_col:
-        The column of `df` to use as the columns of the wide return DataFrame
-
-    values_col:
-        The column of `df` to use as the values of the wide return DataFrame
-
-    index_vals:
-        The unique values to use as the index of the wide return DataFrame.
-        If left as None, `df[index_col].unique()` will be used.
-
-    column_vals:
-        The unique values to use as the columns of the wide return DataFrame.
-        If left as None, `df[columns_col].unique()` will be used.
+    matrix:
+        The matrix, in long format (i.e. a Series), to convert to wide.
 
     infill:
         The value to use to infill any missing cells in the wide DataFrame.
 
+    unstack_level:
+        The level to unstack from the index. This can either be an int, i.e. the
+        ordinal level of the multiindex to unstack, or a string, i.e. the name of
+        the index level to unstack. See pd.DataFrame.unstack().
+
     check_totals:
         Whether to check if the totals are almost equal before and after the
         conversion.
+
+    correct_cols:
+        The correct columns for the resultant dataframe. If this is provided so
+        must 'correct_ind' and vice versa.
+
+    correct_ind:
+        The correct index for the resultant dataframe. If this is provided so
+        must 'correct_cols' and vice versa.
 
     Returns
     -------
@@ -577,35 +577,45 @@ def long_to_wide_infill(
     TypeError:
         If none of the `values_col` is not numeric and `check_totals` is True
     """
-    # Init
-    index_vals = list(set(df[index_col])) if index_vals is None else index_vals
-    column_vals = list(set(df[columns_col])) if column_vals is None else column_vals
-    df = reindex_cols(df, [index_col, columns_col, values_col])
+    if not isinstance(matrix.index, pd.MultiIndex):
+        raise ValueError(
+            "This function expects a multiindexed Series as an "
+            "input. Generally this will be two index levels, one "
+            "for origin/production and another for destination/attraction."
+        )
+    if correct_cols is not None and correct_ind is not None:
+        ind_dict = {
+            matrix.index.names[0]: correct_ind,
+            matrix.index.names[1]: correct_cols,
+        }
+        matrix = long_product_infill(matrix, infill, index_dict=ind_dict)
 
-    index_dict: dict[str, list[Any]] = {index_col: index_vals, columns_col: column_vals}
-    df = long_product_infill(
-        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
-    )
+    elif correct_cols is not None or correct_ind is not None:
+        raise ValueError(
+            "cannot infill correct columns without correct"
+            " index, both are required for infilling"
+        )
 
-    # Convert to wide
-    df = df.pivot(
-        index=index_col,
-        columns=columns_col,
-        values=values_col,
-    )
-    return df
+    unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
+    if check_totals is True:
+        diff = unstacked.sum().sum() - matrix.sum()
+        if diff != 0:
+            raise ValueError(
+                "The matrix total has changed in translating. If "
+                "you have set infill to anything other than zero "
+                f"this is likely why. Difference = {diff} (after "
+                f"- before."
+            )
+    return unstacked
 
 
 def wide_to_long_infill(
     df: pd.DataFrame,
-    index_col_1_name: str,
-    index_col_2_name: str,
-    value_col_name: str,
-    index_col_1_vals: Optional[list[Any]] = None,
-    index_col_2_vals: Optional[list[Any]] = None,
-    infill: Any = 0,
-    check_totals: bool = False,
-) -> pd.DataFrame:
+    out_name: str | None = None,
+    correct_cols: list | None = None,
+    correct_ind: list | None = None,
+    infill: Any = None,
+) -> pd.Series:
     """Convert a matrix from wide to long format, infilling missing values.
 
     Parameters
@@ -615,33 +625,18 @@ def wide_to_long_infill(
         must be the values that are to become `index_col_1_name`, and the
         columns of `df` will be melted to become `index_col_2_name`.
 
-    index_col_1_name:
-        The name to give to the column that was the index of `df`.
+    out_name:
+        The 'name' attribute of the resultant pandas Series. This defaults to
+        'val' if not provided.
 
-    index_col_2_name:
-        The name to give to the column that was the column names of `df`.
+    correct_cols:
+        The correct columns of the input matrix.
 
-    value_col_name:
-        The name to give to the column that was the values of `df`.
-
-    index_col_1_vals:
-        The unique values to use as the first index of the return dataframe.
-        These unique values will be combined with every combination of
-        `index_col_2_vals` to create the full index.
-        If left as None, the unique values of `df` Index will be used.
-
-    index_col_2_vals:
-        The unique values to use as the second index of the return dataframe.
-        These unique values will be combined with every combination of
-        `index_col_1_vals` to create the full index.
-        If left as None, the unique values of `df` columns will be used.
+    correct_ind:
+        The correct index of the input matrix
 
     infill:
-        The value to use to infill any missing cells in the return DataFrame.
-
-    check_totals:
-        Whether to check if the totals are almost equal before and after the
-        conversion.
+        Value to infill when the matrix is unstacked.
 
     Returns
     -------
@@ -654,26 +649,26 @@ def wide_to_long_infill(
     TypeError:
         If none of the `value_col_name` is not numeric and `check_totals` is True
     """
-    # Assume the index is the first ID
-    df = df.reset_index()
-    df = df.rename(columns={df.columns[0]: index_col_1_name})
 
-    # Convert to long
-    df = df.melt(
-        id_vars=index_col_1_name,
-        var_name=index_col_2_name,
-        value_name=value_col_name,
-    )
+    if isinstance(df.index, pd.MultiIndex):
+        raise ValueError(
+            "This expects a single index in the input matrix, being "
+            "zones and matching the columns."
+        )
 
-    # Infill anything that's missing
-    index_dict = {
-        index_col_1_name: index_col_1_vals,
-        index_col_2_name: index_col_2_vals,
-    }
-    df = long_product_infill(
-        df=df, index_dict=index_dict, infill=infill, check_totals=check_totals
-    )
-    return df
+    stacked = df.stack(future_stack=True)
+    stacked.name = "val"
+    if out_name is not None:
+        stacked.name = out_name
+    if correct_ind is not None and correct_cols is not None:
+        ind_dict = {
+            stacked.index.names[0]: correct_ind,
+            stacked.index.names[1]: correct_cols,
+        }
+        stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
+
+    assert isinstance(stacked, pd.Series)
+    return stacked
 
 
 def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
@@ -684,28 +679,16 @@ def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
 
     Parameters
     ----------
-    df:
-        The dataframe, in long format, to convert to a wide numpy array.
-
-    index_col:
-        The column of `df` to use as the index of the wide return DataFrame
-
-    columns_col:
-        The column of `df` to use as the columns of the wide return DataFrame
-
-    values_col:
-        The column of `df` to use as the values of the wide return DataFrame
-
-    index_vals:
-        The unique values to use as the index of the wide return DataFrame.
-        If left as None, `df[index_col].unique()` will be used.
-
-    column_vals:
-        The unique values to use as the columns of the wide return DataFrame.
-        If left as None, `df[columns_col].unique()` will be used.
+     matrix:
+        The matrix, in long format (i.e. a Series), to convert to wide.
 
     infill:
         The value to use to infill any missing cells in the wide DataFrame.
+
+    unstack_level:
+        The level to unstack from the index. This can either be an int, i.e. the
+        ordinal level of the multiindex to unstack, or a string, i.e. the name of
+        the index level to unstack.
 
     check_totals:
         Whether to check if the totals are almost equal before and after the
@@ -722,7 +705,7 @@ def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
     long_to_wide_infill()
     """
     df = long_to_wide_infill(*args, **kwargs)
-    return df.values
+    return df.to_numpy()
 
 
 def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
