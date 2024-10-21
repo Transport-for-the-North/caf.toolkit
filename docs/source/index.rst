@@ -18,11 +18,11 @@ transport analytics and appraisal tools.
 Contents
 --------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
+   start
    user_guide
    api
-   examples/index
 
 
 Indices and tables
