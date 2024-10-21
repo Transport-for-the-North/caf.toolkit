@@ -1,5 +1,7 @@
 # Required libraries
 sphinx>=7.1.2
-sphinx-automodapi>=0.16.0
 pydata-sphinx-theme>=0.14.1
 graphviz>=0.20.1
+sphinx-gallery>=0.17.1
+matplotlib # required by sphinx-gallery
+sphinx-argparse>=0.5.2
