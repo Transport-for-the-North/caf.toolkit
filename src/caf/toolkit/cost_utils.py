@@ -7,6 +7,7 @@ import copy
 import logging
 import os
 from typing import Optional
+import warnings
 
 # Third Party
 import numpy as np
@@ -88,7 +89,19 @@ class CostDistribution:
         self._validate_df_values()
 
     def _validate_df_values(self) -> CostDistribution:
-        """sense check the values provided for the distribution"""
+        """Sense check the values provided for the distribution.
+
+        Raises
+        ------
+        ValueError
+            If any columns contain anything other than positive numbers.
+
+        Warns
+        -----
+        UserWarning
+            If the bins aren't complete i.e. doesn't start at 0,
+            gaps between bin edged or zero width bins.
+        """
         basic_numerical_checks = {
             "min column": self.min_vals,
             "max column": self.max_vals,
@@ -98,14 +111,14 @@ class CostDistribution:
 
         for name, check in basic_numerical_checks.items():
             if (check < 0).any():
-                raise ValueError(f"Negatives are not allowed in the {name} column")
+                LOG.warning(f"Negatives are not allowed in the {name} column")
             if (np.isnan(check)).any():
-                raise ValueError(f"NaNs are not allowed in the {name} column")
+                LOG.warning(f"NaNs are not allowed in the {name} column")
             if (np.isinf(check)).any():
-                raise ValueError(f"Inf are not allowed in the {name} column")
+                LOG.warning(f"Inf are not allowed in the {name} column")
 
         if self.min_vals.min() != 0:
-            LOG.warning(
+            warnings.warn(
                 "Minimum bound in min is not 0, consider recreating the"
                 " distribution so no short distance trips are missed"
             )
@@ -114,7 +127,7 @@ class CostDistribution:
         gaps = self.max_vals[:-1] != self.min_vals[1:]
         # TODO this will do for now, but this could be made more specific
         if gaps.any():
-            LOG.warning(
+            warnings.warn(
                 "The bins do not nest (either overlapping or disjoint),"
                 " there is a risk you will miss trips during your analysis"
             )
@@ -122,7 +135,9 @@ class CostDistribution:
         zero_width = gaps = self.min_vals == self.max_vals
 
         if zero_width.any():
-            LOG.warning("Bins in the distribution have zero, review if this makes sense")
+            warnings.warn(
+                "{zero_width.sum()} bins in the distribution have zero width, review if this makes sense"
+            )
 
         return self
 
