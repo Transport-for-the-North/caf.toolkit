@@ -125,7 +125,7 @@ class CostDistribution:
 
         # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
         gaps = self.max_vals[:-1] != self.min_vals[1:]
-        # TODO this will do for now, but this could be made more specific
+        # TODO(KF) this will do for now, but this could be made more specific
         if gaps.any():
             warnings.warn(
                 "The bins do not nest (either overlapping or disjoint),"
