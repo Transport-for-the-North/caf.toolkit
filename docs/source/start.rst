@@ -17,7 +17,8 @@ Pipx
 ----
 
 When using caf.toolkit as a command-line utility the recommended method for installation
-is pipx, as this handles installing the tool in a self-contained way. To install using pipx
+is `Pipx <https://pipx.pypa.io/stable/>`__, as this handles
+installing the tool in a self-contained way. To install using pipx
 first install pipx into your default Python environment using pip or conda, see
 `Pipx's installation instructions <https://pipx.pypa.io/stable/installation/>`__ for more details.
 

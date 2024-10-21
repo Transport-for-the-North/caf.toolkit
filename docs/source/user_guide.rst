@@ -11,7 +11,7 @@ This section provides an in-depth guide on using caf.van.
 .. toctree::
    :maxdepth: 2
 
-   tool_usage
+   usage/index
    tutorial
    examples/index
 

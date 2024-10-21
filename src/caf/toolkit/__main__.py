@@ -149,6 +149,23 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
 
 def parse_args() -> TranslationArgs | MatrixTranslationArgs:
     """Parse and validate command-line arguments."""
+    parser = _create_arg_parser()
+
+    # Print help if no arguments are given
+    args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
+
+    try:
+        params = args.dataclass_parse_func(args)
+    except (pydantic.ValidationError, FileNotFoundError) as exc:
+        if _TRACEBACK:
+            raise
+        # Switch to raising SystemExit as this doesn't include traceback
+        raise SystemExit(str(exc)) from exc
+
+    return params
+
+
+def _create_arg_parser():
     parser = argparse.ArgumentParser(
         __package__,
         description=ctk.__doc__,
@@ -188,18 +205,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
         formatter_class=arguments.TidyUsageArgumentDefaultsHelpFormatter,
     )
 
-    # Print help if no arguments are given
-    args = parser.parse_args(None if len(sys.argv[1:]) > 0 else ["-h"])
-
-    try:
-        params = args.dataclass_parse_func(args)
-    except (pydantic.ValidationError, FileNotFoundError) as exc:
-        if _TRACEBACK:
-            raise
-        # Switch to raising SystemExit as this doesn't include traceback
-        raise SystemExit(str(exc)) from exc
-
-    return params
+    return parser
 
 
 def main():
