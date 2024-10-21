@@ -6,8 +6,8 @@ from __future__ import annotations
 import copy
 import logging
 import os
-from typing import Optional
 import warnings
+from typing import Optional
 
 # Third Party
 import numpy as np
