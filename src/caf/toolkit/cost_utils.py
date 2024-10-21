@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import warnings
 from typing import Optional
 
 # Third Party
@@ -85,6 +86,60 @@ class CostDistribution:
         self.__weighted_avg_col = weighted_avg_col
 
         self._validate_df_col_names()
+        self._validate_df_values()
+
+    def _validate_df_values(self) -> CostDistribution:
+        """Sense check the values provided for the distribution.
+
+        Raises
+        ------
+        ValueError
+            If any columns contain anything other than positive numbers.
+
+        Warns
+        -----
+        UserWarning
+            If the bins aren't complete i.e. doesn't start at 0,
+            gaps between bin edged or zero width bins.
+        """
+        basic_numerical_checks = {
+            "min column": self.min_vals,
+            "max column": self.max_vals,
+            "trips": self.trip_vals,
+            "average distance": self.avg_vals,
+        }
+
+        for name, check in basic_numerical_checks.items():
+            if (check < 0).any():
+                raise ValueError(f"Negatives are not allowed in the {name} column")
+            if (np.isnan(check)).any():
+                raise ValueError(f"NaNs are not allowed in the {name} column")
+            if (np.isinf(check)).any():
+                raise ValueError(f"Inf are not allowed in the {name} column")
+
+        if self.min_vals.min() != 0:
+            warnings.warn(
+                "Minimum bound in min is not 0, consider recreating the"
+                " distribution so no short distance trips are missed"
+            )
+
+        # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
+        gaps = self.max_vals[:-1] != self.min_vals[1:]
+        # TODO(KF) this will do for now, but this could be made more specific
+        if gaps.any():
+            warnings.warn(
+                "The bins do not nest (either overlapping or disjoint),"
+                " there is a risk you will miss trips during your analysis"
+            )
+
+        zero_width = gaps = self.min_vals == self.max_vals
+
+        if zero_width.any():
+            warnings.warn(
+                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense"
+            )
+
+        return self
 
     def _validate_df_col_names(self) -> CostDistribution:
         """Check the given columns are in the given dataframe."""
