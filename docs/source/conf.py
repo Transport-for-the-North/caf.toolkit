@@ -74,7 +74,7 @@ numpydoc_show_class_members = False
 
 # Change autodoc settings
 autodoc_member_order = "groupwise"
-autoclass_content = "both"
+autoclass_content = "class"
 autodoc_default_options = {
     "undoc-members": True,
     "show-inheritance": True,
@@ -99,6 +99,8 @@ sphinx_gallery_conf = {
 # -- Options for Linking to external docs (intersphinx) ----------------------
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
 }
 intersphinx_timeout = 30
 
