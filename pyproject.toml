@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "caf.toolkit"
-dynamic = ["version"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 description = "A toolkit of transport planning and appraisal functionalities"
 readme = "README.md"
 license = { "file" = "LICENSE" }
@@ -17,41 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
-    "numpy>=1.19.0",
-    "pandas>=2.0.0",
-    "sparse>=0.13.0",
-    "tqdm>=4.50.2",
-    "pydantic>=2.5.0",
-    "strictyaml>=1.6",
-    "psutil>=5.9.0",
-]
-
-[project.optional-dependencies]
-lint = [
-    "black>=24.1.1",
-    "mypy>=1.0.0",
-    "mypy_extensions>=1.0.0",
-    "pydocstyle[toml]>=6.1.1",
-    "pylint>=2.14.5",
-    "pandas-stubs>=2.0.0",
-]
-
-test = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-xdist>=3.3.1",
-    "tox>=3.24.3",
-]
-
-docs = [
-    "sphinx>=7.1.2",
-    "pydata-sphinx-theme>=0.14.1",
-    "graphviz>=0.20.1",
-    "sphinx-gallery>=0.17.1",
-    "matplotlib",                  # required by sphinx-gallery
-    "sphinx-argparse>=0.5.2",
-]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/Transport-for-the-North/caf.toolkit/issues"
@@ -61,6 +26,13 @@ Documentation = "http://caftoolkit.rtfd.io/"
 
 [project.scripts]
 "caf.toolkit" = "caf.toolkit.__main__:main"
+
+[tool.setuptools.dynamic]
+dependencies = { "file" = "requirements.txt" }
+
+[tool.setuptools.dynamic.optional-dependencies]
+dev = { "file" = "requirements_dev.txt" }
+docs = { "file" = "docs/requirements.txt" }
 
 # Packaging options
 [tool.setuptools.packages.find]
