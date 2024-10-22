@@ -1,25 +1,31 @@
 Quick Start
 ===========
 
-CAF.toolkit is provided as a Python package and a command-line utility,
-which requires no Python code written to use. The command-line utility
-only aims to provide some of the commonly used functionality,
-see :ref:`usage` for details.
+CAF.toolkit is provided as a Python package and a command-line utility.
+The command-line utility aims to make some of the commonly used functionality 
+available without needing to use Python code, see :ref:`usage` for details.
 
 CAF.toolkit can be installed from pip, conda-forge or pipx
 (when using as a command-line utility).
-
+Pip
+---
+Installing through pip is easy and can be done in one command:
 ``pip install caf.toolkit``
 
+conda-forge
+-----------
+Pip
+---
+Installing through conda-forge is easy and can be done in one command:
 ``conda install caf.toolkit -c conda-forge``
 
 Pipx
 ----
 
-When using caf.toolkit as a command-line utility the recommended method for installation
-is `Pipx <https://pipx.pypa.io/stable/>`__, as this handles
-installing the tool in a self-contained way. To install using pipx
-first install pipx into your default Python environment using pip or conda, see
+ `Pipx <https://pipx.pypa.io/stable/>`__ is the recommended way to use caf.toolkit as a utility.
+ It handles installing the tool in its own container, and makes it easy to access from a terminal.
+
+First install pipx into your default Python environment using pip or conda, see
 `Pipx's installation instructions <https://pipx.pypa.io/stable/installation/>`__ for more details.
 
 Once pipx is installed and setup caf.toolkit can be installed using ``pipx install caf.toolkit``,
@@ -47,5 +53,5 @@ When using caf.toolkit functionality within Python the recommended alias is ``ct
     import caf.toolkit as ctk
 
 The :ref:`user guide` contains :ref:`tutorials` and :ref:`code examples`, which
-explain the functionality available within caf.toolkit. For a detailed look at the
+explain available functionality. For a detailed look at the
 package API see :ref:`Module API Documentation`.

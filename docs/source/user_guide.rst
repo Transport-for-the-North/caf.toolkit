@@ -1,7 +1,7 @@
 User Guide
 ==========
 
-This section provides an in-depth guide on using caf.van.
+This section provides an in-depth guide on using caf.toolkit.
 
 .. note::
    - For quick start guide see :ref:`quick start`
