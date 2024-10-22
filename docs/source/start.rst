@@ -7,6 +7,7 @@ available without needing to use Python code, see :ref:`usage` for details.
 
 CAF.toolkit can be installed from pip, conda-forge or pipx
 (when using as a command-line utility).
+
 Pip
 ---
 Installing through pip is easy and can be done in one command:
@@ -14,16 +15,14 @@ Installing through pip is easy and can be done in one command:
 
 conda-forge
 -----------
-Pip
----
 Installing through conda-forge is easy and can be done in one command:
 ``conda install caf.toolkit -c conda-forge``
 
 Pipx
 ----
 
- `Pipx <https://pipx.pypa.io/stable/>`__ is the recommended way to use caf.toolkit as a utility.
- It handles installing the tool in its own container, and makes it easy to access from a terminal.
+`Pipx <https://pipx.pypa.io/stable/>`__ is the recommended way to use caf.toolkit as a utility.
+It handles installing the tool in its own container, and makes it easy to access from a terminal.
 
 First install pipx into your default Python environment using pip or conda, see
 `Pipx's installation instructions <https://pipx.pypa.io/stable/installation/>`__ for more details.
