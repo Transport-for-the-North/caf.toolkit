@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Literal, Optional, TypedDict, TypeVar
+from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -488,7 +488,7 @@ def numpy_vector_zone_translation(
 
 
 def pandas_long_matrix_zone_translation(
-    matrix: pd.DataFrame,
+    matrix: pd.DataFrame | pd.Series,
     index_col_1_name: str,
     index_col_2_name: str,
     values_col: str,
@@ -501,7 +501,7 @@ def pandas_long_matrix_zone_translation(
     index_col_1_out_name: Optional[str] = None,
     index_col_2_out_name: Optional[str] = None,
     check_totals: bool = True,
-) -> pd.DataFrame:
+) -> pd.Series:
     """Efficiently translates a pandas matrix between index systems.
 
     Parameters
@@ -575,27 +575,25 @@ def pandas_long_matrix_zone_translation(
     """
     # pylint: disable=too-many-arguments, too-many-locals
     # Init
+    if bool(index_col_2_out_name) != bool(index_col_1_out_name):
+        raise ValueError("If one of index_col_out_name is set, both must be set.")
+    matrix = matrix.copy()
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
-    all_cols = matrix.columns.tolist()
+    if isinstance(matrix, pd.DataFrame):
 
-    if index_col_1_out_name is None:
-        index_col_1_out_name = index_col_1_name
-    if index_col_2_out_name is None:
-        index_col_2_out_name = index_col_2_name
-
-    # Drop any columns we're not keeping
-    drop_cols = set(all_cols) - set(keep_cols)
-    if len(drop_cols) > 0:
-        warnings.warn(f"Extra columns found in matrix, dropping the following: {drop_cols}")
-    matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
+        all_cols = matrix.columns.tolist()
+        # Drop any columns we're not keeping
+        drop_cols = set(all_cols) - set(keep_cols)
+        if len(drop_cols) > 0:
+            warnings.warn(
+                f"Extra columns found in matrix, dropping the following: {drop_cols}"
+            )
+        matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
+        matrix = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
+        assert isinstance(matrix, pd.Series)
 
     # Convert to wide to translate
-    wide_mat = pd_utils.long_to_wide_infill(
-        df=matrix,
-        index_col=index_col_1_name,
-        columns_col=index_col_2_name,
-        values_col=values_col,
-    )
+    wide_mat = pd_utils.long_to_wide_infill(matrix=matrix)
 
     translated_wide_mat = pandas_matrix_zone_translation(
         matrix=wide_mat,
@@ -609,12 +607,13 @@ def pandas_long_matrix_zone_translation(
     )
 
     # Convert back
-    return pd_utils.wide_to_long_infill(
-        df=translated_wide_mat,
-        index_col_1_name=index_col_1_out_name,
-        index_col_2_name=index_col_2_out_name,
-        value_col_name=values_col,
-    )
+    out_mat = pd_utils.wide_to_long_infill(df=translated_wide_mat)
+    if index_col_2_out_name is not None:
+        # Check at the start of function makes sure if one is not None, both are
+        assert index_col_1_out_name is not None
+        out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
+
+    return out_mat
 
 
 def pandas_matrix_zone_translation(
@@ -729,12 +728,12 @@ def pandas_matrix_zone_translation(
         msg = ".*zones will be dropped.*"
         warnings.filterwarnings(action="ignore", message=msg, category=UserWarning)
 
-        half_done = pandas_multi_vector_zone_translation(
+        half_done = pandas_vector_zone_translation(
             vector=matrix,
             translation=row_translation,
             **common_kwargs,
         )
-        translated = pandas_multi_vector_zone_translation(
+        translated = pandas_vector_zone_translation(
             vector=half_done.transpose(),
             translation=col_translation,
             **common_kwargs,
@@ -744,7 +743,7 @@ def pandas_matrix_zone_translation(
         return translated
 
     if not math_utils.is_almost_equal(matrix.to_numpy().sum(), translated.to_numpy().sum()):
-        raise ValueError(
+        warnings.warn(
             f"Some values seem to have been dropped during the translation. "
             f"Check the given translation matrix isn't unintentionally "
             f"dropping values. If the difference is small, it's likely a "
@@ -793,18 +792,42 @@ def pandas_matrix_zone_translation(
 #     ...  # pragma: no cover
 
 
+@overload
+def pandas_vector_zone_translation(
+    vector: pd.Series,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
+) -> pd.Series:
+    # pylint: disable=too-many-arguments
+    ...  # pragma: no cover
+
+
+@overload
+def pandas_vector_zone_translation(
+    vector: pd.DataFrame,
+    translation: pd.DataFrame,
+    translation_from_col: str,
+    translation_to_col: str,
+    translation_factors_col: str,
+    check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
+) -> pd.DataFrame:
+    # pylint: disable=too-many-arguments
+    ...  # pragma: no cover
+
+
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    from_unique_index: Optional[list[Any]] = None,
-    to_unique_index: Optional[list[Any]] = None,
-    translation_dtype: Optional[np.dtype] = None,
-    vector_infill: float = 0.0,
-    translate_infill: float = 0.0,
     check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
     """Efficiently translate a pandas vector between index systems.
@@ -838,26 +861,14 @@ def pandas_vector_zone_translation(
         Where zone pairs do not exist, they will be infilled with
         `translate_infill`.
 
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system.
+    check_totals:
+        Whether to check that the input and output matrices sum to the same
+        total.
 
     translation_dtype:
         The numpy datatype to use to do the translation. If None, then the
         dtype of `vector` is used. Where such high precision
         isn't needed, a more memory and time efficient data type can be used.
-
-    vector_infill:
-        The value to use to infill any missing vector values.
-
-    translate_infill:
-        The value to use to infill any missing translation factors.
-
-    check_totals:
-        Whether to check that the input and output matrices sum to the same
-        total.
 
     Returns
     -------
@@ -869,170 +880,77 @@ def pandas_vector_zone_translation(
     `pandas_single_vector_zone_translation()`
     `pandas_multi_vector_zone_translation()`
     """
-    if isinstance(vector, pd.DataFrame):
-        if len(vector.columns) > 1:
-            return pandas_multi_vector_zone_translation(
-                vector=vector,
-                translation=translation,
-                translation_from_col=translation_from_col,
-                translation_to_col=translation_to_col,
-                translation_factors_col=translation_factors_col,
-                check_totals=check_totals,
-            )
-        vector = vector.squeeze()
 
-    if from_unique_index is None:
-        raise ValueError("from_unique_index must be set for single vector translations")
+    vector = vector.copy()
+    translation = translation.copy()
 
-    if to_unique_index is None:
-        raise ValueError("to_unique_index must be set for single vector translations")
+    # Throw a warning if any index values are in the vector, but not in the
+    # translation. These values will just be dropped.
+    translation_from = translation[translation_from_col].unique()
 
-    return pandas_single_vector_zone_translation(
-        vector=vector,
-        translation=translation,
-        translation_from_col=translation_from_col,
-        translation_to_col=translation_to_col,
-        translation_factors_col=translation_factors_col,
-        from_unique_index=from_unique_index,
-        to_unique_index=to_unique_index,
-        translation_dtype=translation_dtype,
-        vector_infill=vector_infill,
-        translate_infill=translate_infill,
-        check_totals=check_totals,
+    if translation_dtype is None:
+        translation_dtype = np.promote_types(
+            translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
+        )
+
+    assert translation_dtype is not None
+
+    new_values = _convert_dtypes(
+        arr=vector.to_numpy(),
+        to_type=translation_dtype,
+        arr_name="vector",
     )
 
+    if isinstance(vector, pd.Series):
+        vector = pd.Series(index=vector.index, name=vector.name, data=new_values)
+    else:
+        vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
 
-def pandas_single_vector_zone_translation(
-    vector: pd.Series | pd.DataFrame,
-    translation: pd.DataFrame,
-    translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
-    translation_dtype: Optional[np.dtype] = None,
-    vector_infill: float = 0.0,
-    translate_infill: float = 0.0,
-    check_totals: bool = True,
-) -> pd.Series:
-    # pylint: disable=too-many-arguments
-    """Efficiently translate a single-column pandas vector between index systems.
-
-    Internally, checks and converts the pandas inputs into numpy arrays
-    and calls `numpy_vector_zone_translation()`. The final output is then
-    converted back into a pandas Series, using the same format as the input.
-
-    Parameters
-    ----------
-    vector:
-        The vector to translate. The index must be the values to be translated.
-
-    translation:
-        A pandas DataFrame defining the weights to translate use when
-        translating.
-        Needs to contain columns:
-        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
-
-    translation_from_col:
-        The name of the column in `translation` containing the current index
-        values of `vector`.
-
-    translation_to_col:
-        The name of the column in `translation` containing the desired output
-        index values. This will define the output index format.
-
-    translation_factors_col:
-        The name of the column in `translation` containing the translation
-        weights between `translation_from_col` and `translation_to_col`.
-        Where zone pairs do not exist, they will be infilled with
-        `translate_infill`.
-
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system.
-
-    translation_dtype:
-        The numpy datatype to use to do the translation. If None, then the
-        dtype of `vector` is used. Where such high precision
-        isn't needed, a more memory and time efficient data type can be used.
-
-    vector_infill:
-        The value to use to infill any missing vector values.
-
-    translate_infill:
-        The value to use to infill any missing translation factors.
-
-    check_totals:
-        Whether to check that the input and output matrices sum to the same
-        total.
-
-    Returns
-    -------
-    translated_vector:
-        vector, translated into to_zone system.
-
-    See Also
-    --------
-    .numpy_vector_zone_translation()
-    """
-    # If dataframe given, try coerce
-    if isinstance(vector, pd.DataFrame):
-        if vector.shape[1] != 1:
-            raise ValueError(
-                "`vector` must be a pandas.Series, or a pandas.DataFrame with "
-                f"one column. Got a DataFrame of shape {vector.shape} instead"
-            )
-        vector = vector[vector.columns[0]]
-
-    # Set the dtypes to match
-    vector.index, translation[translation_from_col] = pd_utils.cast_to_common_type(
-        [vector.index, translation[translation_from_col]],
-    )
-
-    _pandas_vector_validation(
-        vector=vector,
-        translation=translation,
-        translation_from_col=translation_from_col,
-        from_unique_index=from_unique_index,
-        to_unique_index=to_unique_index,
-        name="vector",
+    translation[translation_factors_col] = _convert_dtypes(
+        arr=translation[translation_factors_col].to_numpy(),
+        to_type=translation_dtype,
+        arr_name="row_translation",
     )
 
     # ## PREP AND TRANSLATE ## #
-    # Square the translation
-    translation = pd_utils.long_to_wide_infill(
-        df=translation,
-        index_col=translation_from_col,
-        columns_col=translation_to_col,
-        values_col=translation_factors_col,
-        index_vals=from_unique_index,
-        column_vals=to_unique_index,
-        infill=translate_infill,
+    # set index for translation
+    indexed_translation = translation.set_index([translation_from_col, translation_to_col])
+
+    # Fixing indices for the zone translation
+    ind_names, vector, translation = _multi_vector_trans_index(
+        vector, translation, translation_from_col, translation_from
     )
 
-    # Sort vector and infill 0s
-    vector = vector.reindex(
-        index=from_unique_index,
-        fill_value=vector_infill,
+    # trans_vector should now contain the correct index level if an error hasn't
+    # been raised
+    factors = indexed_translation[translation_factors_col].squeeze()
+    if not isinstance(factors, pd.Series):
+        raise TypeError("Input translation vector is probably the wrong shape.")
+    translated = (
+        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
     )
 
-    # Translate and return
-    translated = numpy_vector_zone_translation(
-        vector=vector.to_numpy(),
-        translation=translation.values,
-        translation_dtype=translation_dtype,
-        check_totals=check_totals,
-    )
-    return pd.Series(
-        data=translated,
-        index=to_unique_index,
-        name=vector.name,
-    )
+    if check_totals:
+        overall_diff = translated.sum().sum() - vector.sum().sum()
+        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
+            warnings.warn(
+                "Some values seem to have been dropped. The difference "
+                f"total is {overall_diff} (translated - original)."
+            )
+
+    # Sometimes we need to remove the index name to make sure the same style of
+    # dataframe is returned as that which came in
+    if vector.index.name is None:
+        translated.index.name = None
+
+    # Make sure the output has the same name as input series
+    if isinstance(vector, pd.Series):
+        translated.name = vector.name
+
+    return translated
 
 
-def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
+def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
     """Warn when zones are missing from vector.
 
     Produces RuntimeWarning detailing the number of missing rows and
@@ -1056,100 +974,13 @@ def _vector_missing_warning(vector: pd.DataFrame, missing_rows: list) -> None:
     LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
 
-def pandas_multi_vector_zone_translation(
-    vector: pd.DataFrame,
+def _multi_vector_trans_index(
+    vector: pd.DataFrame | pd.Series,
     translation: pd.DataFrame,
     translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    translation_dtype: Optional[np.dtype] = None,
-    check_totals: bool = True,
-) -> pd.DataFrame:
-    """Efficiently translate a multi-column pandas vector between index systems.
-
-    Internally, checks and converts the pandas inputs into numpy arrays
-    and calls `numpy_vector_zone_translation()`. The final output is then
-    converted back into a pandas Series, using the same format as the input.
-
-    Parameters
-    ----------
-    vector:
-        The vector to translate. The index must be the values to be translated.
-        Any further segmentation data (i.e. data which should not be factored
-        or translated) must be either in the columns or part of a MultiIndex.
-        If part of a MultiIndex, the level of the MultiIndex to translate on
-        must be named share a name with translation_from_col.
-
-    translation:
-        A pandas DataFrame defining the weights to translate use when
-        translating.
-        Needs to contain columns:
-        `translation_from_col`, `translation_to_col`, `translation_factors_col`.
-
-    translation_from_col:
-        The name of the column in `translation` containing the current index
-        values of `vector`.
-
-    translation_to_col:
-        The name of the column in `translation` containing the desired output
-        index values. This will define the output index format.
-
-    translation_factors_col:
-        The name of the column in `translation` containing the translation
-        weights between `translation_from_col` and `translation_to_col`.
-        Where zone pairs do not exist, they will be infilled with
-        `translate_infill`.
-
-    translation_dtype:
-        The numpy datatype to use to do the translation. If None, then the
-        dtype of the vector is used. Where such high precision
-        isn't needed, a more memory and time efficient data type can be used.
-
-    check_totals:
-        Whether to check that the input and output matrices sum to the same
-        total.
-
-    Returns
-    -------
-    translated_vector:
-        vector, translated into to_zone system.
-
-    See Also
-    --------
-    .numpy_vector_zone_translation()
-    """
-    vector = vector.copy()
-    translation = translation.copy()
-
-    # Throw a warning if any index values are in the vector, but not in the
-    # translation. These values will just be dropped.
-    translation_from = translation[translation_from_col].unique()
-
-    # ## CONVERT DTYPES ## #
-    # Convert data dtypes if needed
-    if translation_dtype is None:
-        translation_dtype = np.promote_types(
-            translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
-        )
-    assert translation_dtype is not None
-
-    new_values = _convert_dtypes(
-        arr=vector.to_numpy(),
-        to_type=translation_dtype,
-        arr_name="vector",
-    )
-    vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
-    translation[translation_factors_col] = _convert_dtypes(
-        arr=translation[translation_factors_col].to_numpy(),
-        to_type=translation_dtype,
-        arr_name="row_translation",
-    )
-
-    # ## PREP AND TRANSLATE ## #
-    # set index for translation
-    indexed_translation = translation.set_index([translation_from_col, translation_to_col])
-
-    # Correct index for vector
+    translation_from: np.ndarray,
+) -> tuple[list[str], pd.DataFrame | pd.Series, pd.DataFrame]:
+    """Create correct index for `pandas_multi_vector_zone_translation`."""
     if isinstance(vector.index, pd.MultiIndex):
         ind_names = list(vector.index.names)
         if translation_from_col in ind_names:
@@ -1194,29 +1025,7 @@ def pandas_multi_vector_zone_translation(
         vector.index.names = [translation_from_col]
         ind_names = []
 
-    # trans_vector should now contain the correct index level if an error hasn't
-    # been raised
-    factors = indexed_translation[translation_factors_col].squeeze()
-    if not isinstance(factors, pd.Series):
-        raise TypeError("Input translation vector is probably the wrong shape.")
-    translated = (
-        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
-    )
-
-    if check_totals:
-        overall_diff = translated.sum().sum() - vector.sum().sum()
-        if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
-            raise ValueError(
-                "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original)."
-            )
-
-    # Sometimes we need to remove the index name to make sure the same style of
-    # dataframe is returned as that which came in
-    if vector.index.name is None:
-        translated.index.name = None
-
-    return translated
+    return ind_names, vector, translation
 
 
 def _load_translation(
@@ -1355,30 +1164,13 @@ def vector_translation_from_file(
         translation_to_column,
         translation_factors_column,
     )
-    to_unique_index = lookup[to_col].unique()
-    if isinstance(to_unique_index, np.ndarray):
-        to_unique_index_list = to_unique_index.tolist()
-    else:
-        raise TypeError(
-            "to_col should refer to columns in the "
-            "translation vector containing valid unique indices."
-        )
-    from_unique_index = lookup[from_col].unique()
-    if isinstance(from_unique_index, np.ndarray):
-        from_unique_index_list = from_unique_index.tolist()
-    else:
-        raise TypeError(
-            "from_col should refer to columns in the "
-            "translation vector containing valid unique indices."
-        )
+
     translated = pandas_vector_zone_translation(
         vector,
         lookup,
         translation_from_col=from_col,
         translation_to_col=to_col,
         translation_factors_col=factors_col,
-        from_unique_index=from_unique_index_list,
-        to_unique_index=to_unique_index_list,
     )
 
     translated.to_csv(output_path)
@@ -1422,6 +1214,8 @@ def matrix_translation_from_file(
     translation_factors_column : int | str
         Name, or position, of column in translation
         containing the splitting factors.
+    format_: Literal["square", "long"] = "long",
+        Whether the matrix is in long or wide format.
     """
     # TODO(MB) Handle square format CSVs, and deal with too-many-locals
     # pylint: disable=too-many-locals
