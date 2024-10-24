@@ -53,4 +53,4 @@ When using caf.toolkit functionality within Python the recommended alias is ``ct
 
 The :ref:`user guide` contains :ref:`tutorials` and :ref:`code examples`, which
 explain available functionality. For a detailed look at the
-package API see :ref:`Module API Documentation`.
+package API see :ref:`API Reference`.

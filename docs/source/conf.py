@@ -119,3 +119,38 @@ master_doc = "index"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_theme_options = {
+    "use_edit_page_button": True,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Transport-for-the-North/caf.toolkit",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        }
+    ],
+    "header_links_before_dropdown": 4,
+    "external_links": [
+        {
+            "name": "Changelog",
+            "url": "https://github.com/Transport-for-the-North/caf.toolkit/releases",
+        },
+        {
+            "name": "Issues",
+            "url": "https://github.com/Transport-for-the-North/caf.toolkit/issues",
+        },
+        {
+            "name": "CAF Handbook",
+            "url": "https://transport-for-the-north.github.io/CAF-Handbook/",
+        },
+    ],
+    "primary_sidebar_end": ["indices.html", "sidebar-ethical-ads.html"],
+}
+html_context = {
+    "github_url": "https://github.com",
+    "github_user": "Transport-for-the-North",
+    "github_repo": "caf.toolkit",
+    "github_version": "main",
+    "doc_path": "docs/source",
+}

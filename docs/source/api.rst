@@ -1,5 +1,5 @@
-Module API Documentation
-========================
+API Reference
+=============
 
 This section shows the detailed documentation for caf.toolkit, last
 updated on |today|.

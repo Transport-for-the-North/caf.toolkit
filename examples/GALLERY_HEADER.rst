@@ -11,4 +11,4 @@ This section contains code examples for using some of the functionality within C
 .. note::
    - For quick start guide see :ref:`quick start`
    - For more in-depth user guide and tutorial see :ref:`user guide`
-   - For details on the package API see :ref:`module api documentation`
+   - For details on the package API see :ref:`api reference`
