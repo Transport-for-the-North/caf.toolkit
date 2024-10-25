@@ -4,22 +4,18 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+from __future__ import annotations
 
 # Built-Ins
+import importlib
+import inspect
 import os
 import re
 import sys
 from pathlib import Path
 
+# -- Path setup --------------------------------------------------------------
 dir_path = Path(__file__).parents[2]
 source = dir_path / "src"
 sys.path.insert(0, os.path.abspath(str(source)))
@@ -59,6 +55,7 @@ extensions = [
     "sphinx_gallery.gen_gallery",
     "sphinx.ext.intersphinx",
     "sphinxarg.ext",
+    "sphinx.ext.linkcode",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -104,7 +101,6 @@ intersphinx_mapping = {
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
 }
 intersphinx_timeout = 30
-
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -154,3 +150,62 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs/source",
 }
+
+# -- Options for Linkcode extension ------------------------------------------
+
+
+def _get_object_filepath(module: str, fullname: str) -> str:
+    """Get filepath (including line numbers) for object in module."""
+    mod = importlib.import_module(module)
+    if "." in fullname:
+        objname, attrname = fullname.split(".")
+        obj = getattr(mod, objname)
+
+        try:
+            # object is method of a class
+            obj = getattr(obj, attrname)
+        except AttributeError:
+            # object is attribute of a class so use class
+            obj = getattr(mod, objname)
+
+    else:
+        try:
+            obj = getattr(mod, fullname)
+        except AttributeError:
+            return module.replace(".", "/") + ".py"
+
+    try:
+        file = inspect.getsourcefile(obj)
+        lines = inspect.getsourcelines(obj)
+        filepath = f"{file}#L{lines[1]}"
+    except (TypeError, OSError):
+        filepath = module.replace(".", "/") + ".py"
+
+    return filepath
+
+
+def linkcode_resolve(domain: str, info: dict) -> str | None:
+    """Resolve URLs for linking to code on GitHub.
+
+    See sphinx.ext.linkcode extension docs for more details
+    https://www.sphinx-doc.org/en/master/usage/extensions/linkcode.html
+    """
+    if domain != "py":
+        return None
+    if not info["module"]:
+        return None
+
+    filepath = _get_object_filepath(info["module"], info["fullname"])
+    # Check if path is in the directory
+    try:
+        filepath = str(Path(filepath).relative_to(dir_path))
+    except ValueError:
+        return None
+
+    tag = f"v{version.split('+', maxsplit=1)[0]}"
+    github_url = (
+        f"{html_context['github_url']}/{html_context['github_user']}"
+        f"/{html_context['github_repo']}/tree/{tag}"
+    )
+
+    return f"{github_url}/{filepath}"
