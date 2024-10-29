@@ -119,6 +119,9 @@ html_static_path = ["_static"]
 
 html_theme_options = {
     "use_edit_page_button": True,
+    "logo": {
+        "text": f"{project} {version}",
+    },
     "icon_links": [
         {
             "name": "GitHub",
