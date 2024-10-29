@@ -34,6 +34,11 @@ dependencies = { "file" = "requirements.txt" }
 dev = { "file" = "requirements_dev.txt" }
 docs = { "file" = "docs/requirements.txt" }
 
+# Dynamic versioning for editable installs
+[tool.setuptools.cmdclass]
+build_py = "versioningit.cmdclass.build_py"
+sdist = "versioningit.cmdclass.sdist"
+
 # Packaging options
 [tool.setuptools.packages.find]
 where = ["src"]
