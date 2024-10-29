@@ -254,12 +254,12 @@ def _pandas_matrix_validation(
 def numpy_matrix_zone_translation(
     matrix: np.ndarray,
     translation: np.ndarray,
+    *,
     col_translation: Optional[np.ndarray] = None,
     translation_dtype: Optional[np.dtype] = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
-    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a matrix between index systems.
 
     Uses the given translation matrices to translate a matrix of values
