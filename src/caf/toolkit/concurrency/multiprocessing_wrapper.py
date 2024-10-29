@@ -257,6 +257,7 @@ def _check_args_kwargs(
 
 def _process_pool_wrapper_kwargs_in_order(
     fn: Callable[..., _T],
+    *,
     arg_list: Collection[Iterable[Any]],
     kwarg_list: Collection[Mapping[str, Any]],
     process_count: int,
@@ -310,6 +311,7 @@ def _process_pool_wrapper_kwargs_in_order(
 
 def _process_pool_wrapper_kwargs_out_order(
     fn: Callable[..., _T],
+    *,
     arg_list: Collection[Iterable[Any]],
     kwarg_list: Collection[Mapping[str, Any]],
     process_count: int,
@@ -361,6 +363,7 @@ def _process_pool_wrapper_kwargs_out_order(
 
 def multiprocess(
     fn: Callable[..., _T],
+    *,
     arg_list: Optional[Collection[Iterable[Any]]] = None,
     kwarg_list: Optional[Collection[Mapping[str, Any]]] = None,
     process_count: Optional[int] = None,
@@ -450,7 +453,7 @@ def multiprocess(
 
     >>> args_list = [a_args, b_args, c_args]
     >>> kwargs_list = [a_kwargs, b_kwargs, c_kwargs]
-    >>> a, b, c = multiprocess(sorted, args_list, kwargs_list)
+    >>> a, b, c = multiprocess(sorted, arg_list=args_list, kwarg_list=kwargs_list)
 
     # TODO(BT): Add example of how to convert a for-loop into one of these calls.
     """

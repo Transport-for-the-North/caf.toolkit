@@ -129,6 +129,7 @@ def _pandas_vector_validation(
     to_unique_index: list[Any],
     name: str = "vector",
 ) -> None:
+    # pylint: disable=too-many-positional-arguments
     """Validate the given parameters for a vector zone translation.
 
     Parameters
@@ -253,6 +254,7 @@ def _pandas_matrix_validation(
 def numpy_matrix_zone_translation(
     matrix: np.ndarray,
     translation: np.ndarray,
+    *,
     col_translation: Optional[np.ndarray] = None,
     translation_dtype: Optional[np.dtype] = None,
     check_shapes: bool = True,
@@ -502,6 +504,7 @@ def pandas_long_matrix_zone_translation(
     index_col_2_out_name: Optional[str] = None,
     check_totals: bool = True,
 ) -> pd.Series:
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a pandas matrix between index systems.
 
     Parameters
@@ -626,6 +629,7 @@ def pandas_matrix_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a pandas matrix between index systems.
 
     Only works on wide matrices and not long. If translating long matrices,
@@ -755,43 +759,6 @@ def pandas_matrix_zone_translation(
     return translated
 
 
-# TODO(BT): Can uncomment once we have pandas stubs
-# @overload
-# def pandas_vector_zone_translation(
-#     vector: pd.Series,
-#     translation: pd.DataFrame,
-#     translation_from_col: str,
-#     translation_to_col: str,
-#     translation_factors_col: str,
-#     from_unique_index: list[Any],
-#     to_unique_index: list[Any],
-#     translation_dtype: Optional[np.dtype] = None,
-#     vector_infill: float = 0.0,
-#     translate_infill: float = 0.0,
-#     check_totals: bool = True,
-# ) -> pd.Series:
-#     # pylint: disable=too-many-arguments
-#     ...  # pragma: no cover
-#
-#
-# @overload
-# def pandas_vector_zone_translation(
-#     vector: pd.DataFrame,
-#     translation: pd.DataFrame,
-#     translation_from_col: str,
-#     translation_to_col: str,
-#     translation_factors_col: str,
-#     from_unique_index: list[Any],
-#     to_unique_index: list[Any],
-#     translation_dtype: Optional[np.dtype] = None,
-#     vector_infill: float = 0.0,
-#     translate_infill: float = 0.0,
-#     check_totals: bool = True,
-# ) -> pd.Series | pd.DataFrame:
-#     # pylint: disable=too-many-arguments
-#     ...  # pragma: no cover
-
-
 @overload
 def pandas_vector_zone_translation(
     vector: pd.Series,
@@ -803,6 +770,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
 
@@ -817,6 +785,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
 
@@ -830,6 +799,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translate a pandas vector between index systems.
 
     Works for either single (Series) or multi (DataFrame) columns data vectors.
@@ -1096,6 +1066,7 @@ def vector_translation_from_file(
     vector_path: pathlib.Path,
     translation_path: pathlib.Path,
     output_path: pathlib.Path,
+    *,
     vector_zone_column: str | int,
     translation_from_column: str | int,
     translation_to_column: str | int,
@@ -1181,6 +1152,7 @@ def matrix_translation_from_file(
     matrix_path: pathlib.Path,
     translation_path: pathlib.Path,
     output_path: pathlib.Path,
+    *,
     matrix_zone_columns: tuple[int | str, int | str],
     matrix_values_column: int | str,
     translation_from_column: int | str,
