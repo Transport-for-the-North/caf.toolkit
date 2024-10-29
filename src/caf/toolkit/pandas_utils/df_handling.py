@@ -533,6 +533,7 @@ def long_product_infill(
 
 def long_to_wide_infill(
     matrix: pd.Series,
+    *,
     infill: Any = 0,
     unstack_level: str | int = -1,
     check_totals: bool = False,

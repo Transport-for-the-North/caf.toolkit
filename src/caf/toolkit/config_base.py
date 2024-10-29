@@ -284,6 +284,7 @@ def _remove_none_dict(data: dict) -> dict | None:
 def write_config(
     yaml: str,
     path: Path,
+    *,
     datetime_comment: bool = True,
     name: Optional[str] = None,
     other_comment: Optional[str] = None,

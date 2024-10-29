@@ -256,6 +256,7 @@ class LogHelper:
         self,
         root_logger: str,
         tool_details: ToolDetails,
+        *,
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,

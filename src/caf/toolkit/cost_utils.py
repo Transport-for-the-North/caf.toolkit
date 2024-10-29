@@ -67,6 +67,7 @@ class CostDistribution:
     def __init__(
         self,
         df: pd.DataFrame,
+        *,
         min_col: str = "min",
         max_col: str = "max",
         avg_col: str = "avg",
@@ -287,6 +288,7 @@ class CostDistribution:
         cls,
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
+        *,
         min_bounds: Optional[list[float] | np.ndarray] = None,
         max_bounds: Optional[list[float] | np.ndarray] = None,
         bin_edges: Optional[list[float] | np.ndarray] = None,
@@ -399,6 +401,7 @@ class CostDistribution:
     @staticmethod
     def from_file(
         filepath: os.PathLike,
+        *,
         min_col: str = "min",
         max_col: str = "max",
         avg_col: str = "avg",

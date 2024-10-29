@@ -101,6 +101,7 @@ def dataframe_to_n_dimensional_sparse_array(
     df: pd.DataFrame,
     dimension_cols: dict[Any, list[Any]],
     value_col: Any,
+    *,
     sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
     warning_action: WarningActionKind = "default",
     fill_value: np.number | int | float = 0,
