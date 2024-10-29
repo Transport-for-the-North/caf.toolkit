@@ -759,43 +759,6 @@ def pandas_matrix_zone_translation(
     return translated
 
 
-# TODO(BT): Can uncomment once we have pandas stubs
-# @overload
-# def pandas_vector_zone_translation(
-#     vector: pd.Series,
-#     translation: pd.DataFrame,
-#     translation_from_col: str,
-#     translation_to_col: str,
-#     translation_factors_col: str,
-#     from_unique_index: list[Any],
-#     to_unique_index: list[Any],
-#     translation_dtype: Optional[np.dtype] = None,
-#     vector_infill: float = 0.0,
-#     translate_infill: float = 0.0,
-#     check_totals: bool = True,
-# ) -> pd.Series:
-#     # pylint: disable=too-many-arguments
-#     ...  # pragma: no cover
-#
-#
-# @overload
-# def pandas_vector_zone_translation(
-#     vector: pd.DataFrame,
-#     translation: pd.DataFrame,
-#     translation_from_col: str,
-#     translation_to_col: str,
-#     translation_factors_col: str,
-#     from_unique_index: list[Any],
-#     to_unique_index: list[Any],
-#     translation_dtype: Optional[np.dtype] = None,
-#     vector_infill: float = 0.0,
-#     translate_infill: float = 0.0,
-#     check_totals: bool = True,
-# ) -> pd.Series | pd.DataFrame:
-#     # pylint: disable=too-many-arguments
-#     ...  # pragma: no cover
-
-
 @overload
 def pandas_vector_zone_translation(
     vector: pd.Series,
