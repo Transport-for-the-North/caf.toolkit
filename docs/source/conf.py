@@ -108,6 +108,7 @@ intersphinx_timeout = 30
 # a list of builtin themes.
 #
 html_theme = "pydata_sphinx_theme"
+html_show_sourcelink = False
 
 master_doc = "index"
 
