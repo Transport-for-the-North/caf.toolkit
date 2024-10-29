@@ -129,6 +129,7 @@ def _pandas_vector_validation(
     to_unique_index: list[Any],
     name: str = "vector",
 ) -> None:
+    # pylint: disable=too-many-positional-arguments
     """Validate the given parameters for a vector zone translation.
 
     Parameters
@@ -258,6 +259,7 @@ def numpy_matrix_zone_translation(
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a matrix between index systems.
 
     Uses the given translation matrices to translate a matrix of values
@@ -502,6 +504,7 @@ def pandas_long_matrix_zone_translation(
     index_col_2_out_name: Optional[str] = None,
     check_totals: bool = True,
 ) -> pd.Series:
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a pandas matrix between index systems.
 
     Parameters
@@ -626,6 +629,7 @@ def pandas_matrix_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translates a pandas matrix between index systems.
 
     Only works on wide matrices and not long. If translating long matrices,
@@ -803,6 +807,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
 
@@ -817,6 +822,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
 
@@ -830,6 +836,7 @@ def pandas_vector_zone_translation(
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
     """Efficiently translate a pandas vector between index systems.
 
     Works for either single (Series) or multi (DataFrame) columns data vectors.
