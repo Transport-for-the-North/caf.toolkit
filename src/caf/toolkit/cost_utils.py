@@ -190,7 +190,7 @@ class CostDistribution:
     @property
     def df(self) -> pd.DataFrame:
         """A Pandas DataFrame containing the class data."""
-        return self.__df
+        return self.__df.copy()
 
     @property
     def min_vals(self) -> np.ndarray:
