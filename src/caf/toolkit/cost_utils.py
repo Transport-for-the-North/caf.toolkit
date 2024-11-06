@@ -181,7 +181,7 @@ class CostDistribution:
         """Check if two items are the same."""
         if not isinstance(other, CostDistribution):
             return False
-        return (self.__df == other.df).values.all()
+        return (self.__df == other.__df).values.all()
 
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
@@ -512,7 +512,7 @@ class CostDistribution:
             )
         new_distribution = self.copy()
         # pylint: disable-next=protected-access
-        new_distribution.df[new_distribution.__trips_col] = trip_vals
+        new_distribution.__df[new_distribution.__trips_col] = trip_vals
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
