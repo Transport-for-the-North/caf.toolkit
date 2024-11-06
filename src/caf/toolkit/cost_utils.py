@@ -181,6 +181,8 @@ class CostDistribution:
         """Check if two items are the same."""
         if not isinstance(other, CostDistribution):
             return False
+        # Optimisation: We want to compare the actual dataframes here rather than copies of them
+        # pylint: disable-next=protected-access
         return (self.__df == other.__df).values.all()
 
     def copy(self) -> CostDistribution:
@@ -511,6 +513,8 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
+        # Optimisation: We should make a new class with the constructor, however this is quicker
+        # as it avoids the constructor validation that we know has already been done on this data
         # pylint: disable-next=protected-access
         new_distribution.__df[new_distribution.__trips_col] = trip_vals
         return new_distribution
