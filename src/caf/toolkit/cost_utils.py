@@ -74,9 +74,8 @@ class CostDistribution:
         trips_col: str = "trips",
         weighted_avg_col: Optional[str] = None,
     ):
-        self.df = df
-
         # Keep as private. These shouldn't be needed outside of this class
+        self.__df = df
         self.__min_col = min_col
         self.__max_col = max_col
         self.__avg_col = avg_col
@@ -154,24 +153,24 @@ class CostDistribution:
         # Check columns are in df
         err_cols = {}
         for col_name, col_val in req_cols.items():
-            if col_val not in self.df:
+            if col_val not in self.__df:
                 err_cols.update({col_name: col_val})
 
         # Add in the weighted_avg_col if not already in df
         req_cols.update({"weighted_avg_col": self.__weighted_avg_col})
-        if self.__weighted_avg_col not in self.df.columns.to_list():
-            self.df[self.__weighted_avg_col] = self.df[self.__avg_col]
+        if self.__weighted_avg_col not in self.__df.columns.to_list():
+            self.__df[self.__weighted_avg_col] = self.__df[self.__avg_col]
 
         # Throw error if missing columns found
         if err_cols != dict():
             raise ValueError(
                 "Not all the given column names exist in the given df. "
                 f"The following columns are missing:{err_cols}\n"
-                f"With the following in the DataFrame: {self.df.columns}"
+                f"With the following in the DataFrame: {self.__df.columns}"
             )
 
         # Tidy up df
-        self.df = pd_utils.reindex_cols(self.df, list(req_cols.values()))
+        self.__df = pd_utils.reindex_cols(self.__df, list(req_cols.values()))
         return self
 
     def __len__(self):
@@ -182,21 +181,28 @@ class CostDistribution:
         """Check if two items are the same."""
         if not isinstance(other, CostDistribution):
             return False
-        return (self.df == other.df).values.all()
+        # Optimisation: We want to compare the actual dataframes here rather than copies of them
+        # pylint: disable-next=protected-access
+        return (self.__df == other.__df).values.all()
 
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
         return copy.copy(self)
 
     @property
+    def df(self) -> pd.DataFrame:
+        """A Pandas DataFrame containing the class data."""
+        return self.__df.copy()
+
+    @property
     def min_vals(self) -> np.ndarray:
         """Minimum values of the cost distribution bin edges."""
-        return self.df[self.__min_col].to_numpy()
+        return self.__df[self.__min_col].to_numpy()
 
     @property
     def max_vals(self) -> np.ndarray:
         """Maximum values of the cost distribution in edges."""
-        return self.df[self.__max_col].to_numpy()
+        return self.__df[self.__max_col].to_numpy()
 
     @property
     def bin_edges(self) -> np.ndarray:
@@ -211,17 +217,17 @@ class CostDistribution:
     @property
     def avg_vals(self) -> np.ndarray:
         """Average values for each of the cost distribution bins."""
-        return self.df[self.__avg_col].to_numpy()
+        return self.__df[self.__avg_col].to_numpy()
 
     @property
     def weighted_avg_vals(self) -> np.ndarray:
         """Weighted average values for each of the cost distribution bins."""
-        return self.df[self.__weighted_avg_col].to_numpy()
+        return self.__df[self.__weighted_avg_col].to_numpy()
 
     @property
     def trip_vals(self) -> np.ndarray:
         """Trip values for each of the cost distribution bins."""
-        return self.df[self.__trips_col].to_numpy()
+        return self.__df[self.__trips_col].to_numpy()
 
     @property
     def band_share_vals(self) -> np.ndarray:
@@ -507,8 +513,10 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
+        # Optimisation: We should make a new class with the constructor, however this is quicker
+        # as it avoids the constructor validation that we know has already been done on this data
         # pylint: disable-next=protected-access
-        new_distribution.df[new_distribution.__trips_col] = trip_vals
+        new_distribution.__df[new_distribution.__trips_col] = trip_vals
         return new_distribution
 
     def trip_residuals(self, other: CostDistribution) -> np.ndarray:
