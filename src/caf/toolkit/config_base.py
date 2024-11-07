@@ -28,10 +28,9 @@ class BaseConfig(pydantic.BaseModel):
 
     See Also
     --------
-    [pydantic docs](https://pydantic-docs.helpmanual.io/):
-        for more information about using pydantic's model classes.
-    `pydantic.BaseModel`: which handles converting data to Python types.
-    `pydantic.validator`: which allows additional custom validation methods.
+    pydantic.BaseModel: handles converting data to Python types.
+    pydantic.field_validator: custom validation for attributes.
+    pydantic.model_validator: custom validation for class.
 
     Examples
     --------
@@ -61,14 +60,14 @@ class BaseConfig(pydantic.BaseModel):
         some_option=False,
     )
 
-    Config class can be converted to YAML or saved with `save_yaml`.
+    Config class can be converted to YAML or saved with :func:`BaseConfig.save_yaml`.
 
     >>> print(parameters.to_yaml())
     import_folder: Test Folder
     name: Test
     some_option: no
 
-    Config class data can be loaded from a YAML config file using `load_yaml`.
+    Config class data can be loaded from a YAML config file using :func:`BaseConfig.load_yaml`.
 
     >>> yaml_text = '''
     ... import_folder: Test Folder
