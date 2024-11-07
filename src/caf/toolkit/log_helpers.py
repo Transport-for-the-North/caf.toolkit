@@ -50,7 +50,7 @@ _SEMVER_REGEX = (
 
 
 class LoggingWarning(Warning):
-    """Warnings from the `LogHelper` and other toolkit logging functionality."""
+    """Warnings from :class:`LogHelper` and other toolkit logging functionality."""
 
 
 @dataclasses.dataclass
@@ -450,7 +450,7 @@ class TemporaryLogFile:
 
     See Also
     --------
-    `LogHelper`: for setting up logging for a tool.
+    LogHelper: for setting up logging for a tool.
 
     Examples
     --------
