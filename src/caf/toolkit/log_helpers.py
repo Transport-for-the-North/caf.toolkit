@@ -55,27 +55,19 @@ class LoggingWarning(Warning):
 
 @dataclasses.dataclass
 class ToolDetails:
-    """Information about the current tool.
-
-    Attributes
-    ----------
-    name: str
-        Name of the tool.
-    version: str
-        Version of the tool, should be in semantic versioning
-        format https://semver.org/.
-    homepage: str, optional
-        URL of the homepage for the tool.
-    source_url: str, optional
-        URL of the source code repository for the tool.
-    """
+    """Information about the current tool."""
 
     name: str
+    """Name of the tool."""
     version: Annotated[
         str, types.StringConstraints(strip_whitespace=True, pattern=_SEMVER_REGEX)
     ]
+    """Version of the tool, should be in semantic versioning
+    format https://semver.org/."""
     homepage: Optional[pydantic.HttpUrl] = None
+    """URL of the homepage for the tool."""
     source_url: Optional[pydantic.HttpUrl] = None
+    """URL of the source code repository for the tool."""
 
     def __str__(self) -> str:
         """Nicely formatted multi-line string."""
@@ -99,36 +91,24 @@ class ToolDetails:
 
 @dataclasses.dataclass
 class SystemInformation:
-    """Information about the PC and Python version.
-
-    Attributes
-    ----------
-    user: str
-        Account name of the currently logged in user.
-    pc_name: str
-        Name of the PC.
-    python_version: str
-        Python version being used.
-    operating_system: str
-        Information about the name and version of OS.
-    architecture: str
-        Name of the machine architecture e.g. "AMD64".
-    processor: str
-        Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel".
-    cpu_count: int | None
-        Number of logical CPU cores on the machine.
-    total_ram: int | None
-        Total virtual memory (bytes) on the machine.
-    """
+    """Information about the PC and Python version."""
 
     user: str
+    """Account name of the currently logged in user."""
     pc_name: str
+    """Name of the PC."""
     python_version: str
+    """Python version being used."""
     operating_system: str
+    """Information about the name and version of OS."""
     architecture: str
+    """Name of the machine architecture e.g. "AMD64"."""
     processor: str
+    """Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"."""
     cpu_count: Optional[int]
+    """Number of logical CPU cores on the machine."""
     total_ram: Optional[int]
+    """Total virtual memory (bytes) on the machine."""
 
     @classmethod
     def load(cls) -> SystemInformation:
@@ -184,18 +164,18 @@ class LogHelper:
 
     Parameters
     ----------
-    root_logger : str
+    root_logger
         Name of the root logger to add handlers to,
         should be the name of the Python package.
     tool_details : ToolDetails
         Details of the tool being ran.
-    console : bool, optional
+    console
         If True (default) output log messages to the console
         with default settings.
-    log_file : os.PathLike, optional
+    log_file
         If given output log messages to a file with default
         settings.
-    warning_capture : bool, optional
+    warning_capture
         If True (default) capture, and log, Python warnings.
 
     Examples
