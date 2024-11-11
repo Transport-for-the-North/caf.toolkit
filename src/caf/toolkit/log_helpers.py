@@ -55,7 +55,19 @@ class LoggingWarning(Warning):
 
 @dataclasses.dataclass
 class ToolDetails:
-    """Information about the current tool."""
+    """Information about the current tool.
+
+    Parameters
+    ----------
+    name
+        See :any:`name`.
+    version
+        See :any:`version`.
+    homepage
+        See :any:`homepage`.
+    source_url
+        See :any:`source_url`.
+    """
 
     name: str
     """Name of the tool."""
@@ -91,7 +103,27 @@ class ToolDetails:
 
 @dataclasses.dataclass
 class SystemInformation:
-    """Information about the PC and Python version."""
+    """Information about the PC and Python version.
+
+    Parameters
+    ----------
+    user
+        See :any:`user`.
+    pc_name
+        See :any:`pc_name`.
+    python_version
+        See :any:`python_version`.
+    operating_system
+        See :any:`operating_system`.
+    architecture
+        See :any:`architecture`.
+    processor
+        See :any:`processor`.
+    cpu_count
+        See :any:`cpu_count`.
+    total_ram
+        See :any:`total_ram`.
+    """
 
     user: str
     """Account name of the currently logged in user."""
