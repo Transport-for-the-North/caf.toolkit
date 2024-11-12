@@ -72,13 +72,6 @@ numpydoc_show_class_members = False
 # Change autodoc settings
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
-autodoc_default_options = {
-    "undoc-members": True,
-    "show-inheritance": True,
-    "special-members": False,
-    "private-members": False,
-    "exclude-members": "__module__, __weakref__, __dict__",
-}
 autodoc_typehints = "description"
 
 # Auto summary options
