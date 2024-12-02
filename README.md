@@ -21,8 +21,19 @@ a lot of the useful stuff from
 [NorMITs Demand](https://github.com/Transport-for-the-North/NorMITs-Demand)
 more widely available and easily accessible.
 
+## Common Analytical Framework
+
+This package is sits within the [Common Analytical Framework (CAF)](https://transport-for-the-north.github.io/caf_homepage/intro.html),
+which is a collaboration between transport bodies in the UK to develop and maintain commonly used
+transport analytics and appraisal tools.
 
 ## Contributing
 CAF.Toolkit happily accepts contributions.
 
-The best way to contribute to this project is to go to the issues tab and report bugs or submit a feature request. This helps CAF.Toolkit become more stable and full-featured. Please check the closed bugs before submitting a bug report to see if your question has already been answered.
+The best way to contribute to this project is to go to the [issues tab](https://github.com/Transport-for-the-North/caf.toolkit/issues)
+to report bugs or submit feature requests. This helps CAF.toolkit become more
+stable and full-featured. Please check the closed bugs before submitting a bug report to see if your
+question has already been answered.
+
+Please see our [contribution guidelines](https://github.com/Transport-for-the-North/.github/blob/main/CONTRIBUTING.rst)
+for details on contributing to the codebase or documentation.
