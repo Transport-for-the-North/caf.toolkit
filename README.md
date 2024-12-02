@@ -31,9 +31,9 @@ transport analytics and appraisal tools.
 CAF.Toolkit happily accepts contributions.
 
 The best way to contribute to this project is to go to the [issues tab](https://github.com/Transport-for-the-North/caf.toolkit/issues)
-and report bugs or submit a feature request. This helps CAF.toolkit become more
+to report bugs or submit feature requests. This helps CAF.toolkit become more
 stable and full-featured. Please check the closed bugs before submitting a bug report to see if your
 question has already been answered.
 
-Please see our [organisation contribution guidelines](https://github.com/Transport-for-the-North/.github/blob/main/CONTRIBUTING.rst)
+Please see our [contribution guidelines](https://github.com/Transport-for-the-North/.github/blob/main/CONTRIBUTING.rst)
 for details on contributing to the codebase or documentation.
