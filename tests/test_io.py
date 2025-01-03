@@ -6,7 +6,7 @@ from __future__ import annotations
 import dataclasses
 import pathlib
 import re
-from typing import Literal
+from typing import Iterator, Literal
 
 # Third Party
 import numpy as np
@@ -45,6 +45,21 @@ class MatrixResults:
     path: pathlib.Path
     format: Literal["square", "long"]
     index_col: list[str] | str
+
+
+class _FakeGlobPath:
+    """Mock class replacing `pathlib.Path`."""
+
+    def __init__(self, suffixes: list[str]):
+        self._suffixes = suffixes
+
+    def glob(self, name: str) -> Iterator[pathlib.Path]:
+        """Mock `glob` method which just returns name with suffixes added.
+
+        This does not create any files.
+        """
+        for suffix in self._suffixes:
+            yield pathlib.Path(name.replace(".*", suffix))
 
 
 @pytest.fixture(name="data", scope="module")
@@ -259,3 +274,56 @@ class TestReadCSVMatrix:
         pattern = re.compile(f"unknown format {format_}", re.I)
         with pytest.raises(ValueError, match=pattern):
             io.read_csv_matrix(path, format_)
+
+
+class TestFindFile:
+    """Tests for the `find_file` function."""
+
+    def test_correct(self):
+        """Test single correct file exists and is found."""
+        suffixes = [".csv.bz2"]
+        expected = "test_file.csv.bz2"
+
+        folder = _FakeGlobPath(suffixes)
+        found = io.find_file(folder, "test_file", suffixes)
+
+        assert found.name == expected, "incorrect file found"
+
+    def test_correct_extras(self):
+        """Test multiple file exists, highest priority is found and warning raised."""
+        suffixes = [".csv.bz2", ".csv", ".txt"]
+        expected = "test_file.csv.bz2"
+
+        folder = _FakeGlobPath(suffixes)
+
+        warn_msg = (
+            f'Found {len(suffixes)} files named "test_file" with the expected'
+            r" suffixes, the highest priority suffix is used\."
+        )
+        with pytest.warns(RuntimeWarning, match=warn_msg):
+            found = io.find_file(folder, "test_file", suffixes)
+
+        assert found.name == expected, "incorrect file found"
+
+    def test_unexpected(self):
+        """Test unexpected warning when additional files with different suffixes are found."""
+        suffixes = [".csv.bz2"]
+        extras = [".xlsx", ".test"]
+        expected = "test_file.csv.bz2"
+
+        folder = _FakeGlobPath(suffixes + extras)
+
+        warn_msg = (
+            f'Found {len(extras)} files named "test_file" with unexpected'
+            rf' suffixes \({", ".join(re.escape(i) for i in extras)}\),'
+            r" these are ignored\."
+        )
+        with pytest.warns(RuntimeWarning, match=warn_msg):
+            found = io.find_file(folder, "test_file", suffixes)
+
+        assert found.name == expected, "incorrect file found"
+
+    def test_not_found(self):
+        """Test `FileNotFoundError` is raised when no files are found."""
+        with pytest.raises(FileNotFoundError):
+            io.find_file(_FakeGlobPath([]), "test_file", [".csv"])

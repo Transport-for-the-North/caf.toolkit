@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import collections.abc
 import logging
 import os
 import pathlib
@@ -229,3 +230,68 @@ def read_csv_matrix(
             matrix = matrix.reindex(matrix.columns, axis=0)
 
     return matrix
+
+
+def find_file(
+    folder: pathlib.Path, name: str, suffixes: collections.abc.Sequence[str]
+) -> pathlib.Path:
+    """Find file based on acceptable suffixes.
+
+    Parameters
+    ----------
+    folder
+        Folder to search for file with, doesn't search within sub-folders.
+    name
+        Filename to search for, this should **not** include suffixes
+        (file extensions).
+    suffixes
+        Allowed suffixes to find, if multiple files are found with
+        acceptable `suffixes` then the one with the suffix first
+        in `suffixes` is returned.
+
+    Returns
+    -------
+    pathlib.Path
+        First file found in list of `suffixes`.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no file can be found with `suffixes`.
+
+    Warns
+    -----
+    RuntimeWarning
+        If multiple files are found with the same name but different suffixes.
+    """
+    found: list[pathlib.Path] = []
+    unexpected: list[str] = []
+
+    for path in folder.glob(f"{name}.*"):
+        suffix = "".join(path.suffixes)
+
+        if suffix in suffixes:
+            found.append(path)
+        else:
+            unexpected.append(suffix)
+
+    if len(unexpected) > 0:
+        warnings.warn(
+            f'Found {len(unexpected)} files named "{name}" with unexpected'
+            f' suffixes ({", ".join(unexpected)}), these are ignored.',
+            RuntimeWarning,
+        )
+    if len(found) > 1:
+        warnings.warn(
+            f'Found {len(found)} files named "{name}" with the expected'
+            " suffixes, the highest priority suffix is used.",
+            RuntimeWarning,
+        )
+
+    if len(found) == 0:
+        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+
+    # Order found based on expected_suffixes
+    found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
+
+    return found[0]
