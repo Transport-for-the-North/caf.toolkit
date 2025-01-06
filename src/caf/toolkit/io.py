@@ -235,7 +235,7 @@ def read_csv_matrix(
 def find_file_with_name(
     folder: pathlib.Path, name: str, suffixes: collections.abc.Sequence[str]
 ) -> pathlib.Path:
-    """Find file in `folder` based on acceptable `suffixes`.
+    """Find a file in a folder matching _any_ acceptable suffix.
 
     Searches the given `folder` only, i.e. not sub-folders, and finds
     the first file existing based on the order of `suffixes`. Warnings
