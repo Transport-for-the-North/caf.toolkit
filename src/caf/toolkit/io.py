@@ -243,7 +243,7 @@ def find_file(
         Folder to search for file with, doesn't search within sub-folders.
     name
         Filename to search for, this should **not** include suffixes
-        (file extensions).
+        (file extensions, e.g. ".csv", ".txt").
     suffixes
         Allowed suffixes to find, if multiple files are found with
         acceptable `suffixes` then the one with the suffix first
@@ -268,6 +268,7 @@ def find_file(
     unexpected: list[str] = []
 
     for path in folder.glob(f"{name}.*"):
+        # Combines multiple suffixes into one, does nothing if only one suffix exists
         suffix = "".join(path.suffixes)
 
         if suffix in suffixes:
