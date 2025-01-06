@@ -285,7 +285,7 @@ class TestFindFile:
         expected = "test_file.csv.bz2"
 
         folder = _FakeGlobPath(suffixes)
-        found = io.find_file(folder, "test_file", suffixes)
+        found = io.find_file_with_name(folder, "test_file", suffixes)
 
         assert found.name == expected, "incorrect file found"
 
@@ -301,7 +301,7 @@ class TestFindFile:
             r" suffixes, the highest priority suffix is used\."
         )
         with pytest.warns(RuntimeWarning, match=warn_msg):
-            found = io.find_file(folder, "test_file", suffixes)
+            found = io.find_file_with_name(folder, "test_file", suffixes)
 
         assert found.name == expected, "incorrect file found"
 
@@ -319,11 +319,11 @@ class TestFindFile:
             r" these are ignored\."
         )
         with pytest.warns(RuntimeWarning, match=warn_msg):
-            found = io.find_file(folder, "test_file", suffixes)
+            found = io.find_file_with_name(folder, "test_file", suffixes)
 
         assert found.name == expected, "incorrect file found"
 
     def test_not_found(self):
         """Test `FileNotFoundError` is raised when no files are found."""
         with pytest.raises(FileNotFoundError):
-            io.find_file(_FakeGlobPath([]), "test_file", [".csv"])
+            io.find_file_with_name(_FakeGlobPath([]), "test_file", [".csv"])

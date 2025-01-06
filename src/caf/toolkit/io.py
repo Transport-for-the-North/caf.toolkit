@@ -232,10 +232,14 @@ def read_csv_matrix(
     return matrix
 
 
-def find_file(
+def find_file_with_name(
     folder: pathlib.Path, name: str, suffixes: collections.abc.Sequence[str]
 ) -> pathlib.Path:
-    """Find file based on acceptable suffixes.
+    """Find file in `folder` based on acceptable `suffixes`.
+
+    Searches the given `folder` only, i.e. not sub-folders, and finds
+    the first file existing based on the order of `suffixes`. Warnings
+    are output if other files are found with the given `name`.
 
     Parameters
     ----------
