@@ -270,7 +270,6 @@ def find_file_with_name(
 
     Examples
     --------
-
     Import built-in modules used for creating temporary directory
     with example files.
 
