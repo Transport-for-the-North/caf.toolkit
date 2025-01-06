@@ -267,6 +267,59 @@ def find_file_with_name(
     -----
     RuntimeWarning
         If multiple files are found with the same name but different suffixes.
+
+    Examples
+    --------
+
+    Import built-in modules used for creating temporary directory
+    with example files.
+
+    >>> import pathlib
+    >>> import tempfile
+
+    List of files which will be created in the temporary directory for examples.
+
+    >>> filenames = [
+    ...     "test_file.csv",
+    ...     "test_file.csv.bz2",
+    ...     "test_file.txt",
+    ...     "test_file.xlsx",
+    ...     "another_file.csv",
+    ...     "another_file.csv.bz2",
+    ...     "another_file.txt",
+    ... ]
+
+    Setup temporary folder and create empty files (above) for examples.
+
+    >>> tmpdir = tempfile.TemporaryDirectory()
+    >>> folder = pathlib.Path(tmpdir.name)
+    >>> for name in filenames:
+    ...     path = folder / name
+    ...     path.touch()
+
+    Find "test_file" which is either a CSV (.csv) or compressed CSV (.csv.bz2).
+    Files exist with both of the suffixes but the function will only return
+    the path to the preferred one, i.e. the one which shows up first in the
+    list.
+
+    >>> find_file_with_name(folder, "test_file", [".csv", ".csv.bz2"]).name
+    'test_file.csv'
+
+    Runtime warnings are returned if any other files exist with the correct name
+    but different suffixes, a different warning is output if files exist with
+    suffixes in the list versus files which exist with other (ignored) suffixes.
+
+    Finding an Excel file in the folder, there isn't a file with suffix ".xls" so
+    this will return a Path object pointing to "test_file.xlsx".
+
+    >>> find_file_with_name(folder, "test_file", [".xls", ".xlsx"]).name
+    'test_file.xlsx'
+
+    If no files can be found with any of the suffixes given then a FileNotFoundError
+    is raised.
+
+    >>> # Deleting temporary directory and example files
+    >>> tmpdir.cleanup()
     """
     found: list[pathlib.Path] = []
     unexpected: list[str] = []
