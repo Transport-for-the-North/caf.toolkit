@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import collections.abc
 import logging
 import os
 import pathlib
@@ -229,3 +230,125 @@ def read_csv_matrix(
             matrix = matrix.reindex(matrix.columns, axis=0)
 
     return matrix
+
+
+def find_file_with_name(
+    folder: pathlib.Path, name: str, suffixes: collections.abc.Sequence[str]
+) -> pathlib.Path:
+    """Find a file in a folder matching _any_ acceptable suffix.
+
+    Searches the given `folder` only, i.e. not sub-folders, and finds
+    the first file existing based on the order of `suffixes`. Warnings
+    are output if other files are found with the given `name`.
+
+    Parameters
+    ----------
+    folder
+        Folder to search for file with, doesn't search within sub-folders.
+    name
+        Filename to search for, this should **not** include suffixes
+        (file extensions, e.g. ".csv", ".txt").
+    suffixes
+        Allowed suffixes to find, if multiple files are found with
+        acceptable `suffixes` then the one with the suffix first
+        in `suffixes` is returned.
+
+    Returns
+    -------
+    pathlib.Path
+        First file found in list of `suffixes`.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no file can be found with `suffixes`.
+
+    Warns
+    -----
+    RuntimeWarning
+        If multiple files are found with the same name but different suffixes.
+
+    Examples
+    --------
+    Import built-in modules used for creating temporary directory
+    with example files.
+
+    >>> import pathlib
+    >>> import tempfile
+
+    List of files which will be created in the temporary directory for examples.
+
+    >>> filenames = [
+    ...     "test_file.csv",
+    ...     "test_file.csv.bz2",
+    ...     "test_file.txt",
+    ...     "test_file.xlsx",
+    ...     "another_file.csv",
+    ...     "another_file.csv.bz2",
+    ...     "another_file.txt",
+    ... ]
+
+    Setup temporary folder and create empty files (above) for examples.
+
+    >>> tmpdir = tempfile.TemporaryDirectory()
+    >>> folder = pathlib.Path(tmpdir.name)
+    >>> for name in filenames:
+    ...     path = folder / name
+    ...     path.touch()
+
+    Find "test_file" which is either a CSV (.csv) or compressed CSV (.csv.bz2).
+    Files exist with both of the suffixes but the function will only return
+    the path to the preferred one, i.e. the one which shows up first in the
+    list.
+
+    >>> find_file_with_name(folder, "test_file", [".csv", ".csv.bz2"]).name
+    'test_file.csv'
+
+    Runtime warnings are returned if any other files exist with the correct name
+    but different suffixes, a different warning is output if files exist with
+    suffixes in the list versus files which exist with other (ignored) suffixes.
+
+    Finding an Excel file in the folder, there isn't a file with suffix ".xls" so
+    this will return a Path object pointing to "test_file.xlsx".
+
+    >>> find_file_with_name(folder, "test_file", [".xls", ".xlsx"]).name
+    'test_file.xlsx'
+
+    If no files can be found with any of the suffixes given then a FileNotFoundError
+    is raised.
+
+    >>> # Deleting temporary directory and example files
+    >>> tmpdir.cleanup()
+    """
+    found: list[pathlib.Path] = []
+    unexpected: list[str] = []
+
+    for path in folder.glob(f"{name}.*"):
+        # Combines multiple suffixes into one, does nothing if only one suffix exists
+        suffix = "".join(path.suffixes)
+
+        if suffix in suffixes:
+            found.append(path)
+        else:
+            unexpected.append(suffix)
+
+    if len(unexpected) > 0:
+        warnings.warn(
+            f'Found {len(unexpected)} files named "{name}" with unexpected'
+            f' suffixes ({", ".join(unexpected)}), these are ignored.',
+            RuntimeWarning,
+        )
+    if len(found) > 1:
+        warnings.warn(
+            f'Found {len(found)} files named "{name}" with the expected'
+            " suffixes, the highest priority suffix is used.",
+            RuntimeWarning,
+        )
+
+    if len(found) == 0:
+        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+
+    # Order found based on expected_suffixes
+    found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
+
+    return found[0]
