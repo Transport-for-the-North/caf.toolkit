@@ -206,8 +206,8 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     if almost_zero is None:
         almost_zero = 1 / matrix.size
 
-    info: pd.Series = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-
+    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
+    assert isinstance(info, pd.Series) # To stop MyPy whinging 
     info["columns"] = len(matrix.columns)
     info["rows"] = len(matrix.index)
     info["sum"] = matrix.sum().sum()
