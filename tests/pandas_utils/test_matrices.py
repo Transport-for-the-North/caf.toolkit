@@ -60,7 +60,11 @@ class TestMatrices:
     def test_trip_ends(self, matrix, translation_vector):
         """Test the trip ends property produces the expected output."""
         matrix_report = pd_utils.MatrixReport(
-            matrix, translation_vector, "from", "to", "factor"
+            matrix,
+            translation_factors=translation_vector,
+            translation_from_col="from",
+            translation_to_col="to",
+            translation_factors_col="factor",
         )
 
         test_trip_ends = matrix_report.trip_ends
