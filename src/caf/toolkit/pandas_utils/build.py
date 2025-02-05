@@ -1,5 +1,7 @@
 """Build Dummy datasets for the purposes of testing and demonstrations."""
 
+from __future__ import annotations
+
 # Built-Ins
 import abc
 
