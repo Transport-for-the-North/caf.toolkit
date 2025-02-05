@@ -132,12 +132,12 @@ class MatrixReport:
         return pd.DataFrame({"row_sums": self.row_sum, "col_sums": self.column_sum})
 
     @property
-    def row_sum(self) -> pd.DataFrame:
+    def row_sum(self) -> pd.Series:
         """The row sums of the matrix."""
         return self.matrix.sum(axis=0)
 
     @property
-    def column_sum(self) -> pd.DataFrame:
+    def column_sum(self) -> pd.Series:
         """The column sums of the matrix."""
         return self.matrix.sum(axis=1)
 
@@ -206,7 +206,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     if almost_zero is None:
         almost_zero = 1 / matrix.size
 
-    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
+    info: pd.Series = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
 
     info["columns"] = len(matrix.columns)
     info["rows"] = len(matrix.index)
