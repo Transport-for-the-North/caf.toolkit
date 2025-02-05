@@ -174,13 +174,13 @@ class MatrixReport:
         matrix = pd.read_csv(path, index_col=0)
 
         if translation_path is not None:
-            translation = pd.read_csv(translation_path)
+            translation_factors = pd.read_csv(translation_path)
         else:
-            translation = None
+            translation_factors = None
 
         return cls(
             matrix,
-            translation_factors=translation,
+            translation_factors=translation_factors,
             translation_from_col=translation_from_col,
             translation_to_col=translation_to_col,
             translation_factors_col=translation_factors_col,
