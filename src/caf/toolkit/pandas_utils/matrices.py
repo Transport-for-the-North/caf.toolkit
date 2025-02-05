@@ -1,6 +1,4 @@
-""" 
-Contains functions that perform checks and provide high level statistics. 
-"""
+"""Contains functions that perform checks and provide high level statistics."""
 
 from __future__ import annotations
 
@@ -12,7 +10,7 @@ from typing import Optional
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import translation
+from caf.toolkit import translation  # pylint: disable=redefined-outer-name
 
 
 class MatrixReport:
@@ -41,6 +39,7 @@ class MatrixReport:
     def __init__(
         self,
         matrix: pd.DataFrame,
+        *,
         translation_factors: Optional[pd.DataFrame] = None,
         translation_from_col: Optional[str] = None,
         translation_to_col: Optional[str] = None,
@@ -146,6 +145,7 @@ class MatrixReport:
     def from_file(
         cls,
         path: Path,
+        *,
         translation_path: Optional[Path] = None,
         translation_from_col: Optional[str] = None,
         translation_to_col: Optional[str] = None,
@@ -180,10 +180,10 @@ class MatrixReport:
 
         return cls(
             matrix,
-            translation,
-            translation_from_col,
-            translation_to_col,
-            translation_factors_col,
+            translation_factors=translation,
+            translation_from_col=translation_from_col,
+            translation_to_col=translation_to_col,
+            translation_factors_col=translation_factors_col,
         )
 
 

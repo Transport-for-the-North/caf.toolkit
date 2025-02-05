@@ -12,7 +12,7 @@ MATRIX_SIZE = 100
 
 @pytest.fixture(name="matrix", scope="session")
 def fixture_matrix():
-    """Matrix to test matrix report functionality."""    
+    """Matrix to test matrix report functionality."""
     matrix_rows = []
 
     gen = np.random.default_rng(10)
@@ -29,7 +29,7 @@ def fixture_matrix():
 
 @pytest.fixture(name="translation_vector", scope="session")
 def fixture_translation() -> pd.DataFrame:
-    """Translation to test matrix report functionality"""    
+    """Translation to test matrix report functionality"""
     trans_data = []
 
     for i in range(MATRIX_SIZE):
@@ -39,7 +39,8 @@ def fixture_translation() -> pd.DataFrame:
 
 
 class TestMatrices:
-    """Test Matrices functionality."""    
+    """Test Matrices functionality."""
+
     def test_matrix_describe(self, matrix: pd.DataFrame):
         """Test that the matrix describe function produces the expected outputs."""
         test = pd_utils.matrix_describe(matrix)
@@ -85,7 +86,11 @@ class TestMatrices:
     ):
         """Test whether writing out the matrix report classes executes without erroring."""
         matrix_report = pd_utils.MatrixReport(
-            matrix, translation_vector, "to", "from", "factor"
+            matrix,
+            translation_factors=translation_vector,
+            translation_from_col="from",
+            translation_to_col="to",
+            translation_factors_col="factor",
         )
         with pd.ExcelWriter(tmp_path_factory.getbasetemp() / "test.xlsx", mode="w") as writer:
             matrix_report.write_to_excel(writer, "test", True)
