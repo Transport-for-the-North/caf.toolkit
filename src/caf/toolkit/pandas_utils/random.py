@@ -53,6 +53,12 @@ class ChoiceGenerator(DataGenerator):
     ):
         super().__init__(name, length)
         self.values = values
+
+        if all_values and (len(values) >= length):
+            raise ValueError(
+                "all_values has been set to True when the number of choices "
+                "is greater than length"
+            )
         self.all_values = all_values
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
@@ -70,7 +76,10 @@ class ChoiceGenerator(DataGenerator):
 
         """
         if self.all_values:
-            # this is to ensure all values are present
+            # check is made on init whether length < length(value) so we don't worry about this here
+            if self.length == len(self.values):
+                return pd.Series(list(self.values), name=self.name)
+
             generated_values = generator.choice(
                 list(self.values), self.length - len(self.values)
             )

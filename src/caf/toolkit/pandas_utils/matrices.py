@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 # Built-Ins
+import warnings
 from pathlib import Path
 from typing import Optional
-import warnings
 
 # Third Party
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import translation, cost_utils  # pylint: disable=redefined-outer-name
+from caf.toolkit import cost_utils, translation  # pylint: disable=redefined-outer-name
 
 
 class MatrixReport:
@@ -158,9 +158,9 @@ class MatrixReport:
 
     @property
     def describe(self) -> pd.DataFrame:
-        """High level statistics of the matrix 
-        
-        If translation vector provided the sectorised matrix statistics are also passed. 
+        """High level statistics of the matrix
+
+        If translation vector provided the sectorised matrix statistics are also passed.
         """
         return self.describe.copy()
 
