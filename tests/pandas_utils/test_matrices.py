@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 # Local Imports
-from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import cost_utils, pandas_utils as pd_utils
 from caf.toolkit import translation
 
 MATRIX_SIZE = 100
@@ -18,7 +18,24 @@ def fixture_matrix():
     gen = np.random.default_rng(10)
 
     for i in range(MATRIX_SIZE):
-        float_generator = pd_utils.build.FloatGenerator(i, MATRIX_SIZE, 1000)
+        float_generator = pd_utils.random.FloatGenerator(i, MATRIX_SIZE, 1000)
+        matrix_rows.append(float_generator.generate(gen))
+
+    matrix = pd.DataFrame(matrix_rows)
+    matrix.columns = matrix.index
+
+    return matrix
+
+
+@pytest.fixture(name="cost_matrix", scope="session")
+def fixture_cost_matrix():
+    """Matrix to test matrix report functionality."""
+    matrix_rows = []
+
+    gen = np.random.default_rng(30)
+
+    for i in range(MATRIX_SIZE):
+        float_generator = pd_utils.random.FloatGenerator(i, MATRIX_SIZE, 400)
         matrix_rows.append(float_generator.generate(gen))
 
     matrix = pd.DataFrame(matrix_rows)
@@ -82,10 +99,37 @@ class TestMatrices:
 
         pd.testing.assert_frame_equal(control_trip_ends, test_trip_ends)
 
+    def test_trip_length_distribution(
+        self,
+        matrix: pd.DataFrame,
+        translation_vector: pd.DataFrame,
+        cost_matrix: pd.DataFrame,
+    ):
+        """Test whether writing out the matrix report classes executes without erroring."""
+        matrix_report = pd_utils.MatrixReport(
+            matrix,
+            translation_factors=translation_vector,
+            translation_from_col="from",
+            translation_to_col="to",
+            translation_factors_col="factor",
+        )
+        matrix_report.trip_length_distribution(
+            cost_matrix, [0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
+        )
+
+        test_tld = matrix_report.distribution
+
+        control_tld = cost_utils.CostDistribution.from_data(
+            matrix.to_numpy(), cost_matrix, bin_edges=[0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
+        )
+
+        pd.testing.assert_frame_equal(test_tld.df, control_tld.df)
+
     def test_writing_matrix_report(
         self,
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
+        cost_matrix: pd.DataFrame,
         tmp_path_factory: pytest.TempPathFactory,
     ):
         """Test whether writing out the matrix report classes executes without erroring."""
@@ -95,6 +139,9 @@ class TestMatrices:
             translation_from_col="from",
             translation_to_col="to",
             translation_factors_col="factor",
+        )
+        matrix_report.trip_length_distribution(
+            cost_matrix, [0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
         )
         with pd.ExcelWriter(tmp_path_factory.getbasetemp() / "test.xlsx", mode="w") as writer:
             matrix_report.write_to_excel(writer, "test", True)

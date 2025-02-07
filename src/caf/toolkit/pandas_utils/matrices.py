@@ -5,12 +5,13 @@ from __future__ import annotations
 # Built-Ins
 from pathlib import Path
 from typing import Optional
+import warnings
 
 # Third Party
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import translation  # pylint: disable=redefined-outer-name
+from caf.toolkit import translation, cost_utils  # pylint: disable=redefined-outer-name
 
 
 class MatrixReport:
@@ -46,7 +47,9 @@ class MatrixReport:
         translation_factors_col: Optional[str] = None,
     ):
 
-        self.describe = pd.DataFrame()
+        self._describe = pd.DataFrame()
+
+        self.tld = None
 
         if translation_factors is not None:
             if (
@@ -60,11 +63,11 @@ class MatrixReport:
                     "must also be given"
                 )
 
-            self.describe["Original_Matrix"] = matrix_describe(matrix)
+            self._describe["Original_Matrix"] = matrix_describe(matrix)
 
             translated_describe_label = "Translated_Matrix"
 
-            matrix = translation.pandas_matrix_zone_translation(
+            translated_matrix = translation.pandas_matrix_zone_translation(
                 matrix,
                 translation_factors,
                 translation_from_col,
@@ -84,12 +87,31 @@ class MatrixReport:
             )
         else:
             translated_describe_label = "Matrix"
+        self._matrix = matrix
+        self._translated_matrix = translated_matrix
+        self._describe[translated_describe_label] = matrix_describe(matrix)
+        self._distribution: cost_utils.CostDistribution | None = None
 
-        self.matrix = matrix
-        self.describe[translated_describe_label] = matrix_describe(matrix)
+    def trip_length_distribution(
+        self,
+        cost_matrix: pd.DataFrame,
+        bins: list[int],
+    ) -> cost_utils.CostDistribution:
+        try:
+            cost_matrix.index = [int(ind) for ind in cost_matrix.index]
+            cost_matrix.columns = [int(col) for col in cost_matrix.columns]
+        except ValueError:
+            pass
+        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]
+        self._distribution = cost_utils.CostDistribution.from_data(
+            self._matrix.to_numpy(), cost_matrix, bin_edges=bins
+        )
 
     def write_to_excel(
-        self, writer: pd.ExcelWriter, label: Optional[str] = None, output_matrix: bool = False
+        self,
+        writer: pd.ExcelWriter,
+        label: Optional[str] = None,
+        output_sector_matrix: bool = False,
     ) -> None:
         """Writes the report to an Excel file
 
@@ -119,12 +141,38 @@ class MatrixReport:
                 " be truncated and will not be unique"
             )
 
-        self.describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
+        self._describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
 
         self.trip_ends.to_excel(writer, sheet_name=f"{sheet_prefix}Trip_Ends")
 
-        if output_matrix is True:
-            self.matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
+        if output_sector_matrix is True:
+            if self._translated_matrix is not None:
+                self._translated_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
+            else:
+                warnings.warn(
+                    "Cannot output sectorised matrix unless you pass the translation vector on init"
+                )
+
+        if self._distribution is not None:
+            self._distribution.df.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
+
+    @property
+    def describe(self) -> pd.DataFrame:
+        """High level statistics of the matrix 
+        
+        If translation vector provided the sectorised matrix statistics are also passed. 
+        """
+        return self.describe.copy()
+
+    @property
+    def sector_matrix(self) -> pd.DataFrame:
+        """Sector matrix if translation vector provided, otherwise none."""
+        return self._translated_matrix
+
+    @property
+    def distribution(self) -> cost_utils.CostDistribution | None:
+        """Distribution if `trip_length_distribution` has been called, otherwise none."""
+        return self._distribution
 
     @property
     def trip_ends(self) -> pd.DataFrame:
@@ -134,12 +182,12 @@ class MatrixReport:
     @property
     def row_sum(self) -> pd.Series:
         """The row sums of the matrix."""
-        return self.matrix.sum(axis=0)
+        return self._translated_matrix.sum(axis=0)
 
     @property
     def column_sum(self) -> pd.Series:
         """The column sums of the matrix."""
-        return self.matrix.sum(axis=1)
+        return self._translated_matrix.sum(axis=1)
 
     @classmethod
     def from_file(
@@ -207,7 +255,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
         almost_zero = 1 / matrix.size
 
     info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-    assert isinstance(info, pd.Series) # To stop MyPy whinging 
+    assert isinstance(info, pd.Series)  # To stop MyPy whinging
     info["columns"] = len(matrix.columns)
     info["rows"] = len(matrix.index)
     info["sum"] = matrix.sum().sum()
