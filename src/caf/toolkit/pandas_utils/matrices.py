@@ -111,12 +111,13 @@ class MatrixReport:
         bins : list[int]
             Bins to use for the distribution.
         """
+        # I have ignored Mypy complaining about index/column types as this works as intended
         try:
-            cost_matrix.index = [int(ind) for ind in cost_matrix.index]
-            cost_matrix.columns = [int(col) for col in cost_matrix.columns]
+            cost_matrix.index = [int(ind) for ind in cost_matrix.index] #type: ignore[assignment]
+            cost_matrix.columns = [int(col) for col in cost_matrix.columns] #type: ignore[assignment]
         except ValueError:
             pass
-        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]
+        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns] #type: ignore[index]
         self._distribution = cost_utils.CostDistribution.from_data(
             self._matrix.to_numpy(), cost_matrix, bin_edges=bins
         )
@@ -179,7 +180,7 @@ class MatrixReport:
         return self.describe.copy()
 
     @property
-    def sector_matrix(self) -> pd.DataFrame:
+    def sector_matrix(self) -> pd.DataFrame|None:
         """Sector matrix if translation vector provided, otherwise none."""
         return self._translated_matrix
 
@@ -196,12 +197,16 @@ class MatrixReport:
     @property
     def row_sum(self) -> pd.Series:
         """The row sums of the matrix."""
-        return self._translated_matrix.sum(axis=0)
+        if self._translated_matrix is not None:
+            return self._translated_matrix.sum(axis=0)
+        return self._matrix.sum(axis=0)
 
     @property
     def column_sum(self) -> pd.Series:
         """The column sums of the matrix."""
-        return self._translated_matrix.sum(axis=1)
+        if self._translated_matrix is not None:
+            return self._translated_matrix.sum(axis=1)
+        return self._matrix.sum(axis=1)
 
     @classmethod
     def from_file(
