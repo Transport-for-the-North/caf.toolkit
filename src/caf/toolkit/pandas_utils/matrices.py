@@ -47,9 +47,11 @@ class MatrixReport:
         translation_factors_col: Optional[str] = None,
     ):
 
-        self._describe = pd.DataFrame()
+        self._describe: pd.DataFrame = pd.DataFrame()
 
         self.tld = None
+
+        translated_matrix: pd.DataFrame | None = None
 
         if translation_factors is not None:
             if (
@@ -88,7 +90,7 @@ class MatrixReport:
         else:
             translated_describe_label = "Matrix"
         self._matrix = matrix
-        self._translated_matrix = translated_matrix
+        self._translated_matrix: pd.DataFrame | None = translated_matrix
         self._describe[translated_describe_label] = matrix_describe(matrix)
         self._distribution: cost_utils.CostDistribution | None = None
 
@@ -96,7 +98,19 @@ class MatrixReport:
         self,
         cost_matrix: pd.DataFrame,
         bins: list[int],
-    ) -> cost_utils.CostDistribution:
+    ) -> None:
+        """Calculates a distribution from the matrix passed on initilisation.
+
+        Distribution is stored within the object which can be accessed using
+        the `MatrixReport.distribution` property.
+
+        Parameters
+        ----------
+        cost_matrix : pd.DataFrame
+            Cost matrix corresponding with the inputted matrix.
+        bins : list[int]
+            Bins to use for the distribution.
+        """
         try:
             cost_matrix.index = [int(ind) for ind in cost_matrix.index]
             cost_matrix.columns = [int(col) for col in cost_matrix.columns]
