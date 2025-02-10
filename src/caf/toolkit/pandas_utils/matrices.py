@@ -99,7 +99,7 @@ class MatrixReport:
         cost_matrix: pd.DataFrame,
         bins: list[int],
     ) -> None:
-        """Calculates a distribution from the matrix passed on initilisation.
+        """Calculate a distribution from the matrix passed on initilisation.
 
         Distribution is stored within the object which can be accessed using
         the `MatrixReport.distribution` property.
@@ -113,11 +113,11 @@ class MatrixReport:
         """
         # I have ignored Mypy complaining about index/column types as this works as intended
         try:
-            cost_matrix.index = [int(ind) for ind in cost_matrix.index] #type: ignore[assignment]
-            cost_matrix.columns = [int(col) for col in cost_matrix.columns] #type: ignore[assignment]
+            cost_matrix.index = [int(ind) for ind in cost_matrix.index]  # type: ignore[assignment]
+            cost_matrix.columns = [int(col) for col in cost_matrix.columns]  # type: ignore[assignment]
         except ValueError:
             pass
-        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns] #type: ignore[index]
+        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
         self._distribution = cost_utils.CostDistribution.from_data(
             self._matrix.to_numpy(), cost_matrix, bin_edges=bins
         )
@@ -128,7 +128,7 @@ class MatrixReport:
         label: Optional[str] = None,
         output_sector_matrix: bool = False,
     ) -> None:
-        """Writes the report to an Excel file
+        """Write the report to an Excel file.
 
         Parameters
         ----------
@@ -173,14 +173,14 @@ class MatrixReport:
 
     @property
     def describe(self) -> pd.DataFrame:
-        """High level statistics of the matrix
+        """High level statistics of the matrix.
 
         If translation vector provided the sectorised matrix statistics are also passed.
         """
         return self.describe.copy()
 
     @property
-    def sector_matrix(self) -> pd.DataFrame|None:
+    def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
         return self._translated_matrix
 
@@ -255,7 +255,7 @@ class MatrixReport:
 
 
 def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
-    """Creates a high level summary of a matrix.
+    """Create a high level summary of a matrix.
 
     Parameters
     ----------
