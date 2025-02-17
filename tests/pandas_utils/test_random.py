@@ -211,28 +211,12 @@ def fixture_id_starting_val() -> DataGeneratorRun:
     return DataGeneratorRun(
         random.UniqueIdGenerator("Steves_least_favourite_numbers", 20, 4),
         pd.Series(
+            # fmt: off
             [
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
+                4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                15, 16, 17, 18, 19, 20, 21, 22, 23,
             ],
+            # fmt: on
             name="Steves_least_favourite_numbers",
         ),
         np.random.default_rng(10),
