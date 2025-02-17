@@ -160,6 +160,7 @@ class MatrixReport:
 
     @property
     def describe(self) -> pd.DataFrame:
+        """High level statistics on the original and, if provided, sectorised matrix."""
         if self._describe is None:
             data = {"Matrix": matrix_describe(self._matrix)}
             if self.sector_matrix is not None:
