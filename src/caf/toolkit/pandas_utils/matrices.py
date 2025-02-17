@@ -11,7 +11,7 @@ from typing import Optional
 import pandas as pd
 
 # Local Imports
-from caf.toolkit import cost_utils, translation  # pylint: disable=redefined-outer-name
+from caf.toolkit import cost_utils, translation
 
 
 class MatrixReport:
