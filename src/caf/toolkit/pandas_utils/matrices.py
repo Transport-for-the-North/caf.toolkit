@@ -99,10 +99,9 @@ class MatrixReport:
         bins : list[int]
             Bins to use for the distribution.
         """
-        # I have ignored Mypy complaining about index/column types as this works as intended
         try:
-            cost_matrix.index = [int(ind) for ind in cost_matrix.index]  # type: ignore[assignment]
-            cost_matrix.columns = [int(col) for col in cost_matrix.columns]  # type: ignore[assignment]
+            cost_matrix.index = pd.to_numeric(cost_matrix.index, downcast="integer")
+            cost_matrix.columns = pd.to_numeric(cost_matrix.columns, downcast="integer")
         except ValueError:
             pass
         cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
@@ -138,7 +137,7 @@ class MatrixReport:
         else:
             sheet_prefix = ""
 
-        if len(sheet_prefix) >= 31:
+        if len(sheet_prefix) >= 19:
             raise ValueError(
                 "label cannot be over 30 characters as the sheets names will"
                 " be truncated and will not be unique"
