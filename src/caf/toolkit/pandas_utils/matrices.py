@@ -100,8 +100,8 @@ class MatrixReport:
             Bins to use for the distribution.
         """
         try:
-            cost_matrix.index = pd.to_numeric(cost_matrix.index, downcast="integer")
-            cost_matrix.columns = pd.to_numeric(cost_matrix.columns, downcast="integer")
+            cost_matrix.index = pd.to_numeric(cost_matrix.index, downcast="integer")  # type: ignore[call-overload]
+            cost_matrix.columns = pd.to_numeric(cost_matrix.columns, downcast="integer")  # type: ignore[call-overload]
         except ValueError:
             pass
         cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
