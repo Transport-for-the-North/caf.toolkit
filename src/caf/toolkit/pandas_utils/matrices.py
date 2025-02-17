@@ -46,11 +46,10 @@ class MatrixReport:
         translation_factors_col: Optional[str] = None,
     ):
 
-        self._describe: pd.DataFrame = pd.DataFrame()
-
-        self.tld = None
-
-        translated_matrix: pd.DataFrame | None = None
+        self._matrix = matrix
+        self._translated_matrix: pd.DataFrame | None = None
+        self._describe: pd.DataFrame | None = None
+        self._distribution: cost_utils.CostDistribution | None = None
 
         if translation_factors is not None:
             if (
@@ -64,11 +63,7 @@ class MatrixReport:
                     "must also be given"
                 )
 
-            self._describe["Original_Matrix"] = matrix_describe(matrix)
-
-            translated_describe_label = "Translated_Matrix"
-
-            translated_matrix = translation.pandas_matrix_zone_translation(
+            self._translated_matrix = translation.pandas_matrix_zone_translation(
                 matrix,
                 translation_factors,
                 translation_from_col,
@@ -86,12 +81,6 @@ class MatrixReport:
                 " translation_to_col or translation_factors_col are provided,"
                 " translation must also be given"
             )
-        else:
-            translated_describe_label = "Matrix"
-        self._matrix = matrix
-        self._translated_matrix: pd.DataFrame | None = translated_matrix
-        self._describe[translated_describe_label] = matrix_describe(matrix)
-        self._distribution: cost_utils.CostDistribution | None = None
 
     def trip_length_distribution(
         self,
