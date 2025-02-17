@@ -31,10 +31,9 @@ class MatrixReport:
     translation_factors_col : Optional[str], optional
         The column in the translation matrix to use as factors, by default None.
 
-    Functions
-    ---------
-    `from_file` : Create a MatrixReport from a file.
-    `write_to_excel` : Write the report to an Excel file.
+    See Also
+    --------
+    from_file, write_to_excel
     """
 
     def __init__(
