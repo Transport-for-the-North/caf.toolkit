@@ -260,9 +260,9 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     ----------
     matrix : pd.DataFrame
         Matrix to be summarised.
-    almost_zero : Optional[float], optional
+    almost_zero : float, optional
         Below this value cells will be defined as almost zero.
-        If None almost zero will be calculated as = 1 / (# of cells in the matrix), by default None
+        If not given, will be calculated as = 1 / (# of cells in the matrix).
 
     Returns
     -------
