@@ -145,6 +145,8 @@ class UniqueIdGenerator(DataGenerator):
     def __init__(self, name: str, length: int, starting_val: int = 0):
         super().__init__(name, length)
         self.starting_val = starting_val
+        if length <= 0 or not isinstance(length, int):
+            raise ValueError("length must be positive, non zero, integer")
 
     def generate(self, generator) -> pd.Series:
         """Generate data using the generator provided and specifications define in the attributes.

@@ -143,28 +143,31 @@ class MatrixReport:
                 " be truncated and will not be unique"
             )
 
-        self._describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
+        self.describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
 
         self.trip_ends.to_excel(writer, sheet_name=f"{sheet_prefix}Trip_Ends")
 
         if output_sector_matrix is True:
-            if self._translated_matrix is not None:
-                self._translated_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
+            if self.sector_matrix is not None:
+                self.sector_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
             else:
                 warnings.warn(
                     "Cannot output sectorised matrix unless you pass the translation vector on init"
                 )
 
-        if self._distribution is not None:
-            self._distribution.df.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
+        if self.distribution is not None:
+            self.distribution.df.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
 
     @property
     def describe(self) -> pd.DataFrame:
-        """High level statistics of the matrix.
+        if self._describe is None:
+            data = {"Matrix": matrix_describe(self._matrix)}
+            if self.sector_matrix is not None:
+                data["Translated_Matrix"] = matrix_describe(self.sector_matrix)
 
-        If translation vector provided the sectorised matrix statistics are also passed.
-        """
-        return self.describe.copy()
+            self._describe = pd.DataFrame(data)
+
+        return self._describe.copy()
 
     @property
     def sector_matrix(self) -> pd.DataFrame | None:
@@ -244,6 +247,8 @@ class MatrixReport:
 def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
     """Create a high level summary of a matrix.
 
+    Stack Matrix before calling pandas describe with additional metrics added.
+
     Parameters
     ----------
     matrix : pd.DataFrame
@@ -255,7 +260,16 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     Returns
     -------
     pd.Series
-        Matrix summary statistics.
+        Matrix summary statistics, expands upon the standard pandas.Series.descibe.
+        Includes
+        5%, 25%, 50%, 75%, 95% Percentiles
+        Mean
+        Count (total, zeros and almost zeros)
+        Standard Deviation
+        Minimum and Maximum
+    See Also
+    --------
+    `pandas.Series.describe`
     """
     if almost_zero is None:
         almost_zero = 1 / matrix.size

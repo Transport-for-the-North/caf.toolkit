@@ -1,3 +1,6 @@
+# Built-Ins
+import pathlib
+
 # Third Party
 import numpy as np
 import pandas as pd
@@ -131,7 +134,7 @@ class TestMatrices:
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-        tmp_path_factory: pytest.TempPathFactory,
+        tmp_path: pathlib.Path,
     ):
         """Test whether writing out the matrix report classes executes without erroring."""
         matrix_report = pd_utils.MatrixReport(
@@ -144,7 +147,7 @@ class TestMatrices:
         matrix_report.trip_length_distribution(
             cost_matrix, [0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
         )
-        with pd.ExcelWriter(tmp_path_factory.getbasetemp() / "test.xlsx", mode="w") as writer:
+        with pd.ExcelWriter(tmp_path / "test.xlsx", mode="w") as writer:
             matrix_report.write_to_excel(writer, "test", True)
 
         assert True
