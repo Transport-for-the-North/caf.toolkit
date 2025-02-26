@@ -16,9 +16,9 @@ to create child classes of BaseConfig to load parameters.
 # Imports & Setup
 # ---------------
 #
-# Imports used within this example, the only third-party package,
-# `pydantic <https://docs.pydantic.dev/latest/>`_, is already a dependency
-# of caf.toolkit.
+# When using :class:`~caf.toolkit.BaseConfig`, the key package required, other than
+# caf.toolkit itself, is `pydantic <https://docs.pydantic.dev/latest/>`_ as this provides
+# additional validation functionality. Pydantic is already a dependency of caf.toolkit.
 
 # Built-Ins
 import pathlib
