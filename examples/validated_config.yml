@@ -7,7 +7,7 @@ simple_validated:
   # Max length 10 characters
   short_text: short text
   # Only allowing lowercase letters, without spaces or punctuation
-  regex_text: gappy text
+  regex_text: valid
 
   # List with 2 - 5 items
   short_list:
@@ -24,7 +24,7 @@ custom_validated:
   # List can be passed as CSV
   flexible_list: 1, 2, 3, 4
 
-model_validated:
+fully_validated:
   possible_values:
     - apple
     - pear

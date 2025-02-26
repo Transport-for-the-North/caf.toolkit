@@ -4,17 +4,23 @@ Using :class:`~caf.toolkit.BaseConfig`
 ======================================
 
 The :class:`~caf.toolkit.BaseConfig` class in caf.toolkit is designed to load
-and validate YAML configuration files. This example shows how
+and validate YAML [#yaml]_ configuration files. This example shows how
 to create child classes of BaseConfig to load parameters.
 
-See Also
---------
-You may also want to check out the :class:`~caf.toolkit.arguments.ModelArguments` class for producing command-line arguments from a BaseConfig class.
+.. seealso ::
+    You may also want to check out the :class:`~caf.toolkit.arguments.ModelArguments`
+    class for producing command-line arguments from a BaseConfig class.
 """
+
+# %%
+# Imports & Setup
+# ---------------
+#
+# Imports used within this example, the only third-party package (pydantic) is a dependency
+# of caf.toolkit.
 
 # Built-Ins
 import pathlib
-import re
 from typing import Any, Self
 
 # Third Party
@@ -24,6 +30,9 @@ from pydantic import dataclasses
 # Local Imports
 import caf.toolkit as ctk
 
+# %%
+# Path to the folder containing this example file.
+
 folder = pathlib.Path().parent
 
 # %%
@@ -32,13 +41,10 @@ folder = pathlib.Path().parent
 #
 # This example shows how to create a simple configuration file
 # with different types of parameters. The majority of Python built-in types can be used,
-# additionally dataclasses and many "simple"[#simple]_ custom types can be used.
+# additionally dataclasses and many "simple" [#simple]_ custom types can be used.
 #
 # .. seealso ::
 #       :ref:`Extra Validation` for information on more complex validation.
-#
-# The :class:`pydantic.DirectoryPath` and :class:`pydantic.FilePath` types both return
-# :class:`pathlib.Path` objects after validating that the directory, or file, exists.
 
 
 class Config(ctk.BaseConfig):
@@ -61,6 +67,15 @@ class Config(ctk.BaseConfig):
 
 parameters = Config.load_yaml(folder / "basic_config.yml")
 print(parameters)
+
+# %%
+# .. note::
+#   The names in the YAML need to be the same as the attributes in the Config class, but
+#   the order can be different.
+#
+#   The :class:`pydantic.DirectoryPath` and :class:`pydantic.FilePath` types both return
+#   :class:`pathlib.Path` objects after validating that the directory, or file, exists.
+
 
 # %%
 # Use :meth:`~caf.toolkit.BaseConfig.to_yaml()` method to convert the class back to YAML,
@@ -129,7 +144,7 @@ print(parameters)
 #
 # Pydantic provides some functionality for adding additional validation to
 # subclasses of :class:`pydantic.BaseModel` (or pydantic dataclasses),
-# which :class:`caf.toolkit.BaseConfig` is based on.
+# which :class:`~caf.toolkit.BaseConfig` is based on.
 #
 # The simplest approach to pydantic's validation is using :class:`pydantic.Field` to
 # add some additional validation.
@@ -147,7 +162,7 @@ class FieldValidated:
     # Text restrictions
     short_text: str = pydantic.Field(max_length=10)
     # Regular expression pattern only allowing lowercase letters
-    regex_text: str = pydantic.Field(pattern=r"[a-z]+")
+    regex_text: str = pydantic.Field(pattern=r"^[a-z]+$")
 
     # Iterable restrictions e.g. lists and tuples
     short_list: list[int] = pydantic.Field(min_length=2, max_length=5)
@@ -156,7 +171,7 @@ class FieldValidated:
 # %%
 # For more complex validation pydantic allow's custom methods to be defined
 # to validate individual fields (:func:`pydantic.field_validator`), or the
-# class as a whole (:func:`pydantic.model_validator`).[#valid]_
+# class as a whole (:func:`pydantic.model_validator`). [#valid]_
 #
 # :class:`CustomFieldValidated` gives an example of using the
 # :func:`pydantic.field_validator` decorator to validate the whole class.
@@ -226,7 +241,7 @@ class ExtraValidatedConfig(ctk.BaseConfig):
 
     simple_validated: FieldValidated
     custom_validated: CustomFieldValidated
-    model_validated: ModelValidated
+    fully_validated: ModelValidated
 
 
 # %%
@@ -245,8 +260,18 @@ print(parameters)
 # %%
 # .. rubric:: Footnotes
 #
+# .. [#yaml] YAML is a language designed for storing data in a way which is both human
+#       and computer friendly way. The language stores data based on key - value pairs
+#       separated by a colon (':'); it uses indents to nest more complex data and hyphens
+#       ('-') to denote lists of items. The `YAML spec <https://yaml.org/spec/1.2.2/>`_
+#       has more details on the language.
+#
+#       :class:`~caf.toolkit.BaseConfig` uses a slightly more restrictive version of YAML
+#       (`strictyaml <https://hitchdev.com/strictyaml/>`_), this avoids any issues with
+#       some of the more complex YAML behaviours which can be confusing in some situations,
+#       see the `strictyaml design justifications <https://hitchdev.com/strictyaml/why/>`_.
+#
 # .. [#simple] "simple" is referring to a type which is initialised with a single
 #       string parameter.
 #
-# .. [#valid] `Pydantic validator documentation
-#       <https://docs.pydantic.dev/latest/concepts/validators/>`_
+# .. [#valid] `Pydantic validator documentation <https://docs.pydantic.dev/latest/concepts/validators/>`_
