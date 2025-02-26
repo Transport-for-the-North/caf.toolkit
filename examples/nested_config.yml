@@ -1,11 +1,11 @@
-output_folder: ..\examples
+output_folder: ../examples
 model_run: test
 
 # Example of a list containing any number of InputFile objects
 inputs:
   # Individual parameters for the dataclass InputFile
   - name: first file
-    path: ..\examples\nested_config.yml
+    path: ../examples/nested_config.yml
     extent:
       min_x: 100
       min_y: 50
@@ -13,7 +13,7 @@ inputs:
       max_y: 150
 
   - name: second file
-    path: ..\examples\nested_config.yml
+    path: ../examples/nested_config.yml
     extent:
       min_x: 10
       min_y: 5
