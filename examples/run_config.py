@@ -4,13 +4,12 @@ Using :class:`~caf.toolkit.BaseConfig`
 ======================================
 
 The :class:`~caf.toolkit.BaseConfig` class in caf.toolkit is designed to load
-and validated YAML configuration files. This example shows how
+and validate YAML configuration files. This example shows how
 to create child classes of BaseConfig to load parameters.
 
 See Also
 --------
-:class:`~caf.toolkit.arguments.ModelArguments`
-    for producing command-line arguments from a BaseConfig class.
+You may also want to check out the :class:`~caf.toolkit.arguments.ModelArguments` class for producing command-line arguments from a BaseConfig class.
 """
 
 # Built-Ins
@@ -31,7 +30,7 @@ folder = pathlib.Path().parent
 # Basic
 # -----
 #
-# This example shows how to create a simple configuration file, without nesting, and
+# This example shows how to create a simple configuration file
 # with different types of parameters. The majority of Python built-in types can be used,
 # additionally dataclasses and many "simple"[#simple]_ custom types can be used.
 #
