@@ -16,7 +16,8 @@ to create child classes of BaseConfig to load parameters.
 # Imports & Setup
 # ---------------
 #
-# Imports used within this example, the only third-party package (pydantic) is a dependency
+# Imports used within this example, the only third-party package,
+# `pydantic <https://docs.pydantic.dev/latest/>`_, is already a dependency
 # of caf.toolkit.
 
 # Built-Ins
