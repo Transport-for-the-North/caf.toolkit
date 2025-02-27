@@ -1,0 +1,34 @@
+simple_validated:
+  # Numbers with restrictions
+  positive: 12
+  small_number: 0.5
+  even: 16
+
+  # Max length 10 characters
+  short_text: short text
+  # Only allowing lowercase letters, without spaces or punctuation
+  regex_text: valid
+
+  # List with 2 - 5 items
+  short_list:
+    - 1
+    - 2
+    - 3
+
+custom_validated:
+  # List provided in sorted order
+  sorted_list:
+    - 1
+    - 2
+    - 3
+  # List can be passed as CSV
+  flexible_list: 1, 2, 3, 4
+
+fully_validated:
+  possible_values:
+    - apple
+    - pear
+    - pineapple
+
+  # Value must be in list above
+  favourite_value: apple

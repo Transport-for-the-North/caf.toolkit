@@ -12,8 +12,14 @@ import importlib
 import inspect
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
+
+# -- Clean-up generated ------------------------------------------------------
+generated_folder = Path(__file__).parent / "_generated"
+if generated_folder.is_dir():
+    shutil.rmtree(generated_folder)
 
 # -- Path setup --------------------------------------------------------------
 dir_path = Path(__file__).parents[2]
@@ -82,7 +88,9 @@ modindex_common_prefix = ["caf.", "caf.toolkit."]
 # -- Options for Sphinx Examples gallery -------------------------------------
 sphinx_gallery_conf = {
     "examples_dirs": "../../examples",  # path to your example scripts
-    "gallery_dirs": "examples",  # path to where to save gallery generated output
+    "gallery_dirs": "_generated/examples",  # path to where to save gallery generated output
+    "backreferences_dir": "_generated/examples/backrefs",  # path to the backreferences files
+    "doc_module": ("caf.toolkit",),
     # Regex pattern of filenames to be ran so the output can be included
     "filename_pattern": rf"{re.escape(os.sep)}run_.*\.py",
 }

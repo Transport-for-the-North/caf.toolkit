@@ -10,7 +10,7 @@ updated on |today|.
    - For code examples see :ref:`code examples`
 
 .. autosummary::
-    :toctree: _autosummary/
+    :toctree: _generated/autosummary/
     :recursive:
 
     caf.toolkit
