@@ -189,15 +189,15 @@ class MatrixReport:
     def row_sum(self) -> pd.Series:
         """The row sums of the matrix."""
         if self._translated_matrix is not None:
-            return self._translated_matrix.sum(axis=0)
-        return self._matrix.sum(axis=0)
+            return self._translated_matrix.sum(axis=1)
+        return self._matrix.sum(axis=1)
 
     @property
     def column_sum(self) -> pd.Series:
         """The column sums of the matrix."""
         if self._translated_matrix is not None:
-            return self._translated_matrix.sum(axis=1)
-        return self._matrix.sum(axis=1)
+            return self._translated_matrix.sum(axis=0)
+        return self._matrix.sum(axis=0)
 
     @classmethod
     def from_file(

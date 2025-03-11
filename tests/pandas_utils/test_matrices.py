@@ -96,8 +96,8 @@ class TestMatrices:
 
         control_trip_ends = pd.DataFrame(
             {
-                "row_sums": translated_matrix.sum(axis=0),
-                "col_sums": translated_matrix.sum(axis=1),
+                "row_sums": translated_matrix.sum(axis=1),
+                "col_sums": translated_matrix.sum(axis=0),
             }
         )
 
