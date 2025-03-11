@@ -483,7 +483,9 @@ def long_product_infill(
     if len(data.index.names) == 1:
         full_ind = pd.Index(index_dict[data.index.name], name=data.index.name)
     else:
-        full_ind = pd.MultiIndex.from_product(index_dict.values(), names=index_dict.keys())
+        full_ind = pd.MultiIndex.from_product(
+            list(index_dict.values()), names=list(index_dict.keys())
+        )
     filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
     # check there's an overlap
@@ -728,8 +730,8 @@ def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
     """
     if len(dimension_cols) > 1:
         return pd.MultiIndex.from_product(
-            iterables=dimension_cols.values(),
-            names=dimension_cols.keys(),
+            iterables=list(dimension_cols.values()),
+            names=list(dimension_cols.keys()),
         )
 
     return pd.Index(
