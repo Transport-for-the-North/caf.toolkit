@@ -5,7 +5,6 @@ from __future__ import annotations
 # Built-Ins
 import pathlib
 import warnings
-
 from typing import Optional
 
 # Third Party
