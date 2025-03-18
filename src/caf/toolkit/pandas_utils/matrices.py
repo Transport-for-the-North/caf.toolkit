@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 # Built-Ins
+import pathlib
 import warnings
-from pathlib import Path
+
 from typing import Optional
 
 # Third Party
@@ -49,7 +50,7 @@ class MatrixReport:
         self._matrix = matrix
         self._translated_matrix: pd.DataFrame | None = None
         self._describe: pd.DataFrame | None = None
-        self._distribution: cost_utils.CostDistribution | None = None
+        self._distribution: pd.DataFrame | None = None
 
         if translation_factors is not None:
             if (
@@ -86,6 +87,10 @@ class MatrixReport:
         self,
         cost_matrix: pd.DataFrame,
         bins: list[int],
+        *,
+        sector_zone_lookup: pd.DataFrame | None,
+        zone_column: str = "zone_id",
+        sector_column: str = "sector_id",
     ) -> None:
         """Calculate a distribution from the matrix passed on initilisation.
 
@@ -104,10 +109,36 @@ class MatrixReport:
             cost_matrix.columns = pd.to_numeric(cost_matrix.columns, downcast="integer")  # type: ignore[call-overload]
         except ValueError:
             pass
-        cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
-        self._distribution = cost_utils.CostDistribution.from_data(
-            self._matrix.to_numpy(), cost_matrix, bin_edges=bins
-        )
+
+        if sector_zone_lookup is None:
+            cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
+            self._distribution = cost_utils.CostDistribution.from_data(
+                self._matrix.to_numpy(), cost_matrix.to_numpy(), bin_edges=bins
+            ).df
+        else:
+
+            for col in [zone_column, sector_column]:
+                if col not in sector_zone_lookup.columns:
+                    raise KeyError(f"{col} not in sector zone lookup columns")
+
+            if not (sector_zone_lookup[zone_column].equals(self._matrix.index)) or not (
+                sector_zone_lookup[zone_column].equals(self._matrix.columns)
+            ):
+                raise KeyError("Zones in sector_zone_lookup must contain all zones ")
+            stacked_distribution = []
+            for sector in sector_zone_lookup[sector_column].unique():
+                zones = sector_zone_lookup.loc[
+                    sector_zone_lookup[sector_column] == sector, zone_column
+                ]
+                cut_matrix = self._matrix.loc[zones, :]
+                cost_matrix = cost_matrix.loc[cut_matrix.index, cut_matrix.columns]  # type: ignore[index]
+                sector_distribution = cost_utils.CostDistribution.from_data(
+                    cut_matrix.to_numpy(), cost_matrix.to_numpy(), bin_edges=bins
+                ).df
+                sector_distribution[sector_column] = sector
+                sector_distribution.set_index(sector_column, append=True)
+                stacked_distribution.append(sector_distribution)
+            self._distribution = pd.concat(stacked_distribution)
 
     def write_to_excel(
         self,
@@ -176,7 +207,7 @@ class MatrixReport:
         return self._translated_matrix
 
     @property
-    def distribution(self) -> cost_utils.CostDistribution | None:
+    def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
         return self._distribution
 
@@ -202,9 +233,9 @@ class MatrixReport:
     @classmethod
     def from_file(
         cls,
-        path: Path,
+        path: pathlib.Path,
         *,
-        translation_path: Optional[Path] = None,
+        translation_path: Optional[pathlib.Path] = None,
         translation_from_col: Optional[str] = None,
         translation_to_col: Optional[str] = None,
         translation_factors_col: Optional[str] = None,
@@ -213,9 +244,9 @@ class MatrixReport:
 
         Parameters
         ----------
-        path : Path
+        path : pathlib.Path
             Path to the matrix csv.
-        translation_path : Optional[Path], optional
+        translation_path : Optional[pathlib.Path], optional
             Path to correspondence between matrix zoning and summary zoning, by default None
         translation_from_col : Optional[str], optional
             The column in the translation matrix with zoning to translate from, by default None.
@@ -284,3 +315,104 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     info["almost_zeros"] = (matrix < almost_zero).sum().sum()
     info["NaNs"] = matrix.isna().sum().sum()
     return info
+
+
+def compare(
+    matrix_report_a: MatrixReport,
+    matrix_report_b: MatrixReport,
+    name_a: str = "a",
+    name_b: str = "b",
+) -> dict[str, pd.DataFrame]:
+    """Compare two matrix reports.
+
+    Parameters
+    ----------
+    matrix_report_a : MatrixReport
+        Matrix for comparison,
+        this matrix will be the numerator in proportional comparisons.
+    matrix_report_b : MatrixReport
+        Other matrix for comparison,
+        this matrix will be the denominator in proportional comparisons.
+    name_a : str, optional
+        name to label matrix_report_a, by default "a"
+    name_b : str, optional
+        name to label matrix_report_b, by default "b"
+
+    Returns
+    -------
+    dict[str, pd.DataFrame]
+        Dictionary containing comparison statistics.
+
+    Raises
+    ------
+    ValueError
+        if either matrix report does not have a sector matrix.
+    """
+
+    comparisons = {}
+    if matrix_report_a.sector_matrix is None or matrix_report_b.sector_matrix is None:
+        raise ValueError(r"matrix reports must be sectorised to perform a comparison")
+
+    comparisons[f"{name_a} - {name_b} matrix"] = (
+        matrix_report_a.sector_matrix - matrix_report_b.sector_matrix
+    )
+    comparisons[f"{name_a} % {name_b} matrix"] = (
+        matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
+    )
+
+    comparisons[f"{name_a}_v_{name_b}_stats"] = pd.DataFrame(
+        {
+            name_a: matrix_report_a.describe["Translated Matrix"],
+            name_b: matrix_report_b.describe["Translated Matrix"],
+        }
+    )
+
+    comparisons[f"{name_a} v {name_b} Trip Ends"] = pd.DataFrame(
+        {
+            f"{name_a} - {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
+            - matrix_report_b.sector_matrix["row_sums"],
+            f"{name_a} / {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
+            / matrix_report_b.sector_matrix["row_sums"],
+            f"{name_a} - {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
+            - matrix_report_b.sector_matrix["col_sums"],
+            f"{name_a} / {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
+            / matrix_report_b.sector_matrix["col_sums"],
+        }
+    )
+
+    if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
+        comparisons[f"{name_a} v {name_b} TLD comparison"] = pd.concat(
+            [matrix_report_a.distribution, matrix_report_b.distribution], axis=1
+        )
+
+    return comparisons
+
+
+def compare_and_output(
+    excel_writer: pd.ExcelWriter,
+    matrix_report_a: MatrixReport,
+    matrix_report_b: MatrixReport,
+    name_a: str = "a",
+    name_b: str = "b",
+) -> None:
+    """Compare two matrix reports.
+
+    Parameters
+    ----------
+    excel_writer: pd.ExcelWriter
+        Excel writer to use to output the comparisons.
+    matrix_report_a : MatrixReport
+        Matrix for comparison,
+        this matrix will be the numerator in proportional comparisons.
+    matrix_report_b : MatrixReport
+        Other matrix for comparison,
+        this matrix will be the denominator in proportional comparisons.
+    name_a : str, optional
+        name to label matrix_report_a, by default "a"
+    name_b : str, optional
+        name to label matrix_report_b, by default "b"
+
+    """
+
+    for name, result in compare(matrix_report_a, matrix_report_b, name_a, name_b).items():
+        result.to_excel(excel_writer, name)
