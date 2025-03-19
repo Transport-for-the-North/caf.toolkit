@@ -3,6 +3,8 @@
 
 Most will be used elsewhere in the codebase too
 """
+from __future__ import annotations
+
 # Built-Ins
 import math
 import warnings
@@ -13,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
+    # Third Party
     import sparse
 
 # # # CONSTANTS # # #

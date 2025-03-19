@@ -58,6 +58,7 @@ disable = [
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",
+    "wrong-import-position", # Compatibility with isort
 ]
 
 [tool.isort]
