@@ -6,12 +6,15 @@ Most will be used elsewhere in the codebase too
 # Built-Ins
 import math
 import warnings
-from typing import Any, Collection, Union
+from typing import TYPE_CHECKING, Any, Collection, Union
 
 # Third Party
 import numpy as np
 import pandas as pd
-import sparse
+
+if TYPE_CHECKING:
+    # Third Party
+    import sparse
 
 # # # CONSTANTS # # #
 
@@ -160,12 +163,21 @@ def root_mean_squared_error(
         if isinstance(diffs, np.ndarray):
             squared_diffs += diffs.flatten().tolist()
 
-        elif isinstance(diffs, sparse.COO):
-            # TODO(BT): Not ideal making this dense, but not sure on a smarter
-            #  way to do this right now.
-            squared_diffs += diffs.todense().flatten().tolist()
         else:
-            raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
+
+            try:
+                # Third Party
+                import sparse # pylint: disable=import-outside-toplevel
+
+                if isinstance(diffs, sparse.COO):
+                    # TODO(BT): Not ideal making this dense, but not sure on a smarter
+                    #  way to do this right now.
+                    squared_diffs += diffs.todense().flatten().tolist()
+                else:
+                    raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
+
+            except ImportError as error:
+                raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.") from error
 
     return float(np.mean(squared_diffs) ** 0.5)
 
