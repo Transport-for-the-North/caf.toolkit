@@ -413,5 +413,9 @@ def compare_matrices_and_output(
 
     """
 
-    for name, result in compare(matrix_report_a, matrix_report_b, name_a, name_b).items():
+    for name, result in compare_matrices(matrix_report_a, matrix_report_b, name_a, name_b).items():
+        if len(name )> 31:
+            warnings.warn(
+                f"Sheet name {name} is over 31 characters and will be truncated"
+            )
         result.to_excel(excel_writer, name)
