@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    # Third Party
     import sparse
 
 # # # CONSTANTS # # #
@@ -167,7 +166,7 @@ def root_mean_squared_error(
 
             try:
                 # Third Party
-                import sparse # pylint: disable=import-outside-toplevel
+                import sparse  # pylint: disable=import-outside-toplevel
 
                 if isinstance(diffs, sparse.COO):
                     # TODO(BT): Not ideal making this dense, but not sure on a smarter
