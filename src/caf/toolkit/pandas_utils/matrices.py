@@ -364,8 +364,8 @@ def compare_matrices(
 
     comparisons["stats"] = pd.DataFrame(
         {
-            name_a: matrix_report_a.describe["Translated_Matrix"],
-            name_b: matrix_report_b.describe["Translated_Matrix"],
+            name_a: matrix_report_a.describe["Matrix"],
+            name_b: matrix_report_b.describe["Matrix"],
         }
     )
 
