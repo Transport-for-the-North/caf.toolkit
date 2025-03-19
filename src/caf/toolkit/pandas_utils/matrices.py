@@ -352,36 +352,51 @@ def compare_matrices(
     if matrix_report_a.sector_matrix is None or matrix_report_b.sector_matrix is None:
         raise ValueError(r"matrix reports must be sectorised to perform a comparison")
 
-    comparisons[f"{name_a} - {name_b} matrix"] = (
+    comparisons[f"{name_a} matrix"] = matrix_report_a.sector_matrix
+    comparisons[f"{name_b} matrix"] = matrix_report_b.sector_matrix
+
+    comparisons["matrix difference"] = (
         matrix_report_a.sector_matrix - matrix_report_b.sector_matrix
     )
-    comparisons[f"{name_a} % {name_b} matrix"] = (
+    comparisons["matrix percentage"] = (
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
-    )
+    ) * 100
 
-    comparisons[f"{name_a}_v_{name_b}_stats"] = pd.DataFrame(
+    comparisons["stats"] = pd.DataFrame(
         {
             name_a: matrix_report_a.describe["Translated_Matrix"],
             name_b: matrix_report_b.describe["Translated_Matrix"],
         }
     )
 
-    comparisons[f"{name_a} v {name_b} Trip Ends"] = pd.DataFrame(
-        {
-            f"{name_a} - {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
-            - matrix_report_b.trip_ends["row_sums"],
-            f"{name_a} / {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
-            / matrix_report_b.trip_ends["row_sums"],
-            f"{name_a} - {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
-            - matrix_report_b.trip_ends["col_sums"],
-            f"{name_a} / {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
-            / matrix_report_b.trip_ends["col_sums"],
-        }
+    trip_ends = matrix_report_a.trip_ends.merge(
+        matrix_report_b.trip_ends,
+        left_index=True,
+        right_index=True,
+        suffixes=(f"_{name_a}", f"_{name_b}"),
     )
 
+    trip_ends["row_sums_difference"] = (
+        trip_ends[f"row_sums_{name_a}"] - trip_ends[f"row_sums_{name_b}"]
+    )
+    trip_ends["row_sums_percentage"] = (
+        trip_ends[f"row_sums_{name_a}"] / trip_ends[f"row_sums_{name_b}"]
+    ) * 100
+    trip_ends["col_sums_difference"] = (
+        trip_ends[f"col_sums_{name_a}"] - trip_ends[f"col_sums_{name_b}"]
+    )
+    trip_ends["col_sums_percentage"] = (
+        trip_ends[f"col_sums_{name_a}"] / trip_ends[f"col_sums_{name_b}"]
+    ) * 100
+
+    comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
+
     if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
-        comparisons[f"{name_a} v {name_b} TLD comparison"] = pd.concat(
-            [matrix_report_a.distribution, matrix_report_b.distribution], axis=1
+        comparisons[f"TLD comparison"] = matrix_report_a.distribution.merge(
+            matrix_report_b.distribution,
+            left_index=True,
+            right_index=True,
+            suffixes=(f"_{name_a}", f"_{name_b}"),
         )
 
     return comparisons
@@ -391,8 +406,10 @@ def compare_matrices_and_output(
     excel_writer: pd.ExcelWriter,
     matrix_report_a: MatrixReport,
     matrix_report_b: MatrixReport,
+    *,
     name_a: str = "a",
     name_b: str = "b",
+    label: Optional[str] = None,
 ) -> None:
     """Compare two matrix reports.
 
@@ -416,6 +433,14 @@ def compare_matrices_and_output(
     for name, result in compare_matrices(
         matrix_report_a, matrix_report_b, name_a, name_b
     ).items():
-        if len(name) > 31:
-            warnings.warn(f"Sheet name {name} is over 31 characters and will be truncated")
-        result.to_excel(excel_writer, name)
+
+        if label is not None:
+            sheet_name = f"{label}_{name}"
+        else:
+            sheet_name = name
+
+        if len(sheet_name) > 31:
+            warnings.warn(
+                f"Sheet name {sheet_name} is over 31 characters and will be truncated"
+            )
+        result.to_excel(excel_writer, sheet_name=sheet_name)
