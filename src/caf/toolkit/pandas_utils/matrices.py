@@ -369,13 +369,13 @@ def compare_matrices(
     comparisons[f"{name_a} v {name_b} Trip Ends"] = pd.DataFrame(
         {
             f"{name_a} - {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
-            - matrix_report_b.sector_matrix["row_sums"],
+            - matrix_report_b.trip_ends["row_sums"],
             f"{name_a} / {name_b} Row Sum": matrix_report_a.trip_ends["row_sums"]
-            / matrix_report_b.sector_matrix["row_sums"],
+            / matrix_report_b.trip_ends["row_sums"],
             f"{name_a} - {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
-            - matrix_report_b.sector_matrix["col_sums"],
+            - matrix_report_b.trip_ends["col_sums"],
             f"{name_a} / {name_b} Col Sum": matrix_report_a.trip_ends["col_sums"]
-            / matrix_report_b.sector_matrix["col_sums"],
+            / matrix_report_b.trip_ends["col_sums"],
         }
     )
 
