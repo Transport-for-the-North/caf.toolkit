@@ -427,7 +427,8 @@ def compare_matrices_and_output(
         name to label matrix_report_a, by default "a"
     name_b : str, optional
         name to label matrix_report_b, by default "b"
-
+    label : Optional[str]
+        Label to add to the sheet names
     """
 
     for name, result in compare_matrices(
