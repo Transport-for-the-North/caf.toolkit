@@ -361,8 +361,8 @@ def compare_matrices(
 
     comparisons[f"{name_a}_v_{name_b}_stats"] = pd.DataFrame(
         {
-            name_a: matrix_report_a.describe["Translated Matrix"],
-            name_b: matrix_report_b.describe["Translated Matrix"],
+            name_a: matrix_report_a.describe["Translated_Matrix"],
+            name_b: matrix_report_b.describe["Translated_Matrix"],
         }
     )
 
@@ -413,9 +413,9 @@ def compare_matrices_and_output(
 
     """
 
-    for name, result in compare_matrices(matrix_report_a, matrix_report_b, name_a, name_b).items():
-        if len(name )> 31:
-            warnings.warn(
-                f"Sheet name {name} is over 31 characters and will be truncated"
-            )
+    for name, result in compare_matrices(
+        matrix_report_a, matrix_report_b, name_a, name_b
+    ).items():
+        if len(name) > 31:
+            warnings.warn(f"Sheet name {name} is over 31 characters and will be truncated")
         result.to_excel(excel_writer, name)
