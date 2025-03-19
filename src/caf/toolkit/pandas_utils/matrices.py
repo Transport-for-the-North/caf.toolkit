@@ -316,7 +316,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     return info
 
 
-def compare(
+def compare_matrices(
     matrix_report_a: MatrixReport,
     matrix_report_b: MatrixReport,
     name_a: str = "a",
@@ -387,7 +387,7 @@ def compare(
     return comparisons
 
 
-def compare_and_output(
+def compare_matrices_and_output(
     excel_writer: pd.ExcelWriter,
     matrix_report_a: MatrixReport,
     matrix_report_b: MatrixReport,

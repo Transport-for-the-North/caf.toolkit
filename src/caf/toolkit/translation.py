@@ -7,6 +7,7 @@ zoning systems.
 from __future__ import annotations
 
 # Built-Ins
+import dataclasses
 import logging
 import pathlib
 import warnings
@@ -1261,3 +1262,64 @@ def matrix_translation_from_file(
 
     translated.to_csv(output_path)
     LOG.info("Written translated matrix CSV to '%s'", output_path)
+
+
+@dataclasses.dataclass
+class ZoneCorrespondencePath:
+    """Defines the path and columns to use for a translation."""
+
+    path: pathlib.Path
+    """Path to the translation file."""
+    from_col_name: str
+    """Column name for the from zoning IDs."""
+    to_col_name: str
+    """Column name for the to zoning IDs."""
+    factors_col_name: str | None = None
+    """Column name for the translation factors."""
+
+    @property
+    def _generic_column_name_lookup(self) -> dict[str, str]:
+
+        lookup = {
+            self.from_col_name: "from",
+            self.to_col_name: "to",
+            self.factors_col_name: "factors",
+        }
+        if self.factors_col_name is not None:
+            lookup[self.factors_col_name] = "factors"
+        return lookup
+
+    @property
+    def _use_cols(self) -> list[str]:
+        cols = [self.from_col_name, self.to_col_name]
+        if self.factors_col_name is not None:
+            cols.append(self.factors_col_name)
+
+        return cols
+
+    def read(
+        self, *, factors_mandatory: bool = True, generic_column_names: bool = False
+    ) -> pd.DataFrame:
+        """Read the translation file.
+
+        Paramters
+        ---------
+        factors_mandatory
+            Whether the factors column is mandatory.
+            If True, an error will be raised if the factors column is not present.
+        generic_column_names
+            Whether to rename the columns to generic names.
+            If True, the columns will be renamed to "from", "to" and "factors".
+        """
+        if factors_mandatory and self.factors_col_name is None:
+            raise ValueError("Factors column name is mandatory.")
+
+        translation = pd.read_csv(
+            self.path,
+            usecols=self._use_cols,
+        )
+
+        if generic_column_names:
+            translation = translation.rename(columns=self._generic_column_name_lookup)
+
+        return translation
