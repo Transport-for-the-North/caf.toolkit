@@ -392,7 +392,7 @@ def compare_matrices(
     comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
 
     if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
-        comparisons[f"TLD comparison"] = matrix_report_a.distribution.merge(
+        comparisons["TLD comparison"] = matrix_report_a.distribution.merge(
             matrix_report_b.distribution,
             left_index=True,
             right_index=True,
