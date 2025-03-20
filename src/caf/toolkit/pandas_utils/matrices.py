@@ -87,7 +87,7 @@ class MatrixReport:
         cost_matrix: pd.DataFrame,
         bins: list[int],
         *,
-        sector_zone_lookup: pd.DataFrame | None,
+        sector_zone_lookup: pd.DataFrame | None = None,
         zone_column: str = "zone_id",
         sector_column: str = "sector_id",
     ) -> None:
@@ -102,6 +102,12 @@ class MatrixReport:
             Cost matrix corresponding with the inputted matrix.
         bins : list[int]
             Bins to use for the distribution.
+        sector_zone_lookup: pd.DataFrame | None = None,
+            lookup table to translate zones to sectors to create a sectorised distribution
+        zone_column: str = "zone_id",
+            column in sector_zone_lookup that contains the zone ids
+        sector_column: str = "sector_id",
+            column in sector_zone_lookup that contains the sector ids
         """
         try:
             cost_matrix.index = pd.to_numeric(cost_matrix.index, downcast="integer")  # type: ignore[call-overload]
