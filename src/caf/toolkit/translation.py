@@ -1286,6 +1286,7 @@ class ZoneCorrespondencePath:
             self.factors_col_name: "factors",
         }
         if self.factors_col_name is not None:
+            assert isinstance(self.factors_col_name, str)
             lookup[self.factors_col_name] = "factors"
         return lookup
 
