@@ -126,8 +126,10 @@ class MatrixReport:
                 if col not in sector_zone_lookup.columns:
                     raise KeyError(f"{col} not in sector zone lookup columns")
 
-            if not (sector_zone_lookup[zone_column].equals(self._matrix.index)) or not (
-                sector_zone_lookup[zone_column].equals(self._matrix.columns)
+            if not (
+                sector_zone_lookup[zone_column].equals(self._matrix.index.to_series())
+            ) or not (
+                sector_zone_lookup[zone_column].equals(self._matrix.columns.to_series())
             ):
                 raise KeyError("Zones in sector_zone_lookup must contain all zones ")
             stacked_distribution = []
