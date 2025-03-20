@@ -192,7 +192,7 @@ class MatrixReport:
                 )
 
         if self.distribution is not None:
-            self.distribution.df.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
+            self.distribution.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
 
     @property
     def describe(self) -> pd.DataFrame:
