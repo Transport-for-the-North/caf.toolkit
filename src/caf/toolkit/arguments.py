@@ -29,6 +29,7 @@ _ARG_TYPE_LOOKUP: dict[str, type] = {
     "str": str,
     "float": float,
     "int": int,
+    "bool": bool,
     "filepath": pathlib.Path,
     "directorypath": pathlib.Path,
     "path": pathlib.Path,
@@ -174,7 +175,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """
     annotation = _replace_union(annotation)
 
-    match = re.match(r"^(?:(\w+)?\[)?([\w \t,.|]+)\]?$", annotation.strip())
+    match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
             f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning
