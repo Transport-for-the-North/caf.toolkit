@@ -273,9 +273,19 @@ class ModelArguments:
             else:
                 description = field.description
 
-            parser.add_argument(
-                *name_or_flags, type=type_, help=description, default=default, nargs=nargs
-            )
+            if type_ is not bool:
+                parser.add_argument(
+                    *name_or_flags, type=type_, help=description, default=default, nargs=nargs
+                )
+                continue
+
+            # Use the store true / false action for boolean flags
+            # Use false as default if not given
+            if default is None or not default:
+                action = "store_true"
+            else:
+                action = "store_false"
+            parser.add_argument(*name_or_flags, action=action, help=description)
 
         parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
