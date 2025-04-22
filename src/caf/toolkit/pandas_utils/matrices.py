@@ -50,6 +50,7 @@ class MatrixReport:
         self._translated_matrix: pd.DataFrame | None = None
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
+        self._vkms: pd.Series | None = None
 
         if translation_factors is not None:
             if (
@@ -81,6 +82,48 @@ class MatrixReport:
                 " translation_to_col or translation_factors_col are provided,"
                 " translation must also be given"
             )
+
+    def calc_vehicle_kms(
+        self,
+        cost_matrix: pd.DataFrame,
+        *,
+        sector_zone_lookup: pd.DataFrame | None = None,
+        zone_column: str = "zone_id",
+        sector_column: str = "sector_id",
+    ) -> None:
+        """Calculate vehicle kms from the matrix passed on initilisation.
+
+        The result is stored within the object which can be accessed using the `MatrixReport.vkms` property.
+        VKMs are calculated as the sum of the product of the cost matrix and the matrix.
+        
+        Parameters
+        ----------
+        cost_matrix : pd.DataFrame
+            Cost matrix corresponding with the inputted matrix.
+        sector_zone_lookup: pd.DataFrame | None = None,
+            Lookup table to translate zones to sectors to create a sectorised distribution
+        zone_column: str
+            Column in sector_zone_lookup that contains the zone ids, deafaults to "zone_id"
+        sector_column: str = "sector_id",
+            Column in sector_zone_lookup that contains the sector ids, defaults to "sector_id"
+        """
+        if not (
+            cost_matrix.index.equals(self._matrix.index)
+            and cost_matrix.columns.equals(self._matrix.columns)
+        ):
+            raise ValueError("Cost matrix must have the same index and columns as the matrix")
+
+        zonal_kms = self._matrix.multiply(cost_matrix)
+
+        origin_kms = zonal_kms.sum(axis=1)
+
+        if sector_zone_lookup is None:
+            self.vkms = pd.Series({"vkms": origin_kms.sum()}, name="vkms")
+
+        sector_replace = sector_zone_lookup.set_index(zone_column)[sector_column].to_dict()
+        sector_kms = origin_kms.rename(columns=sector_replace).groupby().sum()
+        sector_kms.name = "vkms"
+        self.vkms = sector_kms
 
     def trip_length_distribution(
         self,
@@ -126,12 +169,12 @@ class MatrixReport:
                 if col not in sector_zone_lookup.columns:
                     raise KeyError(f"{col} not in sector zone lookup columns")
 
-            #TODO fix this check
-            #if not (
+            # TODO fix this check
+            # if not (
             #    sector_zone_lookup[zone_column].reset_index().equals(self._matrix.index.to_series().reset_index())
-            #) or not (
+            # ) or not (
             #    sector_zone_lookup[zone_column].equals(self._matrix.columns.to_series())
-            #):
+            # ):
             #    raise KeyError("Zones in sector_zone_lookup must contain all zones ")
             stacked_distribution = []
             for sector in sector_zone_lookup[sector_column].unique():
@@ -144,9 +187,11 @@ class MatrixReport:
                     cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
                 ).df
                 sector_distribution[sector_column] = sector
-                #sector_distribution.set_index([sector_column, "min", "max"], append=True)
+                # sector_distribution.set_index([sector_column, "min", "max"], append=True)
                 stacked_distribution.append(sector_distribution)
-            self._distribution = pd.concat(stacked_distribution).set_index([sector_column, "min", "max"])
+            self._distribution = pd.concat(stacked_distribution).set_index(
+                [sector_column, "min", "max"]
+            )
 
     def write_to_excel(
         self,
@@ -218,6 +263,11 @@ class MatrixReport:
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
         return self._distribution
+
+    @property
+    def vkms(self) -> pd.Series | None:
+        """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
+        return self._vkms
 
     @property
     def trip_ends(self) -> pd.DataFrame:
@@ -399,6 +449,8 @@ def compare_matrices(
     ) * 100
 
     comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
+
+    comparisons["Vkms"] = pd.DataFrame({name_a: matrix_report_a.vkms, name_b: matrix_report_b.vkms})
 
     if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
         comparisons["TLD comparison"] = matrix_report_a.distribution.merge(
