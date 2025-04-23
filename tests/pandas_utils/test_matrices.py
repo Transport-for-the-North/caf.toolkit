@@ -127,7 +127,7 @@ class TestMatrices:
             matrix.to_numpy(), cost_matrix, bin_edges=[0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
         )
 
-        pd.testing.assert_frame_equal(test_tld.df, control_tld.df)
+        pd.testing.assert_frame_equal(test_tld, control_tld.df)
 
     def test_writing_matrix_report(
         self,
