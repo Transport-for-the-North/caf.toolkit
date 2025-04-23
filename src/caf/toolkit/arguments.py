@@ -152,13 +152,14 @@ def _replace_union(annotation: str) -> str:
 def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """Attempt to get argument type from annotation text.
 
-    This only works with basic Python types (int, str, float and Path)
-    for any other types (str, False) will be returned.
+    This only works with basic Python types (int, str, float, bool and Path)
+    for any other types str will be returned.
 
     Parameters
     ----------
     annotation : str
-        Type annotation to be parsed e.g. 'list[int | str]'.
+        Type annotation to be parsed e.g. 'list[int | str]'. This can also
+        handle the repr of a type e.g. "<class 'bool'>".
 
     Returns
     -------

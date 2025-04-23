@@ -33,6 +33,10 @@ CORRECT_ANNOTATIONS = [
     ("tuple[int | str, int | str]", (str, False, 2)),
     ("list[int]", (int, False, "*")),
     ("Union[str, int]", (str, False, None)),
+    ("<class 'bool'>", (bool, False, None)),
+    ("<class 'int'>", (int, False, None)),
+    ("<class 'str'>", (str, False, None)),
+    ("<class 'float'>", (float, False, None)),
 ]
 
 
