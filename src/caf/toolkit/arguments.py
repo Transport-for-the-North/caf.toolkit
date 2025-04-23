@@ -29,6 +29,7 @@ _ARG_TYPE_LOOKUP: dict[str, type] = {
     "str": str,
     "float": float,
     "int": int,
+    "bool": bool,
     "filepath": pathlib.Path,
     "directorypath": pathlib.Path,
     "path": pathlib.Path,
@@ -151,13 +152,14 @@ def _replace_union(annotation: str) -> str:
 def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """Attempt to get argument type from annotation text.
 
-    This only works with basic Python types (int, str, float and Path)
-    for any other types (str, False) will be returned.
+    This only works with basic Python types (int, str, float, bool and Path)
+    for any other types str will be returned.
 
     Parameters
     ----------
     annotation : str
-        Type annotation to be parsed e.g. 'list[int | str]'.
+        Type annotation to be parsed e.g. 'list[int | str]'. This can also
+        handle the repr of a type e.g. "<class 'bool'>".
 
     Returns
     -------
@@ -174,7 +176,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """
     annotation = _replace_union(annotation)
 
-    match = re.match(r"^(?:(\w+)?\[)?([\w \t,.|]+)\]?$", annotation.strip())
+    match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
             f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning
@@ -273,9 +275,19 @@ class ModelArguments:
             else:
                 description = field.description
 
-            parser.add_argument(
-                *name_or_flags, type=type_, help=description, default=default, nargs=nargs
-            )
+            if type_ is not bool:
+                parser.add_argument(
+                    *name_or_flags, type=type_, help=description, default=default, nargs=nargs
+                )
+                continue
+
+            # Use the store true / false action for boolean flags
+            # Use false as default if not given
+            if default is None or not default:
+                action = "store_true"
+            else:
+                action = "store_false"
+            parser.add_argument(*name_or_flags, action=action, help=description)
 
         parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
