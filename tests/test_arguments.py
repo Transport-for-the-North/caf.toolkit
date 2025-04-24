@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import sys
 
 # Third Party
 import pytest
@@ -138,13 +139,28 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-class _ArgumentsConfigTest(config_base.BaseConfig):
-    """Class for testing `ModelArguments`."""
+if sys.version_info.minor <= 9:
+    # Using typing instead of | for Python <=3.9
+    # Built-Ins
+    from typing import List, Union
 
-    text: str
-    number: float | int
-    path: pathlib.Path
-    general_list: list[str | int]
+    class _ArgumentsConfigTest(config_base.BaseConfig):
+        """Class for testing `ModelArguments`."""
+
+        text: str
+        number: Union[float, int]
+        path: pathlib.Path
+        general_list: List[Union[str, int]]
+
+else:
+    # Ignore already defined
+    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
+        """Class for testing `ModelArguments`."""
+
+        text: str
+        number: float | int
+        path: pathlib.Path
+        general_list: list[str | int]
 
 
 class TestModelArguments:
