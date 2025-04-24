@@ -139,13 +139,19 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-class _ArgumentsConfigTest(config_base.BaseConfig):
-    """Class for testing `ModelArguments`."""
+if sys.version_info.minor <= 9:
+    # Creating dummy class because the test is skipped
+    class _ArgumentsConfigTest: ...  # pylint: disable=too-few-public-methods
 
-    text: str
-    number: float | int
-    path: pathlib.Path
-    general_list: list[str | int]
+else:
+    # Ignore already defined
+    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
+        """Class for testing `ModelArguments`."""
+
+        text: str
+        number: float | int
+        path: pathlib.Path
+        general_list: list[str | int]
 
 
 class TestModelArguments:
