@@ -139,33 +139,19 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-if sys.version_info.minor <= 9:
-    # Using typing instead of | for Python <=3.9
-    # Built-Ins
-    from typing import List, Union
+class _ArgumentsConfigTest(config_base.BaseConfig):
+    """Class for testing `ModelArguments`."""
 
-    class _ArgumentsConfigTest(config_base.BaseConfig):
-        """Class for testing `ModelArguments`."""
-
-        text: str
-        number: Union[float, int]
-        path: pathlib.Path
-        general_list: List[Union[str, int]]
-
-else:
-    # Ignore already defined
-    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
-        """Class for testing `ModelArguments`."""
-
-        text: str
-        number: float | int
-        path: pathlib.Path
-        general_list: list[str | int]
+    text: str
+    number: float | int
+    path: pathlib.Path
+    general_list: list[str | int]
 
 
 class TestModelArguments:
     """Tests for the `ModelArguments` class."""
 
+    @pytest.mark.skipif(sys.version_info.minor <= 9)
     @pytest.mark.filterwarnings("error")
     def test_add_subcommands(self, parser: argparse.ArgumentParser):
         """Test the `add_subcommands` method works without errors / warnings.
