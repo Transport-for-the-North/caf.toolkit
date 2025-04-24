@@ -151,7 +151,10 @@ class _ArgumentsConfigTest(config_base.BaseConfig):
 class TestModelArguments:
     """Tests for the `ModelArguments` class."""
 
-    @pytest.mark.skipif(sys.version_info.minor <= 9)
+    @pytest.mark.skipif(
+        sys.version_info.minor <= 9,
+        reason="uses | in type annotations which was added in 3.10",
+    )
     @pytest.mark.filterwarnings("error")
     def test_add_subcommands(self, parser: argparse.ArgumentParser):
         """Test the `add_subcommands` method works without errors / warnings.
