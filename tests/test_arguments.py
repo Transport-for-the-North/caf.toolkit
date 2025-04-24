@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 # Built-Ins
+import argparse
 import os
 import pathlib
 
@@ -13,7 +14,7 @@ import pathlib
 import pytest
 
 # Local Imports
-from caf.toolkit import arguments
+from caf.toolkit import arguments, config_base
 
 ##### CONSTANTS #####
 
@@ -37,7 +38,15 @@ CORRECT_ANNOTATIONS = [
     ("<class 'int'>", (int, False, None)),
     ("<class 'str'>", (str, False, None)),
     ("<class 'float'>", (float, False, None)),
+    ("<class 'pathlib.Path'>", (pathlib.Path, False, None)),
+    ("<class 'pathlib._local.Path'>", (pathlib.Path, False, None)),
 ]
+
+
+@pytest.fixture(name="parser")
+def fix_parser() -> argparse.ArgumentParser:
+    """Empty ArgumentParser."""
+    return argparse.ArgumentParser()
 
 
 class TestParseArgDetails:
@@ -127,3 +136,27 @@ class TestGetenvBool:
 
         with pytest.raises(ValueError, match=pattern):
             arguments.getenv_bool(self._variable_name, False)
+
+
+class _ArgumentsConfigTest(config_base.BaseConfig):
+    """Class for testing `ModelArguments`."""
+
+    text: str
+    number: float | int
+    path: pathlib.Path
+    general_list: list[str | int]
+
+
+class TestModelArguments:
+    """Tests for the `ModelArguments` class."""
+
+    @pytest.mark.filterwarnings("error")
+    def test_add_subcommands(self, parser: argparse.ArgumentParser):
+        """Test the `add_subcommands` method works without errors / warnings.
+
+        **Doesn't check the correct sub-commands have been added.**
+        """
+        subparsers = parser.add_subparsers()
+
+        arg_class = arguments.ModelArguments(_ArgumentsConfigTest)
+        arg_class.add_subcommands(subparsers, "test")
