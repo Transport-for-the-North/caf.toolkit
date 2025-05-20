@@ -6,14 +6,16 @@
 from __future__ import annotations
 
 # Built-Ins
+import argparse
 import os
 import pathlib
+import sys
 
 # Third Party
 import pytest
 
 # Local Imports
-from caf.toolkit import arguments
+from caf.toolkit import arguments, config_base
 
 ##### CONSTANTS #####
 
@@ -37,7 +39,15 @@ CORRECT_ANNOTATIONS = [
     ("<class 'int'>", (int, False, None)),
     ("<class 'str'>", (str, False, None)),
     ("<class 'float'>", (float, False, None)),
+    ("<class 'pathlib.Path'>", (pathlib.Path, False, None)),
+    ("<class 'pathlib._local.Path'>", (pathlib.Path, False, None)),
 ]
+
+
+@pytest.fixture(name="parser")
+def fix_parser() -> argparse.ArgumentParser:
+    """Empty ArgumentParser."""
+    return argparse.ArgumentParser()
 
 
 class TestParseArgDetails:
@@ -127,3 +137,37 @@ class TestGetenvBool:
 
         with pytest.raises(ValueError, match=pattern):
             arguments.getenv_bool(self._variable_name, False)
+
+
+if sys.version_info.minor <= 9:
+    # Creating dummy class because the test is skipped
+    class _ArgumentsConfigTest: ...  # pylint: disable=too-few-public-methods
+
+else:
+    # Ignore already defined
+    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
+        """Class for testing `ModelArguments`."""
+
+        text: str
+        number: float | int
+        path: pathlib.Path
+        general_list: list[str | int]
+
+
+class TestModelArguments:
+    """Tests for the `ModelArguments` class."""
+
+    @pytest.mark.skipif(
+        sys.version_info.minor <= 9,
+        reason="uses | in type annotations which was added in 3.10",
+    )
+    @pytest.mark.filterwarnings("error")
+    def test_add_subcommands(self, parser: argparse.ArgumentParser):
+        """Test the `add_subcommands` method works without errors / warnings.
+
+        **Doesn't check the correct sub-commands have been added.**
+        """
+        subparsers = parser.add_subparsers()
+
+        arg_class = arguments.ModelArguments(_ArgumentsConfigTest)
+        arg_class.add_subcommands(subparsers, "test")
