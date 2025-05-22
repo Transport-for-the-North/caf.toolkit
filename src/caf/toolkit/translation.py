@@ -974,7 +974,7 @@ def _multi_vector_trans_index(
                 translation_from
             )
             if len(missing_rows) > 0:
-                _vector_missing_warning(vector, list(missing_rows))
+                _vector_missing_warning(vector.groupby(translation_from_col).sum(), list(missing_rows))
 
         else:
             raise ValueError(
