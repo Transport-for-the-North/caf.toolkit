@@ -91,11 +91,11 @@ class MatrixReport:
         zone_column: str = "zone_id",
         sector_column: str = "sector_id",
     ) -> None:
-        """Calculate vehicle kms from the matrix passed on initilisation.
+        """Calculate vehicle kms from the matrix passed on initialisation.
 
         The result is stored within the object which can be accessed using the `MatrixReport.vkms` property.
         VKMs are calculated as the sum of the product of the cost matrix and the matrix.
-        
+
         Parameters
         ----------
         cost_matrix : pd.DataFrame
@@ -103,7 +103,7 @@ class MatrixReport:
         sector_zone_lookup: pd.DataFrame | None = None,
             Lookup table to translate zones to sectors to create a sectorised distribution
         zone_column: str
-            Column in sector_zone_lookup that contains the zone ids, deafaults to "zone_id"
+            Column in sector_zone_lookup that contains the zone ids, defaults to "zone_id"
         sector_column: str = "sector_id",
             Column in sector_zone_lookup that contains the sector ids, defaults to "sector_id"
         """
@@ -118,12 +118,13 @@ class MatrixReport:
         origin_kms = zonal_kms.sum(axis=1)
 
         if sector_zone_lookup is None:
-            self.vkms = pd.Series({"vkms": origin_kms.sum()}, name="vkms")
+            self._vkms = pd.Series({"vkms": origin_kms.sum()}, name="vkms")
 
-        sector_replace = sector_zone_lookup.set_index(zone_column)[sector_column].to_dict()
-        sector_kms = origin_kms.rename(columns=sector_replace).groupby().sum()
-        sector_kms.name = "vkms"
-        self.vkms = sector_kms
+        else:
+            sector_replace = sector_zone_lookup.set_index(zone_column)[sector_column].to_dict()
+            sector_kms = origin_kms.rename(sector_replace).groupby(level=0).sum()
+            sector_kms.name = "vkms"
+            self._vkms = sector_kms
 
     def trip_length_distribution(
         self,
@@ -134,7 +135,7 @@ class MatrixReport:
         zone_column: str = "zone_id",
         sector_column: str = "sector_id",
     ) -> None:
-        """Calculate a distribution from the matrix passed on initilisation.
+        """Calculate a distribution from the matrix passed on initialisation.
 
         Distribution is stored within the object which can be accessed using
         the `MatrixReport.distribution` property.
@@ -162,20 +163,22 @@ class MatrixReport:
             cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
             self._distribution = cost_utils.CostDistribution.from_data(
                 self._matrix.to_numpy(), cost_matrix.to_numpy(), bin_edges=bins
-            ).df
+            ).df.set_index(["min", "max"])
+
         else:
 
             for col in [zone_column, sector_column]:
                 if col not in sector_zone_lookup.columns:
                     raise KeyError(f"{col} not in sector zone lookup columns")
 
-            # TODO fix this check
-            # if not (
-            #    sector_zone_lookup[zone_column].reset_index().equals(self._matrix.index.to_series().reset_index())
-            # ) or not (
-            #    sector_zone_lookup[zone_column].equals(self._matrix.columns.to_series())
-            # ):
-            #    raise KeyError("Zones in sector_zone_lookup must contain all zones ")
+            if not (
+                sector_zone_lookup[zone_column].sort_values().tolist()
+                == self._matrix.sort_index().index.tolist()
+            ) or not (
+                sector_zone_lookup[zone_column].sort_values().tolist()
+                == self._matrix.columns.sort_values().tolist()
+            ):
+                raise KeyError("Zones in sector_zone_lookup must contain all zones ")
             stacked_distribution = []
             for sector in sector_zone_lookup[sector_column].unique():
                 zones = sector_zone_lookup.loc[
@@ -350,7 +353,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     Returns
     -------
     pd.Series
-        Matrix summary statistics, expands upon the standard pandas.Series.descibe.
+        Matrix summary statistics, expands upon the standard pandas.Series.describe.
         Includes
         5%, 25%, 50%, 75%, 95% Percentiles
         Mean
@@ -449,8 +452,10 @@ def compare_matrices(
     ) * 100
 
     comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
-
-    comparisons["Vkms"] = pd.DataFrame({name_a: matrix_report_a.vkms, name_b: matrix_report_b.vkms})
+    if matrix_report_a.vkms is not None and matrix_report_b.vkms is not None:
+        comparisons["Vkms"] = pd.DataFrame(
+            {name_a: matrix_report_a.vkms, name_b: matrix_report_b.vkms}
+        )
 
     if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
         comparisons["TLD comparison"] = matrix_report_a.distribution.merge(

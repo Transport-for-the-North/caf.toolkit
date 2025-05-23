@@ -1280,14 +1280,14 @@ class ZoneCorrespondencePath:
     @property
     def _generic_column_name_lookup(self) -> dict[str, str]:
 
-        lookup = {
+        lookup: dict[str, str] = {
             self.from_col_name: "from",
             self.to_col_name: "to",
-            self.factors_col_name: "factors",
         }
+
         if self.factors_col_name is not None:
-            assert isinstance(self.factors_col_name, str)
             lookup[self.factors_col_name] = "factors"
+
         return lookup
 
     @property

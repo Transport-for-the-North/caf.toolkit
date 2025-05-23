@@ -857,6 +857,57 @@ def fixture_pd_long_matrix_dtype(
     return PandasLongMatrixResults(wide_results=pd_matrix_dtype)
 
 
+@pytest.fixture(name="translation_path", scope="class")
+def fixture_translation_path(
+    simple_pd_int_translation: PandasTranslation, tmp_path_factory
+) -> translation.ZoneCorrespondencePath:
+    """
+    Temporary path for I/O.
+
+    Parameters
+    ----------
+    tmp_path_factory
+
+    Returns
+    -------
+    Path: file path used for all saving and loading of files within the tests
+    """
+    path = tmp_path_factory.mktemp("main") / "translation.csv"
+    simple_pd_int_translation.df.to_csv(path)
+
+    return translation.ZoneCorrespondencePath(
+        path,
+        simple_pd_int_translation.translation_from_col,
+        simple_pd_int_translation.translation_to_col,
+        simple_pd_int_translation.translation_factors_col,
+    )
+
+
+@pytest.fixture(name="translation_path_no_factors", scope="class")
+def fixture_translation_path_no_factors(
+    simple_pd_int_translation: PandasTranslation, tmp_path_factory
+) -> translation.ZoneCorrespondencePath:
+    """
+    Temporary path for I/O.
+
+    Parameters
+    ----------
+    tmp_path_factory
+
+    Returns
+    -------
+    Path: file path used for all saving and loading of files within the tests
+    """
+    path = tmp_path_factory.mktemp("main") / "translation.csv"
+    simple_pd_int_translation.df.to_csv(path)
+
+    return translation.ZoneCorrespondencePath(
+        path,
+        simple_pd_int_translation.translation_from_col,
+        simple_pd_int_translation.translation_to_col,
+    )
+
+
 # # # TESTS # # #
 @pytest.mark.usefixtures(
     "np_vector_aggregation",
@@ -1629,3 +1680,120 @@ class TestMatrixTranslationFromFile:
             check_column_type=False,
             check_index_type=False,
         )
+
+
+class TestZoneCorrespondencePath:
+    """Tests for the `zone_correspondence_path` function."""
+
+    def test_zone_correspondence_path(
+        self,
+        translation_path: translation.ZoneCorrespondencePath,
+        simple_pd_int_translation: PandasTranslation,
+    ) -> None:
+        """Test zone correspondence path read with factors mandatory
+        and generic column names."""
+        read_translation = translation_path.read(
+            factors_mandatory=True, generic_column_names=True
+        )
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            simple_pd_int_translation.df.rename(
+                columns={
+                    simple_pd_int_translation.translation_from_col: "from",
+                    simple_pd_int_translation.translation_to_col: "to",
+                    simple_pd_int_translation.translation_factors_col: "factors",
+                }
+            ),
+            check_dtype=False,
+        )
+
+    def test_zone_correspondence_path_factors_not_read(
+        self,
+        translation_path: translation.ZoneCorrespondencePath,
+        simple_pd_int_translation: PandasTranslation,
+    ) -> None:
+        """Test zone correspondence path reading with factors
+        not mandatory but given and generic column names."""
+        read_translation = translation_path.read(
+            factors_mandatory=False, generic_column_names=True
+        )
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            simple_pd_int_translation.df.rename(
+                columns={
+                    simple_pd_int_translation.translation_from_col: "from",
+                    simple_pd_int_translation.translation_to_col: "to",
+                    simple_pd_int_translation.translation_factors_col: "factors",
+                }
+            ),
+            check_dtype=False,
+        )
+
+    def test_zone_correspondence_path_not_generic(
+        self,
+        translation_path: translation.ZoneCorrespondencePath,
+        simple_pd_int_translation: PandasTranslation,
+    ) -> None:
+        """Test zone correspondence path reading with factors mandatory and original column names."""
+        read_translation = translation_path.read(
+            factors_mandatory=True, generic_column_names=False
+        )
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            simple_pd_int_translation.df,
+            check_dtype=False,
+        )
+
+    def test_zone_correspondence_path_no_factors(
+        self,
+        translation_path_no_factors: translation.ZoneCorrespondencePath,
+        simple_pd_int_translation: PandasTranslation,
+    ) -> None:
+        """Test zone correspondence path reading with not provided factors and generic column names."""
+        read_translation = translation_path_no_factors.read(
+            factors_mandatory=False, generic_column_names=True
+        )
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            simple_pd_int_translation.df.rename(
+                columns={
+                    simple_pd_int_translation.translation_from_col: "from",
+                    simple_pd_int_translation.translation_to_col: "to",
+                }
+            )[["from", "to"]],
+            check_dtype=False,
+        )
+
+    def test_zone_correspondence_path_no_factors_not_generic(
+        self,
+        translation_path_no_factors: translation.ZoneCorrespondencePath,
+        simple_pd_int_translation: PandasTranslation,
+    ) -> None:
+        """Test zone correspondence path reading with not provided factors and original column names."""
+        read_translation = translation_path_no_factors.read(
+            factors_mandatory=False, generic_column_names=False
+        )
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            simple_pd_int_translation.df[
+                [
+                    simple_pd_int_translation.translation_from_col,
+                    simple_pd_int_translation.translation_to_col,
+                ]
+            ],
+            check_dtype=False,
+        )
+
+    def test_zone_correspondence_path_no_factors_error(
+        self,
+        translation_path_no_factors: translation.ZoneCorrespondencePath,
+    ) -> None:
+        """Test zone correspondence path read raises ValueError when factors are mandatory and not provided."""
+        with pytest.raises(ValueError) as excinfo:
+            translation_path_no_factors.read(factors_mandatory=True, generic_column_names=True)
+        assert str(excinfo.value) == "Factors column name is mandatory."
