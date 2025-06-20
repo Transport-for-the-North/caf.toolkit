@@ -1685,107 +1685,73 @@ class TestMatrixTranslationFromFile:
 class TestZoneCorrespondencePath:
     """Tests for the `zone_correspondence_path` function."""
 
+    @pytest.mark.parametrize("factors_mandatory", [True, False])
+    @pytest.mark.parametrize("generic_columns", [True, False])
     def test_zone_correspondence_path(
         self,
         translation_path: translation.ZoneCorrespondencePath,
         simple_pd_int_translation: PandasTranslation,
+        factors_mandatory: bool,
+        generic_columns: bool,
     ) -> None:
-        """Test zone correspondence path read with factors mandatory
-        and generic column names."""
+        """Test zone correspondence path read.
+
+        Test with / without mandatory factors and generic column names.
+        """
         read_translation = translation_path.read(
-            factors_mandatory=True, generic_column_names=True
+            factors_mandatory=factors_mandatory, generic_column_names=generic_columns
         )
 
-        pd.testing.assert_frame_equal(
-            read_translation,
-            simple_pd_int_translation.df.rename(
+        if generic_columns:
+            expected = simple_pd_int_translation.df.rename(
                 columns={
                     simple_pd_int_translation.translation_from_col: "from",
                     simple_pd_int_translation.translation_to_col: "to",
                     simple_pd_int_translation.translation_factors_col: "factors",
                 }
-            ),
-            check_dtype=False,
-        )
-
-    def test_zone_correspondence_path_factors_not_read(
-        self,
-        translation_path: translation.ZoneCorrespondencePath,
-        simple_pd_int_translation: PandasTranslation,
-    ) -> None:
-        """Test zone correspondence path reading with factors
-        not mandatory but given and generic column names."""
-        read_translation = translation_path.read(
-            factors_mandatory=False, generic_column_names=True
-        )
+            )
+        else:
+            expected = simple_pd_int_translation.df
 
         pd.testing.assert_frame_equal(
             read_translation,
-            simple_pd_int_translation.df.rename(
-                columns={
-                    simple_pd_int_translation.translation_from_col: "from",
-                    simple_pd_int_translation.translation_to_col: "to",
-                    simple_pd_int_translation.translation_factors_col: "factors",
-                }
-            ),
+            expected,
             check_dtype=False,
         )
 
-    def test_zone_correspondence_path_not_generic(
-        self,
-        translation_path: translation.ZoneCorrespondencePath,
-        simple_pd_int_translation: PandasTranslation,
-    ) -> None:
-        """Test zone correspondence path reading with factors mandatory and original column names."""
-        read_translation = translation_path.read(
-            factors_mandatory=True, generic_column_names=False
-        )
-
-        pd.testing.assert_frame_equal(
-            read_translation,
-            simple_pd_int_translation.df,
-            check_dtype=False,
-        )
-
+    @pytest.mark.parametrize("generic_columns", [True, False])
     def test_zone_correspondence_path_no_factors(
         self,
         translation_path_no_factors: translation.ZoneCorrespondencePath,
         simple_pd_int_translation: PandasTranslation,
+        generic_columns: bool,
     ) -> None:
-        """Test zone correspondence path reading with not provided factors and generic column names."""
+        """Test zone correspondence path reading with not provided factors.
+
+        Tests with generic and original column names.
+        """
         read_translation = translation_path_no_factors.read(
-            factors_mandatory=False, generic_column_names=True
+            factors_mandatory=False, generic_column_names=generic_columns
         )
 
-        pd.testing.assert_frame_equal(
-            read_translation,
-            simple_pd_int_translation.df.rename(
+        if generic_columns:
+            expected = simple_pd_int_translation.df.rename(
                 columns={
                     simple_pd_int_translation.translation_from_col: "from",
                     simple_pd_int_translation.translation_to_col: "to",
                 }
-            )[["from", "to"]],
-            check_dtype=False,
-        )
-
-    def test_zone_correspondence_path_no_factors_not_generic(
-        self,
-        translation_path_no_factors: translation.ZoneCorrespondencePath,
-        simple_pd_int_translation: PandasTranslation,
-    ) -> None:
-        """Test zone correspondence path reading with not provided factors and original column names."""
-        read_translation = translation_path_no_factors.read(
-            factors_mandatory=False, generic_column_names=False
-        )
-
-        pd.testing.assert_frame_equal(
-            read_translation,
-            simple_pd_int_translation.df[
+            )[["from", "to"]]
+        else:
+            expected = simple_pd_int_translation.df[
                 [
                     simple_pd_int_translation.translation_from_col,
                     simple_pd_int_translation.translation_to_col,
                 ]
-            ],
+            ]
+
+        pd.testing.assert_frame_equal(
+            read_translation,
+            expected,
             check_dtype=False,
         )
 
@@ -1794,6 +1760,6 @@ class TestZoneCorrespondencePath:
         translation_path_no_factors: translation.ZoneCorrespondencePath,
     ) -> None:
         """Test zone correspondence path read raises ValueError when factors are mandatory and not provided."""
-        with pytest.raises(ValueError) as excinfo:
+        msg = "Factors column name is mandatory."
+        with pytest.raises(ValueError, match=msg):
             translation_path_no_factors.read(factors_mandatory=True, generic_column_names=True)
-        assert str(excinfo.value) == "Factors column name is mandatory."

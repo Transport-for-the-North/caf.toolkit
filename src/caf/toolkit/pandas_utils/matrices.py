@@ -412,7 +412,7 @@ def compare_matrices(
 
     comparisons = {}
     if matrix_report_a.sector_matrix is None or matrix_report_b.sector_matrix is None:
-        raise ValueError(r"matrix reports must be sectorised to perform a comparison")
+        raise ValueError("matrix reports must be sectorised to perform a comparison")
 
     comparisons[f"{name_a} matrix"] = matrix_report_a.sector_matrix
     comparisons[f"{name_b} matrix"] = matrix_report_b.sector_matrix
@@ -438,18 +438,13 @@ def compare_matrices(
         suffixes=(f"_{name_a}", f"_{name_b}"),
     )
 
-    trip_ends["row_sums_difference"] = (
-        trip_ends[f"row_sums_{name_a}"] - trip_ends[f"row_sums_{name_b}"]
-    )
-    trip_ends["row_sums_percentage"] = (
-        trip_ends[f"row_sums_{name_a}"] / trip_ends[f"row_sums_{name_b}"]
-    ) * 100
-    trip_ends["col_sums_difference"] = (
-        trip_ends[f"col_sums_{name_a}"] - trip_ends[f"col_sums_{name_b}"]
-    )
-    trip_ends["col_sums_percentage"] = (
-        trip_ends[f"col_sums_{name_a}"] / trip_ends[f"col_sums_{name_b}"]
-    ) * 100
+    for i in ("row", "col")
+        trip_ends[f"{i}_sums_difference"] = (
+            trip_ends[f"{i}_sums_{name_a}"] - trip_ends[f"{i}_sums_{name_b}"]
+        )
+        trip_ends[f"{i}_sums_percentage"] = (
+            trip_ends[f"{i}_sums_{name_a}"] / trip_ends[f"{i}_sums_{name_b}"]
+        ) * 100
 
     comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
     if matrix_report_a.vkms is not None and matrix_report_b.vkms is not None:
@@ -496,11 +491,8 @@ def compare_matrices_and_output(
     label : Optional[str]
         Label to add to the sheet names
     """
-
-    for name, result in compare_matrices(
-        matrix_report_a, matrix_report_b, name_a, name_b
-    ).items():
-
+    comparisons = compare_matrices(matrix_report_a, matrix_report_b, name_a, name_b)
+    for name, result in comparisons.items():
         if label is not None:
             sheet_name = f"{label}_{name}"
         else:

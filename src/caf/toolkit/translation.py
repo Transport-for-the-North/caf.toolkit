@@ -1268,7 +1268,7 @@ def matrix_translation_from_file(
 class ZoneCorrespondencePath:
     """Defines the path and columns to use for a translation."""
 
-    path: pathlib.Path
+    path: pydantic.FilePath
     """Path to the translation file."""
     from_col_name: str
     """Column name for the from zoning IDs."""
@@ -1306,11 +1306,11 @@ class ZoneCorrespondencePath:
         Paramters
         ---------
         factors_mandatory
-            Whether the factors column is mandatory.
-            If True, an error will be raised if the factors column is not present.
+            If True (default), an error will be raised if the factors
+            column is not present.
         generic_column_names
-            Whether to rename the columns to generic names.
-            If True, the columns will be renamed to "from", "to" and "factors".
+            If True (default), the columns will be renamed
+            to "from", "to" and "factors".
         """
         if factors_mandatory and self.factors_col_name is None:
             raise ValueError("Factors column name is mandatory.")
