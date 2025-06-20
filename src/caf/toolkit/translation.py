@@ -7,7 +7,7 @@ zoning systems.
 from __future__ import annotations
 
 # Built-Ins
-import dataclasses
+from pydantic import dataclasses
 import logging
 import pathlib
 import warnings
