@@ -261,7 +261,53 @@ class TestMatrices:
         assert True
 
 
+class TestCompareMatricesAndOutPut:
+    def test_write_comparison_multi_tlds(
+        self,
+        tmp_path,
+        matrix: pd.DataFrame,
+        cost_matrix: pd.DataFrame,
+        translation_vector: pd.DataFrame,
+    ):
+        matrix_report = pd_utils.MatrixReport(
+            matrix,
+            translation_factors=translation_vector,
+            translation_from_col="from",
+            translation_to_col="to",
+            translation_factors_col="factor",
+        )
+
+        matrix_report.trip_length_distribution(
+            cost_matrix,
+            [0, 1, 2, 5, 10, 20, 50, 100, 200, 400],
+            sector_zone_lookup=translation_vector,
+            zone_column="from",
+            sector_column="to",
+        )
+
+        expected_sheets = [
+            "a matrix",
+            "b matrix",
+            "matrix difference",
+            "matrix percentage",
+            "stats",
+            "Trip Ends",
+            "TLD comparison",
+        ]
+
+        path = tmp_path / "multi_tld_output.xlsx"
+
+        with pd.ExcelWriter(path):
+            pd_utils.compare_matrices_and_output(path, matrix_report, matrix_report)
+
+        output = pd.read_excel(path, sheet_name=None)
+
+        for sheet in expected_sheets:
+            assert sheet in output.keys(), f"{sheet} not in output"
+
+
 class TestMatrixComparison:
+
     def test_comparison_sector_matrix(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
@@ -291,7 +337,7 @@ class TestMatrixComparison:
         pd.testing.assert_frame_equal(
             comparison["matrix percentage"],
             pd.DataFrame(
-                100,
+                0,
                 index=matrix_report.sector_matrix.index,
                 columns=matrix_report.sector_matrix.columns,
                 dtype=np.float64,
@@ -367,7 +413,7 @@ class TestMatrixComparison:
         pd.testing.assert_frame_equal(
             comparison["matrix percentage"],
             pd.DataFrame(
-                100,
+                0,
                 index=matrix_report.sector_matrix.index,
                 columns=matrix_report.sector_matrix.columns,
                 dtype=np.float64,

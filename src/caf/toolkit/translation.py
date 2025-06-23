@@ -7,7 +7,6 @@ zoning systems.
 from __future__ import annotations
 
 # Built-Ins
-from pydantic import dataclasses
 import logging
 import pathlib
 import warnings
@@ -16,6 +15,7 @@ from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 # Third Party
 import numpy as np
 import pandas as pd
+from pydantic import dataclasses
 
 # Local Imports
 from caf.toolkit import io, math_utils
@@ -1319,6 +1319,20 @@ class ZoneCorrespondencePath:
             self.path,
             usecols=self._use_cols,
         )
+
+        if factors_mandatory:
+            if not pd.api.types.is_numeric_dtype(translation[self.factors_col_name]):
+                raise ValueError(f"{self.factors_col_name} must contain numeric values only.")
+            if (translation[self.factors_col_name] > 1).any():
+                warnings.warn(
+                    "%s contains values greater than one,"
+                    " this does not make sense for a zone translation factor"
+                )
+            if (translation[self.factors_col_name] < 0).any():
+                warnings.warn(
+                    "%s contains values greater than one,"
+                    " this does not make sense for a zone translation factor"
+                )
 
         if generic_column_names:
             translation = translation.rename(columns=self._generic_column_name_lookup)

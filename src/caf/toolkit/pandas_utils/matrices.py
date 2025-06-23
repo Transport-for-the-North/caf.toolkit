@@ -93,7 +93,8 @@ class MatrixReport:
     ) -> None:
         """Calculate vehicle kms from the matrix passed on initialisation.
 
-        The result is stored within the object which can be accessed using the `MatrixReport.vkms` property.
+        The result is stored within the object which can be accessed
+        using the `MatrixReport.vkms` property.
         VKMs are calculated as the sum of the product of the cost matrix and the matrix.
 
         Parameters
@@ -101,11 +102,14 @@ class MatrixReport:
         cost_matrix : pd.DataFrame
             Cost matrix corresponding with the inputted matrix.
         sector_zone_lookup: pd.DataFrame | None = None,
-            Lookup table to translate zones to sectors to create a sectorised distribution
+            Lookup table to translate zones to sectors to create a
+            sectorised distribution
         zone_column: str
-            Column in sector_zone_lookup that contains the zone ids, defaults to "zone_id"
+            Column in sector_zone_lookup that contains the zone ids,
+            defaults to "zone_id"
         sector_column: str = "sector_id",
-            Column in sector_zone_lookup that contains the sector ids, defaults to "sector_id"
+            Column in sector_zone_lookup that contains the sector ids,
+            defaults to "sector_id"
         """
         if not (
             cost_matrix.index.equals(self._matrix.index)
@@ -159,42 +163,52 @@ class MatrixReport:
         except ValueError:
             pass
 
+        if not (
+            cost_matrix.index.equals(self._matrix.index)
+            and cost_matrix.columns.equals(self._matrix.columns)
+        ):
+            raise ValueError("Cost matrix must have the same index and columns as the matrix")
+
         if sector_zone_lookup is None:
             cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
             self._distribution = cost_utils.CostDistribution.from_data(
                 self._matrix.to_numpy(), cost_matrix.to_numpy(), bin_edges=bins
             ).df.set_index(["min", "max"])
 
-        else:
+            return
 
-            for col in [zone_column, sector_column]:
-                if col not in sector_zone_lookup.columns:
-                    raise KeyError(f"{col} not in sector zone lookup columns")
+        for col in [zone_column, sector_column]:
+            if col not in sector_zone_lookup.columns:
+                raise KeyError(f"{col} not in sector zone lookup columns")
 
-            if not (
-                sector_zone_lookup[zone_column].sort_values().tolist()
-                == self._matrix.sort_index().index.tolist()
-            ) or not (
-                sector_zone_lookup[zone_column].sort_values().tolist()
-                == self._matrix.columns.sort_values().tolist()
-            ):
-                raise KeyError("Zones in sector_zone_lookup must contain all zones ")
-            stacked_distribution = []
-            for sector in sector_zone_lookup[sector_column].unique():
-                zones = sector_zone_lookup.loc[
-                    sector_zone_lookup[sector_column] == sector, zone_column
-                ]
-                cut_matrix = self._matrix.loc[zones, :]
-                cut_cost_matrix = cost_matrix.loc[cut_matrix.index, cut_matrix.columns]  # type: ignore[index]
-                sector_distribution = cost_utils.CostDistribution.from_data(
-                    cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
-                ).df
-                sector_distribution[sector_column] = sector
-                # sector_distribution.set_index([sector_column, "min", "max"], append=True)
-                stacked_distribution.append(sector_distribution)
-            self._distribution = pd.concat(stacked_distribution).set_index(
-                [sector_column, "min", "max"]
-            )
+        index_check: bool = (
+            sector_zone_lookup[zone_column].sort_values().tolist()
+            == self._matrix.sort_index().index.tolist()
+        )
+        col_check: bool = (
+            sector_zone_lookup[zone_column].sort_values().tolist()
+            == self._matrix.columns.sort_values().tolist()
+        )
+
+        if not (index_check and col_check):
+            raise KeyError("Zones in sector_zone_lookup must contain all zones ")
+
+        stacked_distribution = []
+        for sector in sector_zone_lookup[sector_column].unique():
+            zones = sector_zone_lookup.loc[
+                sector_zone_lookup[sector_column] == sector, zone_column
+            ]
+            cut_matrix = self._matrix.loc[zones, :]
+            cut_cost_matrix = cost_matrix.loc[cut_matrix.index, cut_matrix.columns]  # type: ignore[index]
+            sector_distribution = cost_utils.CostDistribution.from_data(
+                cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
+            ).df
+            sector_distribution[sector_column] = sector
+            # sector_distribution.set_index([sector_column, "min", "max"], append=True)
+            stacked_distribution.append(sector_distribution)
+        self._distribution = pd.concat(stacked_distribution).set_index(
+            [sector_column, "min", "max"]
+        )
 
     def write_to_excel(
         self,
@@ -260,11 +274,14 @@ class MatrixReport:
     @property
     def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
+
         return self._translated_matrix
 
     @property
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
+        if self._translated_matrix is None:
+            warnings.warn("Translated matrix has not been set")
         return self._distribution
 
     @property
@@ -422,7 +439,7 @@ def compare_matrices(
     )
     comparisons["matrix percentage"] = (
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
-    ) * 100
+    ) - 1
 
     comparisons["stats"] = pd.DataFrame(
         {
@@ -438,13 +455,13 @@ def compare_matrices(
         suffixes=(f"_{name_a}", f"_{name_b}"),
     )
 
-    for i in ("row", "col")
+    for i in ("row", "col"):
         trip_ends[f"{i}_sums_difference"] = (
             trip_ends[f"{i}_sums_{name_a}"] - trip_ends[f"{i}_sums_{name_b}"]
         )
         trip_ends[f"{i}_sums_percentage"] = (
             trip_ends[f"{i}_sums_{name_a}"] / trip_ends[f"{i}_sums_{name_b}"]
-        ) * 100
+        ) - 1
 
     comparisons["Trip Ends"] = pd.DataFrame(trip_ends)
     if matrix_report_a.vkms is not None and matrix_report_b.vkms is not None:

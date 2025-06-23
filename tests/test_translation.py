@@ -1759,7 +1759,9 @@ class TestZoneCorrespondencePath:
         self,
         translation_path_no_factors: translation.ZoneCorrespondencePath,
     ) -> None:
-        """Test zone correspondence path read raises ValueError when factors are mandatory and not provided."""
+        """Test zone correspondence path read raises ValueError when
+        factors are mandatory and not provided.
+        """
         msg = "Factors column name is mandatory."
         with pytest.raises(ValueError, match=msg):
             translation_path_no_factors.read(factors_mandatory=True, generic_column_names=True)
