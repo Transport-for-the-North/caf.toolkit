@@ -261,14 +261,22 @@ class TestMatrices:
         assert True
 
 
-class TestCompareMatricesAndOutPut:
-    def test_write_comparison_multi_tlds(
+class TestCompareMatricesAndOutput:
+    """Check compare_matrices_and_output functions as expected."""
+
+    def test_write_comparison(
         self,
         tmp_path,
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
     ):
+        """Check that compare_matrices_and_output writes the expected
+        sheets.
+
+        Content of the sheets has not been tested as this should be covered
+        by TestMatrixComparison.
+        """
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -285,6 +293,13 @@ class TestCompareMatricesAndOutPut:
             sector_column="to",
         )
 
+        matrix_report.calc_vehicle_kms(
+            matrix,
+            sector_zone_lookup=translation_vector,
+            zone_column="from",
+            sector_column="to",
+        )
+
         expected_sheets = [
             "a matrix",
             "b matrix",
@@ -293,12 +308,13 @@ class TestCompareMatricesAndOutPut:
             "stats",
             "Trip Ends",
             "TLD comparison",
+            "Vkms",
         ]
 
         path = tmp_path / "multi_tld_output.xlsx"
 
-        with pd.ExcelWriter(path):
-            pd_utils.compare_matrices_and_output(path, matrix_report, matrix_report)
+        with pd.ExcelWriter(path) as writer:
+            pd_utils.compare_matrices_and_output(writer, matrix_report, matrix_report)
 
         output = pd.read_excel(path, sheet_name=None)
 
@@ -307,10 +323,12 @@ class TestCompareMatricesAndOutPut:
 
 
 class TestMatrixComparison:
+    """Test the compare_matrices function"""
 
     def test_comparison_sector_matrix(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
+        """Test sector matrix comparison produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -347,6 +365,7 @@ class TestMatrixComparison:
     def test_comparison_trip_ends(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
+        """Test Trip End Comparison produces expected results"""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -383,10 +402,11 @@ class TestMatrixComparison:
 
         assert (trip_ends["row_sums_difference"] == 0).all()
         assert (trip_ends["col_sums_difference"] == 0).all()
-        assert (trip_ends["col_sums_percentage"] == 100).all()
-        assert (trip_ends["row_sums_percentage"] == 100).all()
+        assert (trip_ends["col_sums_percentage"] == 0).all()
+        assert (trip_ends["row_sums_percentage"] == 0).all()
 
     def test_comparison_stats(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
+        """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -443,8 +463,8 @@ class TestMatrixComparison:
 
         assert (trip_ends["row_sums_difference"] == 0).all()
         assert (trip_ends["col_sums_difference"] == 0).all()
-        assert (trip_ends["col_sums_percentage"] == 100).all()
-        assert (trip_ends["row_sums_percentage"] == 100).all()
+        assert (trip_ends["col_sums_percentage"] == 0).all()
+        assert (trip_ends["row_sums_percentage"] == 0).all()
 
         pd.testing.assert_series_equal(
             matrix_report.describe["Matrix"], comparison["stats"]["a"], check_names=False
@@ -454,6 +474,7 @@ class TestMatrixComparison:
         )
 
     def test_comparison_vkms(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
+        """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -481,6 +502,7 @@ class TestMatrixComparison:
     def test_comparison_multi_vkms(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
+        """Checks Multi-Area Vkms comparisons functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -508,6 +530,7 @@ class TestMatrixComparison:
     def test_comparison_multi_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
+        """Check Multi-Area TLDs functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -542,6 +565,7 @@ class TestMatrixComparison:
     def test_comparison_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
+        """Check TLD comparison functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,

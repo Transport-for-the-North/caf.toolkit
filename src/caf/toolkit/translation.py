@@ -15,7 +15,7 @@ from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 # Third Party
 import numpy as np
 import pandas as pd
-from pydantic import dataclasses
+from pydantic import FilePath, dataclasses
 
 # Local Imports
 from caf.toolkit import io, math_utils
@@ -1268,7 +1268,7 @@ def matrix_translation_from_file(
 class ZoneCorrespondencePath:
     """Defines the path and columns to use for a translation."""
 
-    path: pydantic.FilePath
+    path: FilePath
     """Path to the translation file."""
     from_col_name: str
     """Column name for the from zoning IDs."""
