@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
+from typing import Any, Hashable, Literal, Optional, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -950,7 +950,7 @@ def _multi_vector_trans_index(
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_from: np.ndarray,
-) -> tuple[list[str], pd.DataFrame | pd.Series, pd.DataFrame]:
+) -> tuple[list[Hashable], pd.DataFrame | pd.Series, pd.DataFrame]:
     """Create correct index for `pandas_multi_vector_zone_translation`."""
     if isinstance(vector.index, pd.MultiIndex):
         ind_names = list(vector.index.names)
