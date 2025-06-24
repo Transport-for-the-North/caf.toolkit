@@ -411,14 +411,14 @@ def long_product_infill(
     data: pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] | None = None,
+    index_dict: dict[Hashable, list] | None = None,
 ) -> pd.DataFrame: ...
 @overload
 def long_product_infill(
     data: pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] | None = None,
+    index_dict: dict[Hashable, list] | None = None,
 ) -> pd.Series: ...
 
 
