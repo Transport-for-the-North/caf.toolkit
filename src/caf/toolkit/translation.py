@@ -10,7 +10,8 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
-from typing import Any, Hashable, Literal, Optional, TypedDict, TypeVar, overload
+from collections.abc import Hashable
+from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
