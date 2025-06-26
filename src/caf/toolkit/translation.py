@@ -1331,7 +1331,7 @@ class ZoneCorrespondencePath:
                 )
             if (translation[self.factors_col_name] < 0).any():
                 warnings.warn(
-                    "%s contains values greater than one,"
+                    "%s contains values less than one,"
                     " this does not make sense for a zone translation factor"
                 )
 
