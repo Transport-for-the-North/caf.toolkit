@@ -276,6 +276,11 @@ def find_file_with_name(
     >>> import pathlib
     >>> import tempfile
 
+    Ignoring any runtime warnings produced, for testing purposes.
+
+    >>> import warnings
+    >>> warnings.filterwarnings("ignore", category=RuntimeWarning)
+
     List of files which will be created in the temporary directory for examples.
 
     >>> filenames = [
