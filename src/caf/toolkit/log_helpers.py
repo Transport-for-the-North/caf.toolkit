@@ -23,12 +23,12 @@ import logging
 import os
 import platform
 import warnings
-import tqdm.contrib.logging as tqdm_log
 from typing import Annotated, Any, Iterable, Optional
 
 # Third Party
 import psutil
 import pydantic
+import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
 

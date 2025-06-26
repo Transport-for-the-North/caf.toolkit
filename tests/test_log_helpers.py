@@ -13,14 +13,14 @@ import os
 import pathlib
 import platform
 import warnings
-import tqdm.contrib.logging
-from unittest.mock import patch
 from typing import NamedTuple
+from unittest.mock import patch
 
 # Third Party
 import psutil
 import pydantic
 import pytest
+import tqdm.contrib.logging
 
 # Local Imports
 from caf.toolkit import (
@@ -30,7 +30,12 @@ from caf.toolkit import (
     ToolDetails,
     log_helpers,
 )
-from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger, LogHelper
+from caf.toolkit.log_helpers import (
+    LoggingWarning,
+    LogHelper,
+    capture_warnings,
+    get_logger,
+)
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -391,7 +396,7 @@ class TestLogHelper:
     def test_tqdm_redirect(self, log_init: LogInitDetails) -> None:
         """Tests tqdm.contrib.logging.logging_redirect_tqdm() function is called."""
         root = "tqdm_test"
-        with patch('tqdm.contrib.logging.logging_redirect_tqdm') as mock_helper:
+        with patch("tqdm.contrib.logging.logging_redirect_tqdm") as mock_helper:
             LogHelper(root, log_init.details)
             mock_helper.assert_called_once()
 
