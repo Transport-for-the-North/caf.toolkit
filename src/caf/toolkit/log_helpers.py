@@ -285,16 +285,10 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
-            if _CAF_LOG_LEVEL.lower() == "debug":
-                self.add_console_handler(log_level=logging.DEBUG)
-            elif _CAF_LOG_LEVEL.lower() == "info":
-                self.add_console_handler(log_level=logging.INFO)
-            elif _CAF_LOG_LEVEL.lower() == "warning":
-                self.add_console_handler(log_level=logging.WARNING)
-            elif _CAF_LOG_LEVEL.lower() == "error":
-                self.add_console_handler(log_level=logging.ERROR)
-            elif _CAF_LOG_LEVEL.lower() == "critical":
-                self.add_console_handler(log_level=logging.CRITICAL)
+            level_lookup = logging.getLevelNamesMapping()
+            level = _CAF_LOG_LEVEL.upper().strip()
+            if level in level_lookup:
+                self.add_console_handler(log_level=level_lookup[level])
             else:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
