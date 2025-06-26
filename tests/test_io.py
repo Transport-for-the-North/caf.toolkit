@@ -279,6 +279,7 @@ class TestReadCSVMatrix:
 class TestFindFile:
     """Tests for the `find_file` function."""
 
+    @pytest.mark.filterwarnings('ignore:Found 2 files named "test_file"*:RuntimeWarning')
     def test_correct(self):
         """Test single correct file exists and is found."""
         suffixes = [".csv.bz2"]

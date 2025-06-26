@@ -457,21 +457,25 @@ class TestLogHelper:
         # pylint: disable=protected-access
         stream = logging.StreamHandler()
 
-        with LogHelper(
-            "test", log_init.details, console=False, warning_capture=warning_capture
-        ) as helper:
-            assert helper.logger.handlers == [], "logger already has handlers"
-            assert warnings_logger.handlers == [], "warnings logger already has handlers"
+        with warnings.catch_warnings():
+            # catch_warnings action and category parameters aren't available in 3.10
+            warnings.filterwarnings(action="ignore", category=LoggingWarning)
 
-            helper.add_handler(stream)
-            assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+            with LogHelper(
+                "test", log_init.details, console=False, warning_capture=warning_capture
+            ) as helper:
+                assert helper.logger.handlers == [], "logger already has handlers"
+                assert warnings_logger.handlers == [], "warnings logger already has handlers"
 
-            if warning_capture:
-                assert warnings_logger.handlers == [
-                    stream
-                ], "handler not added to warnings logger"
-            else:
-                assert warnings_logger.handlers == [], "handlers added to warnings logger"
+                helper.add_handler(stream)
+                assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+
+                if warning_capture:
+                    assert warnings_logger.handlers == [
+                        stream
+                    ], "handler not added to warnings logger"
+                else:
+                    assert warnings_logger.handlers == [], "handlers added to warnings logger"
 
 
 class TestTemporaryLogFile:

@@ -280,7 +280,7 @@ class MatrixReport:
     @property
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
-        if self._translated_matrix is None:
+        if self._distribution is None:
             warnings.warn("Trip Length Distribution has not been set")
         return self._distribution
 
@@ -288,7 +288,7 @@ class MatrixReport:
     def vkms(self) -> pd.Series | None:
         """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
         if self._vkms is None:
-            warnings.warn("Trip Length Distribution has not been set")
+            warnings.warn("Trip VKMs has not been set")
         return self._vkms
 
     @property
