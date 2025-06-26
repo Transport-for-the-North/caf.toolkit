@@ -266,7 +266,6 @@ class LogHelper:
     ...     # Write initialisation log message with system and tool information
     ...     log_helper.write_instantiate_message()
     """
-    
 
     def __init__(
         self,
@@ -298,7 +297,9 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.CRITICAL)
             else:
                 self.add_console_handler(log_level=logging.INFO)
-                warnings.warn("The Environment constant 'CAF_LOG_LEVEL' should either be set to 'debug', 'info', 'warning', 'error', 'critical'.")
+                warnings.warn(
+                    "The Environment constant 'CAF_LOG_LEVEL' should either be set to 'debug', 'info', 'warning', 'error', 'critical'."
+                )
 
         if log_file is not None:
             self.add_file_handler(log_file)
