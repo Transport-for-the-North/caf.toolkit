@@ -104,6 +104,7 @@ class ToolDetails:
     - hash: commit hash
     - [-dirty]: added if git repository contains changes from HEAD
     - [-broken]: added if git repository contains a repository error
+    e.g. "v1-0-abc123-dirty"
     """
 
     def __str__(self) -> str:
