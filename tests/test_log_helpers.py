@@ -241,9 +241,9 @@ class TestToolDetails:
             correct = (
                 "Tool Information\n"
                 "----------------\n"
-                "name    : test1\n"
-                "version : 1.2.3\n"
-                f"commit  : {describe}"
+                "name          : test1\n"
+                "version       : 1.2.3\n"
+                f"full_version  : {describe}"
             )
 
         else:
@@ -251,12 +251,12 @@ class TestToolDetails:
             correct = (
                 "Tool Information\n"
                 "----------------\n"
-                "name       : test1\n"
-                "version    : 1.2.3\n"
-                "homepage   : http://github.com/\n"
-                "source_url : http://github.com/\n"
+                "name         : test1\n"
+                "version      : 1.2.3\n"
+                "homepage     : http://github.com/\n"
+                "source_url   : http://github.com/\n"
                 # When validating URLs the ending '/' is added
-                f"commit     : {describe}"
+                f"full_version : {describe}"
             )
 
         assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct  # type: ignore
