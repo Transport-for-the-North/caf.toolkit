@@ -23,6 +23,7 @@ import logging
 import os
 import platform
 import warnings
+import tqdm.contrib.logging as tqdm_log
 from typing import Annotated, Any, Iterable, Optional
 
 # Third Party
@@ -285,6 +286,7 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
+            tqdm_log.logging_redirect_tqdm([self.logger, self._warning_logger])
             if _CAF_LOG_LEVEL.lower() == "debug":
                 self.add_console_handler(log_level=logging.DEBUG)
             elif _CAF_LOG_LEVEL.lower() == "info":
