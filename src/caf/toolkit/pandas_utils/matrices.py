@@ -287,7 +287,7 @@ class MatrixReport:
     @property
     def vkms(self) -> pd.Series | None:
         """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
-        if self._vkms:
+        if self._vkms is None:
             warnings.warn("Trip Length Distribution has not been set")
         return self._vkms
 
