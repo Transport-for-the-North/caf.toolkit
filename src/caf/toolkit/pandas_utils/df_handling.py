@@ -512,20 +512,20 @@ def long_product_infill(
     # ints can be cast to floats in join
     filled = joined.fillna(infill)[selector].astype(dtype)
 
-    if check_totals is True:  
-        if isinstance(data, pd.Series):  
-            diff = data.sum() - filled.sum()  
+    if check_totals is True:
+        if isinstance(data, pd.Series):
+            diff = data.sum() - filled.sum()
 
-        elif len(data.columns) == 1:  
-            # If data is a dataframe then select would be a list  
-            # of column names so filled would be a dataframe  
-            assert isinstance(filled, pd.DataFrame)  
-            diff = data.iloc[:, 0].sum() - filled.iloc[:, 0].sum()  
+        elif len(data.columns) == 1:
+            # If data is a dataframe then select would be a list
+            # of column names so filled would be a dataframe
+            assert isinstance(filled, pd.DataFrame)
+            diff = data.iloc[:, 0].sum() - filled.iloc[:, 0].sum()
 
-        else:  
-            diff = data.sum().sum() - filled.sum().sum()  
+        else:
+            diff = data.sum().sum() - filled.sum().sum()
 
-        if diff != 0:  
+        if diff != 0:
 
             raise ValueError(
                 "The total has changed in infilling. If "
