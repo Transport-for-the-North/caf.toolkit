@@ -96,7 +96,15 @@ class ToolDetails:
     source_url: Optional[pydantic.HttpUrl] = None
     """URL of the source code repository for the tool."""
     full_version: str | None = pydantic.Field(default_factory=git_describe)
-    """Full version from git describe output, None if git command fails."""
+    """Full version from git describe output, None if git command fails.
+
+    Follows the git describe format: {tag}-{no. commits}-{hash}[-dirty][-broken]
+    - tag: the most recent git tag
+    - no. commits: number of commits since that tag
+    - hash: commit hash
+    - [-dirty]: added if git repository contains changes from HEAD
+    - [-broken]: added if git repository contains a repository error
+    """
 
     def __str__(self) -> str:
         """Nicely formatted multi-line string."""
