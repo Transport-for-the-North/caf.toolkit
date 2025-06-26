@@ -22,6 +22,7 @@ import getpass
 import logging
 import os
 import platform
+import subprocess
 import warnings
 from typing import Annotated, Any, Iterable, Optional
 
@@ -53,6 +54,17 @@ class LoggingWarning(Warning):
     """Warnings from :class:`LogHelper` and other toolkit logging functionality."""
 
 
+def git_describe() -> str | None:
+    """Run git describe command and return string if successful."""
+    cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
+    comp = subprocess.run(cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE)
+
+    if comp.returncode != 0:
+        return None
+
+    return comp.stdout.decode().strip()
+
+
 @dataclasses.dataclass
 class ToolDetails:
     """Information about the current tool.
@@ -80,6 +92,7 @@ class ToolDetails:
     """URL of the homepage for the tool."""
     source_url: Optional[pydantic.HttpUrl] = None
     """URL of the source code repository for the tool."""
+    commit: str | None = pydantic.Field(default_factory=git_describe)
 
     def __str__(self) -> str:
         """Nicely formatted multi-line string."""

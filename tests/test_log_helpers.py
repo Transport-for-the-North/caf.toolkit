@@ -201,6 +201,8 @@ class TestToolDetails:
     @pytest.mark.parametrize("url", [None, "http://github.com"])
     def test_str(self, url: str | None) -> None:
         """Test converting to formatted string with / without optional values."""
+        describe = "v1-0-abc123"
+
         name, version = "test1", "1.2.3"
         if url is None:
             # fmt: off
@@ -208,7 +210,8 @@ class TestToolDetails:
                 "Tool Information\n"
                 "----------------\n"
                 "name    : test1\n"
-                "version : 1.2.3"
+                "version : 1.2.3\n"
+                f"commit  : {describe}"
             )
 
         else:
@@ -219,11 +222,12 @@ class TestToolDetails:
                 "name       : test1\n"
                 "version    : 1.2.3\n"
                 "homepage   : http://github.com/\n"
-                "source_url : http://github.com/"
+                "source_url : http://github.com/\n"
                 # When validating URLs the ending '/' is added
+                f"commit     : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url)) == correct  # type: ignore
+        assert str(ToolDetails(name, version, url, url, commit=describe)) == correct  # type: ignore
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
