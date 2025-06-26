@@ -457,7 +457,10 @@ class TestLogHelper:
         # pylint: disable=protected-access
         stream = logging.StreamHandler()
 
-        with warnings.catch_warnings(action="ignore", category=LoggingWarning):
+        with warnings.catch_warnings():
+            # catch_warnings action and category parameters aren't available in 3.10
+            warnings.filterwarnings(action="ignore", category=LoggingWarning)
+
             with LogHelper(
                 "test", log_init.details, console=False, warning_capture=warning_capture
             ) as helper:
