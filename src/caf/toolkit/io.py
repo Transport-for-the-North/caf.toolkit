@@ -146,6 +146,7 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
 
     return df
 
+
 def read_df(
     path: os.PathLike,
     index_col: int = None,
@@ -210,6 +211,7 @@ def read_df(
         f"Got path: {path}"
     )
 
+
 def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
     """
     Writes the dataframe at path. Decompresses the df if needed.
@@ -248,7 +250,6 @@ def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
             f"Cannot determine the filetype of the given path. Expected "
             f"either '.csv' or '{consts.COMPRESSION_SUFFIX}'"
         )
-
 
 
 def read_csv_matrix(
@@ -457,6 +458,7 @@ def find_file_with_name(
 
     return found[0]
 
+
 def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
     """Removes all suffixes from path
 
@@ -485,6 +487,7 @@ def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
         prev = new
 
     return parent / new
+
 
 def read_matrix(
     path: os.PathLike,
@@ -562,4 +565,3 @@ def read_matrix(
         matrix = matrix.reindex(matrix.index, axis=1)
 
     return matrix
-
