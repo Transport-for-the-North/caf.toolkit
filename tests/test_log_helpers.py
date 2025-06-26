@@ -12,6 +12,7 @@ import logging
 import os
 import pathlib
 import platform
+import subprocess
 import warnings
 from typing import NamedTuple
 
@@ -22,7 +23,12 @@ import pytest
 
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
-from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
+from caf.toolkit.log_helpers import (
+    LoggingWarning,
+    capture_warnings,
+    get_logger,
+    git_describe,
+)
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -181,6 +187,32 @@ def _check_warnings(text: str) -> None:
 
 
 # # # Tests # # #
+
+
+class TestGitDescribe:
+    """Tests for `git_describe` function."""
+
+    def test_valid(self, monkeypatch: pytest.MonkeyPatch):
+        """Test function correctly returns the string result if command is successful."""
+        describe = "v1.0-1-abc123"
+
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess("", 0, stdout=describe.encode())
+
+        monkeypatch.setattr(subprocess, "run", dummy_run)
+
+        assert git_describe() == describe
+
+    def test_invalid(self, monkeypatch: pytest.MonkeyPatch):
+        """Test None is returned whenever the subprocess returns a non-zero code."""
+
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess("", 1)
+
+        monkeypatch.setattr(subprocess, "run", dummy_run)
+        assert git_describe() is None
+
+
 class TestToolDetails:
     """Test ToolDetails class validation."""
 
