@@ -37,6 +37,9 @@ DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 
+# # # ENVIRONMENT VARIABLE # # #
+_CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
+
 # Regular expression for semantic versioning string from https://semver.org/
 _SEMVER_REGEX = (
     r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
@@ -263,6 +266,7 @@ class LogHelper:
     ...     # Write initialisation log message with system and tool information
     ...     log_helper.write_instantiate_message()
     """
+    
 
     def __init__(
         self,
@@ -275,13 +279,26 @@ class LogHelper:
     ):
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
+
         self.logger.setLevel(logging.DEBUG)
 
         self.tool_details = tool_details
         self._warning_logger: logging.Logger | None = None
 
         if console:
-            self.add_console_handler()
+            if _CAF_LOG_LEVEL.lower() == "debug":
+                self.add_console_handler(log_level=logging.DEBUG)
+            elif _CAF_LOG_LEVEL.lower() == "info":
+                self.add_console_handler(log_level=logging.INFO)
+            elif _CAF_LOG_LEVEL.lower() == "warning":
+                self.add_console_handler(log_level=logging.WARNING)
+            elif _CAF_LOG_LEVEL.lower() == "error":
+                self.add_console_handler(log_level=logging.ERROR)
+            elif _CAF_LOG_LEVEL.lower() == "critical":
+                self.add_console_handler(log_level=logging.CRITICAL)
+            else:
+                self.add_console_handler(log_level=logging.INFO)
+                warnings.warn("The Environment constant 'CAF_LOG_LEVEL' should either be set to 'debug', 'info', 'warning', 'error', 'critical'.")
 
         if log_file is not None:
             self.add_file_handler(log_file)

@@ -23,6 +23,7 @@ import pytest
 # Local Imports
 from caf.toolkit import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
 from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
+from caf.toolkit import log_helpers
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -129,9 +130,8 @@ def fixture_log_init() -> LogInitDetails:
 
     msg = f"***  {name}  ***"
     init_message = ["", "*" * len(msg), msg, "*" * len(msg)]
-
+    
     return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
-
 
 @pytest.fixture(name="warnings_logger")
 def fixture_warnings_logger() -> logging.Logger:
@@ -346,6 +346,27 @@ class TestLogHelper:
 
         assert log_init.details_message in text, "incorrect tool details"
         assert log_init.system_message in text, "incorrect system information"
+
+    @pytest.mark.parametrize(["level", "answer"],[("debug", logging.DEBUG), ("info", logging.INFO), ("warning", logging.WARNING), ("error", logging.ERROR), ("critical", logging.CRITICAL)])
+    def test_initialise_messages(
+        self, monkeypatch: pytest.MonkeyPatch, log_init: LogInitDetails, level: str, answer: int,
+    ) -> None:
+        """Test initialising the logger without a file."""
+        root = "log_level_test"
+        logger = logging.getLogger(root)
+        assert len(logger.handlers) == 0, "Too many loggers"
+
+        monkeypatch.setattr(log_helpers, "_CAF_LOG_LEVEL", level)
+
+        with LogHelper(root, log_init.details) as log:
+            assert len(log.logger.handlers) == 1, "incorrect number of handlers"
+            assert isinstance(
+                log.logger.handlers[0], logging.StreamHandler
+            ), "incorrect stream handler"
+            assert log.logger.handlers[0].level == answer
+
+        assert len(log.logger.handlers) == 0, "handlers not cleaned up"
+
 
     def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
         """Test logging to file within `with` statement.
