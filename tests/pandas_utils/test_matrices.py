@@ -325,7 +325,7 @@ class TestCompareMatricesAndOutput:
 class TestMatrixComparison:
     """Test the compare_matrices function"""
 
-    @pytest.mark.filterwarnings('ignore:Trip Length Distribution has not been set:UserWarning')
+    @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_sector_matrix(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
@@ -362,7 +362,8 @@ class TestMatrixComparison:
                 dtype=np.float64,
             ),
         )
-    @pytest.mark.filterwarnings('ignore:Trip Length Distribution has not been set:UserWarning')
+
+    @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_trip_ends(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
@@ -406,7 +407,7 @@ class TestMatrixComparison:
         assert (trip_ends["col_sums_percentage"] == 0).all()
         assert (trip_ends["row_sums_percentage"] == 0).all()
 
-    @pytest.mark.filterwarnings('ignore:Trip Length Distribution has not been set:UserWarning')
+    @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_stats(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -475,6 +476,7 @@ class TestMatrixComparison:
             matrix_report.describe["Matrix"], comparison["stats"]["b"], check_names=False
         )
 
+    @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_vkms(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -501,6 +503,7 @@ class TestMatrixComparison:
             comparison["Vkms"]["b"], matrix_report.vkms, check_exact=False, check_names=False
         )
 
+    @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_multi_vkms(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
@@ -529,6 +532,7 @@ class TestMatrixComparison:
             comparison["Vkms"]["b"], matrix_report.vkms, check_exact=False, check_names=False
         )
 
+    @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_multi_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
@@ -564,6 +568,7 @@ class TestMatrixComparison:
 
         assert len(comparison["TLD comparison"].columns) == 6
 
+    @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
     ):
