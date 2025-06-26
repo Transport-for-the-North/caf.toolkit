@@ -411,14 +411,14 @@ def long_product_infill(
     data: pd.DataFrame,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] | None = None,
+    index_dict: dict[Hashable, list] | None = None,
 ) -> pd.DataFrame: ...
 @overload
 def long_product_infill(
     data: pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] | None = None,
+    index_dict: dict[Hashable, list] | None = None,
 ) -> pd.Series: ...
 
 
@@ -427,7 +427,7 @@ def long_product_infill(
     data: pd.DataFrame | pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[str, list] | None = None,
+    index_dict: dict[Hashable, list] | None = None,
 ) -> pd.DataFrame | pd.Series:
     """Infill columns with a complete product of one another.
 
@@ -470,7 +470,7 @@ def long_product_infill(
     if index_dict is None:
         index_dict = {}
         for ind in data.index.names:
-            vals = data.index.get_level_values(ind).unique()
+            vals = data.index.get_level_values(ind).unique()  # type: ignore
             index_dict[ind] = vals.tolist()
 
     else:
@@ -515,14 +515,18 @@ def long_product_infill(
     if check_totals is True:
         if isinstance(data, pd.Series):
             diff = data.sum() - filled.sum()
+
         elif len(data.columns) == 1:
             # If data is a dataframe then select would be a list
             # of column names so filled would be a dataframe
             assert isinstance(filled, pd.DataFrame)
-            diff = data.squeeze().sum() - filled.squeeze().sum()
+            diff = data.iloc[:, 0].sum() - filled.iloc[:, 0].sum()
+
         else:
             diff = data.sum().sum() - filled.sum().sum()
+
         if diff != 0:
+
             raise ValueError(
                 "The total has changed in infilling. If "
                 "you have set infill to anything other than zero "

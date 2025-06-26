@@ -29,6 +29,7 @@ _ARG_TYPE_LOOKUP: dict[str, type] = {
     "str": str,
     "float": float,
     "int": int,
+    "bool": bool,
     "filepath": pathlib.Path,
     "directorypath": pathlib.Path,
     "path": pathlib.Path,
@@ -92,7 +93,7 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     types = set()
     optional = False
     for type_ in type_str.split("|"):
-        match = re.match(r"(?:(\w+)\.)?(\w+)", type_.strip(), re.I)
+        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.I)
         if match is None:
             warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning)
             return str, optional
@@ -151,13 +152,14 @@ def _replace_union(annotation: str) -> str:
 def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """Attempt to get argument type from annotation text.
 
-    This only works with basic Python types (int, str, float and Path)
-    for any other types (str, False) will be returned.
+    This only works with basic Python types (int, str, float, bool and Path)
+    for any other types str will be returned.
 
     Parameters
     ----------
     annotation : str
-        Type annotation to be parsed e.g. 'list[int | str]'.
+        Type annotation to be parsed e.g. 'list[int | str]'. This can also
+        handle the repr of a type e.g. "<class 'bool'>".
 
     Returns
     -------
@@ -174,7 +176,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """
     annotation = _replace_union(annotation)
 
-    match = re.match(r"^(?:(\w+)?\[)?([\w \t,.|]+)\]?$", annotation.strip())
+    match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
             f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning
@@ -273,9 +275,19 @@ class ModelArguments:
             else:
                 description = field.description
 
-            parser.add_argument(
-                *name_or_flags, type=type_, help=description, default=default, nargs=nargs
-            )
+            if type_ is not bool:
+                parser.add_argument(
+                    *name_or_flags, type=type_, help=description, default=default, nargs=nargs
+                )
+                continue
+
+            # Use the store true / false action for boolean flags
+            # Use false as default if not given
+            if default is None or not default:
+                action = "store_true"
+            else:
+                action = "store_false"
+            parser.add_argument(*name_or_flags, action=action, help=description)
 
         parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
@@ -309,7 +321,14 @@ class ModelArguments:
 
         return parser
 
-    def add_subcommands(self, subparsers: argparse._SubParsersAction, name: str, **kwargs):
+    def add_subcommands(
+        self,
+        subparsers: argparse._SubParsersAction,
+        name: str,
+        add_arguments: bool = True,
+        add_config: bool = True,
+        **kwargs,
+    ):
         """Add sub-commands for CLI arguments and config (if possible).
 
         Note: config sub-command won't be added if model provided to class
@@ -323,13 +342,26 @@ class ModelArguments:
         name : str
             Name of the sub-command to add, if config sub-command is
             added it will be called '{name}-config'.
+        add_arguments : bool
+            If True (default) adds sub-command called '{name}' with arguments.
+        add_config : bool
+            If True (default), and model given is a :class:`BaseConfig`,
+            adds sub-command called '{name}-config' with a single
+            config path argument.
         kwargs
             Keyword arguments to pass to `subparsers.add_parser`.
         """
-        parser = subparsers.add_parser(name, **kwargs)
-        self.add_arguments(parser)
+        if not add_arguments and not add_config:
+            raise ValueError(
+                "cannot add subcommands if add_arguments and add_config are both False."
+            )
 
-        if self._config:
+        parser = subparsers.add_parser(name, **kwargs)
+
+        if add_arguments:
+            self.add_arguments(parser)
+
+        if self._config and add_config:
             kwargs.pop("help", None)
             parser = subparsers.add_parser(
                 f"{name}-config", help=f"run {name} with parameters from config", **kwargs
