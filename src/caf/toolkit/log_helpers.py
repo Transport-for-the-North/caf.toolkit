@@ -79,7 +79,7 @@ class ToolDetails:
         See :any:`homepage`.
     source_url
         See :any:`source_url`.
-    commit
+    full_version
         This will be automatically determined when
         inside a git repository, otherwise is None.
     """
@@ -95,8 +95,8 @@ class ToolDetails:
     """URL of the homepage for the tool."""
     source_url: Optional[pydantic.HttpUrl] = None
     """URL of the source code repository for the tool."""
-    commit: str | None = pydantic.Field(default_factory=git_describe)
-    """Commit string from git describe output, None if git command fails."""
+    full_version: str | None = pydantic.Field(default_factory=git_describe)
+    """Full version from git describe output, None if git command fails."""
 
     def __str__(self) -> str:
         """Nicely formatted multi-line string."""

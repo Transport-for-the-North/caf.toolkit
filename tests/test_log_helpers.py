@@ -259,7 +259,7 @@ class TestToolDetails:
                 f"commit     : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url, commit=describe)) == correct  # type: ignore
+        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct  # type: ignore
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
