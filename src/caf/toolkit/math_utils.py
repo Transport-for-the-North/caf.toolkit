@@ -178,7 +178,7 @@ def root_mean_squared_error(
                 else:
                     raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
 
-            except ImportError as error:
+            except (ModuleNotFoundError, ImportError) as error:
                 raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.") from error
 
     return float(np.mean(squared_diffs) ** 0.5)

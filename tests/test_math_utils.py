@@ -6,12 +6,14 @@ from __future__ import annotations
 import dataclasses
 import math
 import random
+import sys
 from typing import Collection
 
 # Third Party
 import numpy as np
 import pytest
 import sparse
+import importlib
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -115,6 +117,25 @@ class TestRootMeanSquaredError:
             achieved=achieved,
             result=self.get_expected_rmse(targets, achieved),
         )
+
+    def test_sparse_not_installed(
+        self,
+        rmse_example: TestRootMeanSquaredError.RmseExample,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test that error isn't raised when sparse isn't 
+        imported when running with np arrays
+        """
+        monkeypatch.setitem(sys.modules, "sparse", None)
+        importlib.reload(sys.modules["caf.toolkit.math_utils"])
+        targets: np.ndarray = np.hstack([rmse_example.targets, rmse_example.targets])[:, :6]
+        achieved: np.ndarray = np.hstack([rmse_example.achieved, rmse_example.achieved])[:, :6]
+        
+        result = math_utils.root_mean_squared_error(
+            targets=targets,
+            achieved=achieved,
+        )
+        assert True
 
     @pytest.mark.parametrize(
         "rmse_example_str",
