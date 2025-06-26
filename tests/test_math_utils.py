@@ -123,14 +123,14 @@ class TestRootMeanSquaredError:
         rmse_example: TestRootMeanSquaredError.RmseExample,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test that error isn't raised when sparse isn't 
+        """Test that error isn't raised when sparse isn't
         imported when running with np arrays
         """
         monkeypatch.setitem(sys.modules, "sparse", None)
         importlib.reload(sys.modules["caf.toolkit.math_utils"])
         targets: np.ndarray = np.hstack([rmse_example.targets, rmse_example.targets])[:, :6]
         achieved: np.ndarray = np.hstack([rmse_example.achieved, rmse_example.achieved])[:, :6]
-        
+
         result = math_utils.root_mean_squared_error(
             targets=targets,
             achieved=achieved,
