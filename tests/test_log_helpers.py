@@ -241,9 +241,9 @@ class TestToolDetails:
             correct = (
                 "Tool Information\n"
                 "----------------\n"
-                "name          : test1\n"
-                "version       : 1.2.3\n"
-                f"full_version  : {describe}"
+                "name         : test1\n"
+                "version      : 1.2.3\n"
+                f"full_version : {describe}"
             )
 
         else:
