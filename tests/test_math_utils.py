@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # Built-Ins
 import dataclasses
+import importlib
 import math
 import random
 import sys
@@ -13,7 +14,6 @@ from typing import Collection
 import numpy as np
 import pytest
 import sparse
-import importlib
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
