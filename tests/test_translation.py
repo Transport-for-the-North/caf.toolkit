@@ -861,17 +861,7 @@ def fixture_pd_long_matrix_dtype(
 def fixture_translation_path(
     simple_pd_int_translation: PandasTranslation, tmp_path_factory
 ) -> translation.ZoneCorrespondencePath:
-    """
-    Temporary path for I/O.
-
-    Parameters
-    ----------
-    tmp_path_factory
-
-    Returns
-    -------
-    Path: file path used for all saving and loading of files within the tests
-    """
+    """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
     simple_pd_int_translation.df.to_csv(path)
 
@@ -887,17 +877,7 @@ def fixture_translation_path(
 def fixture_translation_path_no_factors(
     simple_pd_int_translation: PandasTranslation, tmp_path_factory
 ) -> translation.ZoneCorrespondencePath:
-    """
-    Temporary path for I/O.
-
-    Parameters
-    ----------
-    tmp_path_factory
-
-    Returns
-    -------
-    Path: file path used for all saving and loading of files within the tests
-    """
+    """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
     simple_pd_int_translation.df.to_csv(path)
 
@@ -1687,7 +1667,7 @@ class TestZoneCorrespondencePath:
 
     @pytest.mark.parametrize("factors_mandatory", [True, False])
     @pytest.mark.parametrize("generic_columns", [True, False])
-    def test_zone_correspondence_path(
+    def test_zone_correspondence_read(
         self,
         translation_path: translation.ZoneCorrespondencePath,
         simple_pd_int_translation: PandasTranslation,
@@ -1720,7 +1700,7 @@ class TestZoneCorrespondencePath:
         )
 
     @pytest.mark.parametrize("generic_columns", [True, False])
-    def test_zone_correspondence_path_no_factors(
+    def test_zone_correspondence_read_no_factors(
         self,
         translation_path_no_factors: translation.ZoneCorrespondencePath,
         simple_pd_int_translation: PandasTranslation,
@@ -1755,7 +1735,7 @@ class TestZoneCorrespondencePath:
             check_dtype=False,
         )
 
-    def test_zone_correspondence_path_no_factors_error(
+    def test_zone_correspondence_read_no_factors_error(
         self,
         translation_path_no_factors: translation.ZoneCorrespondencePath,
     ) -> None:
