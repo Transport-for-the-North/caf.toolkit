@@ -1683,7 +1683,7 @@ class TestMatrixTranslationFromFile:
 
 
 class TestZoneCorrespondencePath:
-    """Tests for the `zone_correspondence_path` function."""
+    """Tests for the `ZoneCorrespondencePath` function."""
 
     @pytest.mark.parametrize("factors_mandatory", [True, False])
     @pytest.mark.parametrize("generic_columns", [True, False])
