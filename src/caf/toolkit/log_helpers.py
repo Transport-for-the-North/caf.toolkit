@@ -22,6 +22,7 @@ import getpass
 import logging
 import os
 import platform
+import sys
 import warnings
 from typing import Annotated, Any, Iterable, Optional
 
@@ -36,6 +37,15 @@ DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+
+# Get lookup between name of level and integer value
+# pylint: disable=no-member,protected-access
+if sys.version_info.minor <= 10:
+    _LEVEL_LOOKUP: dict[str, int] = logging._nameToLevel.copy()
+else:
+    # getLevelNamesMapping added to logging in v3.11
+    _LEVEL_LOOKUP: dict[str, int] = logging.getLevelNamesMapping()  # type: ignore
+# pylint: enable=no-member,protected-access
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
@@ -285,14 +295,14 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
-            level_lookup = logging.getLevelNamesMapping()
             level = _CAF_LOG_LEVEL.upper().strip()
-            if level in level_lookup:
-                self.add_console_handler(log_level=level_lookup[level])
+            if level in _LEVEL_LOOKUP:
+                self.add_console_handler(log_level=_LEVEL_LOOKUP[level])
             else:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
-                    "The Environment constant 'CAF_LOG_LEVEL' should either be set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    "The Environment constant 'CAF_LOG_LEVEL' should either be"
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
                 )
 
         if log_file is not None:
