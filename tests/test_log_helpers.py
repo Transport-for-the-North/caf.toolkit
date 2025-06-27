@@ -12,6 +12,7 @@ import logging
 import os
 import pathlib
 import platform
+import subprocess
 import warnings
 from typing import NamedTuple
 
@@ -28,7 +29,12 @@ from caf.toolkit import (
     ToolDetails,
     log_helpers,
 )
-from caf.toolkit.log_helpers import LoggingWarning, capture_warnings, get_logger
+from caf.toolkit.log_helpers import (
+    LoggingWarning,
+    capture_warnings,
+    get_logger,
+    git_describe,
+)
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -187,6 +193,32 @@ def _check_warnings(text: str) -> None:
 
 
 # # # Tests # # #
+
+
+class TestGitDescribe:
+    """Tests for `git_describe` function."""
+
+    def test_valid(self, monkeypatch: pytest.MonkeyPatch):
+        """Test function correctly returns the string result if command is successful."""
+        describe = "v1.0-1-abc123"
+
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess("", 0, stdout=describe.encode())
+
+        monkeypatch.setattr(subprocess, "run", dummy_run)
+
+        assert git_describe() == describe
+
+    def test_invalid(self, monkeypatch: pytest.MonkeyPatch):
+        """Test None is returned whenever the subprocess returns a non-zero code."""
+
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess("", 1)
+
+        monkeypatch.setattr(subprocess, "run", dummy_run)
+        assert git_describe() is None
+
+
 class TestToolDetails:
     """Test ToolDetails class validation."""
 
@@ -207,14 +239,17 @@ class TestToolDetails:
     @pytest.mark.parametrize("url", [None, "http://github.com"])
     def test_str(self, url: str | None) -> None:
         """Test converting to formatted string with / without optional values."""
+        describe = "v1-0-abc123"
+
         name, version = "test1", "1.2.3"
         if url is None:
             # fmt: off
             correct = (
                 "Tool Information\n"
                 "----------------\n"
-                "name    : test1\n"
-                "version : 1.2.3"
+                "name         : test1\n"
+                "version      : 1.2.3\n"
+                f"full_version : {describe}"
             )
 
         else:
@@ -222,14 +257,15 @@ class TestToolDetails:
             correct = (
                 "Tool Information\n"
                 "----------------\n"
-                "name       : test1\n"
-                "version    : 1.2.3\n"
-                "homepage   : http://github.com/\n"
-                "source_url : http://github.com/"
+                "name         : test1\n"
+                "version      : 1.2.3\n"
+                "homepage     : http://github.com/\n"
+                "source_url   : http://github.com/\n"
                 # When validating URLs the ending '/' is added
+                f"full_version : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url)) == correct  # type: ignore
+        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct  # type: ignore
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
@@ -496,21 +532,25 @@ class TestLogHelper:
         # pylint: disable=protected-access
         stream = logging.StreamHandler()
 
-        with LogHelper(
-            "test", log_init.details, console=False, warning_capture=warning_capture
-        ) as helper:
-            assert helper.logger.handlers == [], "logger already has handlers"
-            assert warnings_logger.handlers == [], "warnings logger already has handlers"
+        with warnings.catch_warnings():
+            # catch_warnings action and category parameters aren't available in 3.10
+            warnings.filterwarnings(action="ignore", category=LoggingWarning)
 
-            helper.add_handler(stream)
-            assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+            with LogHelper(
+                "test", log_init.details, console=False, warning_capture=warning_capture
+            ) as helper:
+                assert helper.logger.handlers == [], "logger already has handlers"
+                assert warnings_logger.handlers == [], "warnings logger already has handlers"
 
-            if warning_capture:
-                assert warnings_logger.handlers == [
-                    stream
-                ], "handler not added to warnings logger"
-            else:
-                assert warnings_logger.handlers == [], "handlers added to warnings logger"
+                helper.add_handler(stream)
+                assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+
+                if warning_capture:
+                    assert warnings_logger.handlers == [
+                        stream
+                    ], "handler not added to warnings logger"
+                else:
+                    assert warnings_logger.handlers == [], "handlers added to warnings logger"
 
 
 class TestTemporaryLogFile:

@@ -7,12 +7,14 @@ import functools
 import logging
 import operator
 import warnings
-from typing import Any, Collection, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, Collection, Literal, Optional, overload
 
 # Third Party
 import numpy as np
 import pandas as pd
-import sparse
+
+if TYPE_CHECKING:
+    import sparse
 
 # Local Imports
 from caf.toolkit.core import SparseLiteral, WarningActionKind
@@ -107,6 +109,15 @@ def dataframe_to_n_dimensional_sparse_array(
     fill_value: np.number | int | float = 0,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
     """Convert a pandas.DataFrame to a sparse.COO matrix."""
+    try:
+        # Third Party
+        import sparse  # pylint: disable=import-outside-toplevel
+    except ImportError as err:
+        raise ImportError(
+            "The 'sparse' package is required to convert a DataFrame to a sparse "
+            "matrix. Please install it using 'pip install sparse' or 'conda install sparse'."
+        ) from err
+
     # Init
     final_shape = [len(x) for x in dimension_cols.values()]
 
