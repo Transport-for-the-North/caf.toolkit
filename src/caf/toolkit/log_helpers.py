@@ -22,8 +22,8 @@ import getpass
 import logging
 import os
 import platform
-import sys
 import subprocess
+import sys
 import warnings
 from typing import Annotated, Any, Iterable, Optional
 
