@@ -22,6 +22,8 @@ import getpass
 import logging
 import os
 import platform
+import subprocess
+import sys
 import warnings
 from typing import Annotated, Any, Iterable, Optional
 
@@ -37,6 +39,15 @@ DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+
+# Get lookup between name of level and integer value
+# pylint: disable=no-member,protected-access
+if sys.version_info.minor <= 10:
+    _LEVEL_LOOKUP: dict[str, int] = logging._nameToLevel.copy()
+else:
+    # getLevelNamesMapping added to logging in v3.11
+    _LEVEL_LOOKUP: dict[str, int] = logging.getLevelNamesMapping()  # type: ignore
+# pylint: enable=no-member,protected-access
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
@@ -57,6 +68,17 @@ class LoggingWarning(Warning):
     """Warnings from :class:`LogHelper` and other toolkit logging functionality."""
 
 
+def git_describe() -> str | None:
+    """Run git describe command and return string if successful."""
+    cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
+    comp = subprocess.run(cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE)
+
+    if comp.returncode != 0:
+        return None
+
+    return comp.stdout.decode().strip()
+
+
 @dataclasses.dataclass
 class ToolDetails:
     """Information about the current tool.
@@ -71,6 +93,9 @@ class ToolDetails:
         See :any:`homepage`.
     source_url
         See :any:`source_url`.
+    full_version
+        This will be automatically determined when
+        inside a git repository, otherwise is None.
     """
 
     name: str
@@ -84,6 +109,17 @@ class ToolDetails:
     """URL of the homepage for the tool."""
     source_url: Optional[pydantic.HttpUrl] = None
     """URL of the source code repository for the tool."""
+    full_version: str | None = pydantic.Field(default_factory=git_describe)
+    """Full version from git describe output, None if git command fails.
+
+    Follows the git describe format: {tag}-{no. commits}-{hash}[-dirty][-broken]
+    - tag: the most recent git tag
+    - no. commits: number of commits since that tag
+    - hash: commit hash
+    - [-dirty]: added if git repository contains changes from HEAD
+    - [-broken]: added if git repository contains a repository error
+    e.g. "v1-0-abc123-dirty"
+    """
 
     def __str__(self) -> str:
         """Nicely formatted multi-line string."""
@@ -287,20 +323,14 @@ class LogHelper:
 
         if console:
             tqdm_log.logging_redirect_tqdm([self.logger, self._warning_logger])
-            if _CAF_LOG_LEVEL.lower() == "debug":
-                self.add_console_handler(log_level=logging.DEBUG)
-            elif _CAF_LOG_LEVEL.lower() == "info":
-                self.add_console_handler(log_level=logging.INFO)
-            elif _CAF_LOG_LEVEL.lower() == "warning":
-                self.add_console_handler(log_level=logging.WARNING)
-            elif _CAF_LOG_LEVEL.lower() == "error":
-                self.add_console_handler(log_level=logging.ERROR)
-            elif _CAF_LOG_LEVEL.lower() == "critical":
-                self.add_console_handler(log_level=logging.CRITICAL)
+            level = _CAF_LOG_LEVEL.upper().strip()
+            if level in _LEVEL_LOOKUP:
+                self.add_console_handler(log_level=_LEVEL_LOOKUP[level])
             else:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
-                    "The Environment constant 'CAF_LOG_LEVEL' should either be set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    "The Environment constant 'CAF_LOG_LEVEL' should either be"
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
                 )
 
         if log_file is not None:
