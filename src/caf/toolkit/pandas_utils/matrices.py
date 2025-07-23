@@ -476,7 +476,7 @@ def compare_matrices(
     comparisons["matrix abs difference"] = matrix_report_a.abs_difference(matrix_report_b)
 
     comparisons["matrix abs percentage"] = (
-        comparisons["matrix abs difference"] - matrix_report_a.sector_matrix
+        comparisons["matrix abs difference"] / matrix_report_a.sector_matrix
     ) - 1
 
     comparisons["stats"] = pd.DataFrame(
