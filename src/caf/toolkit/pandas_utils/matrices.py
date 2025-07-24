@@ -522,9 +522,10 @@ def compare_matrices(
 
 
 def add_matrix_sums(df: pd.DataFrame) -> pd.DataFrame:
-    df.loc["sum"] = df.sum(axis=0)
-    df["sum"] = df.sum(axis=1)
-    return df
+    df_sums = df.copy()
+    df_sums.loc["sum"] = df_sums.sum(axis=0)
+    df_sums["sum"] = df_sums.sum(axis=1)
+    return df_sums
 
 
 def compare_matrices_and_output(
