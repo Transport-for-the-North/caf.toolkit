@@ -281,12 +281,14 @@ class MatrixReport:
 
         matrix_diff = (self.matrix - matrix_2.matrix).abs()
 
-        return translation.pandas_matrix_zone_translation(
-            matrix_diff,
-            self._translation_factors,
-            self._from_col,
-            self._to_col,
-            self._factors_col,
+        return add_matrix_sums(
+            translation.pandas_matrix_zone_translation(
+                matrix_diff,
+                self._translation_factors,
+                self._from_col,
+                self._to_col,
+                self._factors_col,
+            )
         )
 
     @property
@@ -305,7 +307,7 @@ class MatrixReport:
     def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
 
-        return self._translated_matrix
+        return add_matrix_sums(self._translated_matrix)
 
     @property
     def distribution(self) -> pd.DataFrame | None:
@@ -469,6 +471,7 @@ def compare_matrices(
     comparisons["matrix difference"] = (
         matrix_report_a.sector_matrix - matrix_report_b.sector_matrix
     )
+
     comparisons["matrix percentage"] = (
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
     ) - 1
@@ -516,6 +519,12 @@ def compare_matrices(
         )
 
     return comparisons
+
+
+def add_matrix_sums(df: pd.DataFrame) -> pd.DataFrame:
+    df.loc["sum"] = df.sum(axis=0)
+    df["sum"] = df.sum(axis=1)
+    return df
 
 
 def compare_matrices_and_output(
