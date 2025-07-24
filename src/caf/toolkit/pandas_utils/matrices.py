@@ -46,11 +46,15 @@ class MatrixReport:
         translation_factors_col: Optional[str] = None,
     ):
 
-        self._matrix = matrix
+        self._matrix = matrix  # .sort_index(axis=0).sort_index(axis=1)
         self._translated_matrix: pd.DataFrame | None = None
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
         self._vkms: pd.Series | None = None
+        self._translation_factors: pd.DataFrame | None = None
+        self._from_col: str | None = None
+        self._to_col: str | None = None
+        self._factors_col: str | None = None
 
         if translation_factors is not None:
             if (
@@ -71,6 +75,10 @@ class MatrixReport:
                 translation_to_col,
                 translation_factors_col,
             )
+            self._translation_factors = translation_factors
+            self._from_col = translation_from_col
+            self._to_col = translation_to_col
+            self._factors_col = translation_factors_col
 
         elif (
             (translation_factors_col is not None)
@@ -111,6 +119,7 @@ class MatrixReport:
             Column in sector_zone_lookup that contains the sector ids,
             defaults to "sector_id"
         """
+        # cost_matrix = cost_matrix.sort_index(axis = 0).sort_index(axis=1)
         if not (
             cost_matrix.index.equals(self._matrix.index)
             and cost_matrix.columns.equals(self._matrix.columns)
@@ -260,6 +269,29 @@ class MatrixReport:
             self.distribution.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
 
     @property
+    def matrix(self) -> pd.DataFrame:
+        return self._matrix
+
+    def abs_difference(self, matrix_2: MatrixReport) -> pd.DataFrame:
+        if not (
+            self.matrix.index.equals(matrix_2.matrix.index)
+            and matrix_2.matrix.columns.equals(matrix_2.matrix.columns)
+        ):
+            raise ValueError("Cost matrix must have the same index and columns as the matrix")
+
+        matrix_diff = (self.matrix - matrix_2.matrix).abs()
+
+        return add_matrix_sums(
+            translation.pandas_matrix_zone_translation(
+                matrix_diff,
+                self._translation_factors,
+                self._from_col,
+                self._to_col,
+                self._factors_col,
+            )
+        )
+
+    @property
     def describe(self) -> pd.DataFrame:
         """High level statistics on the original and, if provided, sectorised matrix."""
         if self._describe is None:
@@ -275,7 +307,7 @@ class MatrixReport:
     def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
 
-        return self._translated_matrix
+        return add_matrix_sums(self._translated_matrix)
 
     @property
     def distribution(self) -> pd.DataFrame | None:
@@ -439,9 +471,16 @@ def compare_matrices(
     comparisons["matrix difference"] = (
         matrix_report_a.sector_matrix - matrix_report_b.sector_matrix
     )
+
     comparisons["matrix percentage"] = (
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
     ) - 1
+
+    comparisons["matrix abs difference"] = matrix_report_a.abs_difference(matrix_report_b)
+
+    comparisons["matrix abs percentage"] = (
+        comparisons["matrix abs difference"] / matrix_report_a.sector_matrix
+    )
 
     comparisons["stats"] = pd.DataFrame(
         {
@@ -480,6 +519,13 @@ def compare_matrices(
         )
 
     return comparisons
+
+
+def add_matrix_sums(df: pd.DataFrame) -> pd.DataFrame:
+    df_sums = df.copy()
+    df_sums.loc["sum"] = df_sums.sum(axis=0)
+    df_sums["sum"] = df_sums.sum(axis=1)
+    return df_sums
 
 
 def compare_matrices_and_output(

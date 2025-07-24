@@ -442,6 +442,24 @@ class TestMatrixComparison:
                 dtype=np.float64,
             ),
         )
+        pd.testing.assert_frame_equal(
+            comparison["matrix abs difference"],
+            pd.DataFrame(
+                0,
+                index=matrix_report.sector_matrix.index,
+                columns=matrix_report.sector_matrix.columns,
+                dtype=np.float64,
+            ),
+        )
+        pd.testing.assert_frame_equal(
+            comparison["matrix abs percentage"],
+            pd.DataFrame(
+                0,
+                index=matrix_report.sector_matrix.index,
+                columns=matrix_report.sector_matrix.columns,
+                dtype=np.float64,
+            ),
+        )
         trip_ends = comparison["Trip Ends"]
         pd.testing.assert_series_equal(
             trip_ends["row_sums_a"],
