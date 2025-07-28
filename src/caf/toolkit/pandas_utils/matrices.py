@@ -325,10 +325,9 @@ class MatrixReport:
     @property
     def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
-        if self._translated_matrix is not None:
+        if isinstance(self._translated_matrix, pd.DataFrame):
             return add_matrix_sums(self._translated_matrix)
-        else:
-            return None
+        return self._translated_matrix
 
     @property
     def distribution(self) -> pd.DataFrame | None:
