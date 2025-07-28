@@ -270,9 +270,28 @@ class MatrixReport:
 
     @property
     def matrix(self) -> pd.DataFrame:
+        """Matrix in the original zoning system."""
         return self._matrix
 
     def abs_difference(self, matrix_2: MatrixReport) -> pd.DataFrame:
+        """Calculate the absolute difference between to matrices and sectorise output.
+
+        Absolute difference is calculated in original zone system before aggregating
+        Parameters
+        ----------
+        matrix_2 : MatrixReport
+            _description_
+
+        Returns
+        -------
+        pd.DataFrame
+            _description_
+
+        Raises
+        ------
+        ValueError
+            _description_
+        """
         if not (
             self.matrix.index.equals(matrix_2.matrix.index)
             and matrix_2.matrix.columns.equals(matrix_2.matrix.columns)
@@ -522,6 +541,20 @@ def compare_matrices(
 
 
 def add_matrix_sums(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a sum column and row to a dataframe containing a matrix in square format.
+
+    Does not change the original matrix.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Square matrix to add sum row and columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        square matrix with sum row and columns.
+    """
     df_sums = df.copy()
     df_sums.loc["sum"] = df_sums.sum(axis=0)
     df_sums["sum"] = df_sums.sum(axis=1)
