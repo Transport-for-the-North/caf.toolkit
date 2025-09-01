@@ -114,7 +114,7 @@ class BaseConfig(pydantic.BaseModel):
             the YAML data.
         """
         # pylint: disable = unspecified-encoding
-        with open(path, "rt") as file:
+        with open(path, "rt",encoding="utf-8") as file:
             text = file.read()
         return cls.from_yaml(text)
 
