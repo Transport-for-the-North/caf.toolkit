@@ -113,8 +113,8 @@ class BaseConfig(pydantic.BaseModel):
             Instance of class with attributes filled in from
             the YAML data.
         """
-        # pylint: disable = unspecified-encoding
-        with open(path, "rt",encoding="utf-8") as file:
+
+        with open(path, "rt", encoding="utf-8") as file:
             text = file.read()
         return cls.from_yaml(text)
 
@@ -330,6 +330,6 @@ def write_config(
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
         yaml = "\n".join(comment_lines + [yaml])
 
-    # pylint: disable = unspecified-encoding
-    with open(path, "wt",encoding="utf-8") as file:
+
+    with open(path, "wt", encoding="utf-8") as file:
         file.write(yaml)
