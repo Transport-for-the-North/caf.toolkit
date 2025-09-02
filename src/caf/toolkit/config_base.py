@@ -330,6 +330,5 @@ def write_config(
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
         yaml = "\n".join(comment_lines + [yaml])
 
-
     with open(path, "wt", encoding="utf-8") as file:
         file.write(yaml)
