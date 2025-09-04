@@ -6,7 +6,7 @@ from __future__ import annotations
 # Built-Ins
 import functools
 from collections.abc import Hashable
-from typing import Any, Generator
+from typing import Any, Generator, overload
 
 # Third Party
 import numpy as np
@@ -406,12 +406,28 @@ def chunk_df(
     yield from iterator
 
 
+@overload
+def long_product_infill(
+    data: pd.DataFrame,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.DataFrame: ...
+@overload
+def long_product_infill(
+    data: pd.Series,
+    infill: Any = 0,
+    check_totals: bool = False,
+    index_dict: dict[str, list] | None = None,
+) -> pd.Series: ...
+
+
 # pylint: disable=too-many-branches
 def long_product_infill(
     data: pd.DataFrame | pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
-    index_dict: dict[Hashable, list] | None = None,
+    index_dict: dict[str, list] | None = None,
 ) -> pd.DataFrame | pd.Series:
     """Infill columns with a complete product of one another.
 
@@ -647,7 +663,11 @@ def wide_to_long_infill(
             "zones and matching the columns."
         )
 
-    stacked = df.stack(future_stack=True)
+    stacked_df = df.stack(future_stack=True)
+    if isinstance(stacked_df, pd.DataFrame):
+        stacked: pd.Series = stacked_df.squeeze()
+    else:
+        stacked = stacked_df
     stacked.name = "val"
     if out_name is not None:
         stacked.name = out_name
