@@ -6,7 +6,7 @@ from __future__ import annotations
 # Built-Ins
 import functools
 from collections.abc import Hashable
-from typing import Any, Generator, overload
+from typing import Any, Generator
 
 # Third Party
 import numpy as np
