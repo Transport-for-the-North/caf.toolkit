@@ -7,7 +7,7 @@ import copy
 import logging
 import os
 import warnings
-from typing import Optional
+from typing import Optional, Sequence
 
 # Third Party
 import numpy as np
@@ -237,7 +237,7 @@ class CostDistribution:
 
     @staticmethod
     def calculate_weighted_averages(
-        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: list[float] | np.ndarray
+        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: Sequence[float] | np.ndarray
     ):
         """
         Calculate weighted averages of bins in a cost distribution.
@@ -295,9 +295,9 @@ class CostDistribution:
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
         *,
-        min_bounds: Optional[list[float] | np.ndarray] = None,
-        max_bounds: Optional[list[float] | np.ndarray] = None,
-        bin_edges: Optional[list[float] | np.ndarray] = None,
+        min_bounds: Optional[Sequence[float] | np.ndarray] = None,
+        max_bounds: Optional[Sequence[float] | np.ndarray] = None,
+        bin_edges: Optional[Sequence[float] | np.ndarray] = None,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -584,10 +584,10 @@ class CostDistribution:
 
 # # # FUNCTIONS # # #
 def _validate_bin_edges(
-    min_bounds: Optional[list[float] | np.ndarray] = None,
-    max_bounds: Optional[list[float] | np.ndarray] = None,
-    bin_edges: Optional[list[float] | np.ndarray] = None,
-) -> np.ndarray | list[float]:
+    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
+    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
+    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+) -> np.ndarray | Sequence[float]:
     # Use bounds to calculate bin edges
     if bin_edges is None:
         if min_bounds is None or max_bounds is None:
@@ -705,9 +705,9 @@ def dynamic_cost_distribution(
 def cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: Optional[list[float] | np.ndarray] = None,
-    max_bounds: Optional[list[float] | np.ndarray] = None,
-    bin_edges: Optional[list[float] | np.ndarray] = None,
+    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
+    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
+    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
 ) -> np.ndarray:
     """
     Calculate the distribution of costs across a matrix.
