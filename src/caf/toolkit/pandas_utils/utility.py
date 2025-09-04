@@ -75,6 +75,7 @@ def to_numeric(
     **kwargs,
 ) -> pd.Series: ...
 
+
 @overload
 def to_numeric(
     arg: pd.Index,
