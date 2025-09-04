@@ -921,7 +921,7 @@ def _multi_vector_trans_index(
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_from: np.ndarray,
-) -> tuple[list[Hashable], pd.DataFrame | pd.Series, pd.DataFrame]:
+) -> tuple[list[str], pd.DataFrame | pd.Series, pd.DataFrame]:
     """Create correct index for `pandas_multi_vector_zone_translation`."""
     if isinstance(vector.index, pd.MultiIndex):
         ind_names = list(vector.index.names)
