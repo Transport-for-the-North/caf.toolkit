@@ -406,22 +406,6 @@ def chunk_df(
     yield from iterator
 
 
-@overload
-def long_product_infill(
-    data: pd.DataFrame,
-    infill: Any = 0,
-    check_totals: bool = False,
-    index_dict: dict[Hashable, list] | None = None,
-) -> pd.DataFrame: ...
-@overload
-def long_product_infill(
-    data: pd.Series,
-    infill: Any = 0,
-    check_totals: bool = False,
-    index_dict: dict[Hashable, list] | None = None,
-) -> pd.Series: ...
-
-
 # pylint: disable=too-many-branches
 def long_product_infill(
     data: pd.DataFrame | pd.Series,

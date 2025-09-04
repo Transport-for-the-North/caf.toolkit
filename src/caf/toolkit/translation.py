@@ -761,36 +761,6 @@ def pandas_matrix_zone_translation(
     return translated
 
 
-@overload
-def pandas_vector_zone_translation(
-    vector: pd.Series,
-    translation: pd.DataFrame,
-    translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
-) -> pd.Series:
-    # pylint: disable=too-many-arguments
-    # pylint: disable=too-many-positional-arguments
-    ...  # pragma: no cover
-
-
-@overload
-def pandas_vector_zone_translation(
-    vector: pd.DataFrame,
-    translation: pd.DataFrame,
-    translation_from_col: str,
-    translation_to_col: str,
-    translation_factors_col: str,
-    check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
-) -> pd.DataFrame:
-    # pylint: disable=too-many-arguments
-    # pylint: disable=too-many-positional-arguments
-    ...  # pragma: no cover
-
-
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
     translation: pd.DataFrame,

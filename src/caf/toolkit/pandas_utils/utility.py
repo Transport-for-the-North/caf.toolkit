@@ -69,16 +69,7 @@ def to_numeric(
 
 @overload
 def to_numeric(
-    arg: pd.Index,
-    errors: Literal["ignore", "raise", "coerce"] = "raise",
-    downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,
-) -> pd.Index: ...
-
-
-@overload
-def to_numeric(
-    arg: pd.Series,
+    arg: pd.Series | pd.Index,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
     **kwargs,
