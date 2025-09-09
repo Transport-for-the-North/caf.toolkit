@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: main
 
+defaults:
+  timeout-minutes: 2
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
