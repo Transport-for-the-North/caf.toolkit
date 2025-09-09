@@ -30,6 +30,7 @@ from typing import Annotated, Any, Iterable, Optional
 # Third Party
 import psutil
 import pydantic
+import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
 
@@ -321,6 +322,7 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
 
         if console:
+            tqdm_log.logging_redirect_tqdm([self.logger, self._warning_logger])
             level = _CAF_LOG_LEVEL.upper().strip()
             if level in _LEVEL_LOOKUP:
                 self.add_console_handler(log_level=_LEVEL_LOOKUP[level])
