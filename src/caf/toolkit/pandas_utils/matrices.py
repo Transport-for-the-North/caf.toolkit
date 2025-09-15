@@ -338,10 +338,10 @@ class MatrixReport:
         cls,
         path: pathlib.Path,
         *,
-        translation_path: Optional[pathlib.Path] = None,
-        translation_from_col: Optional[str] = None,
-        translation_to_col: Optional[str] = None,
-        translation_factors_col: Optional[str] = None,
+        translation_path: pathlib.Path,
+        translation_from_col: str,
+        translation_to_col: str,
+        translation_factors_col: str,
     ) -> MatrixReport:
         """Create an instance of MatrixReport from file paths.
 
@@ -349,14 +349,14 @@ class MatrixReport:
         ----------
         path : pathlib.Path
             Path to the matrix csv.
-        translation_path : Optional[pathlib.Path], optional
-            Path to correspondence between matrix zoning and summary zoning, by default None
-        translation_from_col : Optional[str], optional
-            The column in the translation matrix with zoning to translate from, by default None.
-        translation_to_col : Optional[str], optional
-            The column in the translation matrix with zoning to translate to, by default None.
-        translation_factors_col : Optional[str], optional
-            The column in the translation matrix to use as factors, by default None.
+        translation_path : pathlib.Path
+            Path to correspondence between matrix zoning and summary zoning.
+        translation_from_col : str
+            The column in the translation matrix with zoning to translate from.
+        translation_to_col : str
+            The column in the translation matrix with zoning to translate to.
+        translation_factors_col : str
+            The column in the translation matrix to use as factors.
 
         Returns
         -------
@@ -364,11 +364,7 @@ class MatrixReport:
             Instance of MatrixReport created from the file paths.
         """
         matrix = pd.read_csv(path, index_col=0)
-
-        if translation_path is not None:
-            translation_factors = pd.read_csv(translation_path)
-        else:
-            translation_factors = None
+        translation_factors = pd.read_csv(translation_path)
 
         return cls(
             matrix,
