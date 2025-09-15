@@ -21,14 +21,13 @@ class MatrixReport:
     ----------
     matrix : pd.DataFrame
          The matrix to be summarised.
-    translation : Optional[pd.DataFrame], optional
+    translation : pd.DataFrame
         A translation matrix to be applied to the matrix,.
-        If None no translations is applied, by default None.
-    translation_from_col : Optional[str], optional
+    translation_from_col : str
         The column in the translation matrix to translate from, by default None.
-    translation_to_col : Optional[str], optional
+    translation_to_col : str
         The column in the translation matrix to translate to, by default None.
-    translation_factors_col : Optional[str], optional
+    translation_factors_col : str
         The column in the translation matrix to use as factors, by default None.
 
     See Also
@@ -40,48 +39,28 @@ class MatrixReport:
         self,
         matrix: pd.DataFrame,
         *,
-        translation_factors: Optional[pd.DataFrame] = None,
-        translation_from_col: Optional[str] = None,
-        translation_to_col: Optional[str] = None,
-        translation_factors_col: Optional[str] = None,
+        translation_factors: pd.DataFrame,
+        translation_from_col: str,
+        translation_to_col: str,
+        translation_factors_col: str,
     ):
 
-        self._matrix = matrix
-        self._translated_matrix: pd.DataFrame | None = None
+        self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
         self._vkms: pd.Series | None = None
+        self._translation_factors: pd.DataFrame = translation_factors
+        self._from_col: str = translation_from_col
+        self._to_col: str = translation_to_col
+        self._factors_col: str = translation_factors_col
 
-        if translation_factors is not None:
-            if (
-                (translation_factors_col is None)
-                or (translation_from_col is None)
-                or (translation_to_col is None)
-            ):
-                raise ValueError(
-                    "If translation is provided translation_from_col,"
-                    " translation_to_col and translation_factors_col "
-                    "must also be given"
-                )
-
-            self._translated_matrix = translation.pandas_matrix_zone_translation(
-                matrix,
-                translation_factors,
-                translation_from_col,
-                translation_to_col,
-                translation_factors_col,
-            )
-
-        elif (
-            (translation_factors_col is not None)
-            or (translation_from_col is not None)
-            or (translation_to_col is not None)
-        ):
-            raise ValueError(
-                "If translation_from_col,"
-                " translation_to_col or translation_factors_col are provided,"
-                " translation must also be given"
-            )
+        self._translated_matrix: pd.DataFrame = translation.pandas_matrix_zone_translation(
+            matrix,
+            self._translation_factors,
+            self._from_col,
+            self._to_col,
+            self._factors_col,
+        )
 
     def calc_vehicle_kms(
         self,
@@ -111,6 +90,7 @@ class MatrixReport:
             Column in sector_zone_lookup that contains the sector ids,
             defaults to "sector_id"
         """
+        cost_matrix = cost_matrix.sort_index(axis=0).sort_index(axis=1)
         if not (
             cost_matrix.index.equals(self._matrix.index)
             and cost_matrix.columns.equals(self._matrix.columns)
@@ -260,6 +240,48 @@ class MatrixReport:
             self.distribution.to_excel(writer, sheet_name=f"{sheet_prefix}Distribution")
 
     @property
+    def matrix(self) -> pd.DataFrame:
+        """Matrix in the original zoning system."""
+        return self._matrix.copy()
+
+    def abs_difference(self, other: MatrixReport) -> pd.DataFrame:
+        """Calculate the absolute difference between to matrices and sectorise output.
+
+        Absolute difference is calculated in original zone system before aggregating
+
+        Returns
+        -------
+        pd.DataFrame
+            Square sector matrix containing the modulus of the difference
+            between the matrix and other. Note that the difference is calculated
+            at the zone level before summing the absolute values to sectors.
+
+
+        Raises
+        ------
+        ValueError
+            If other.matrix does not have identical columns and/or indices to self.matrix
+
+        """
+        if not (
+            self.matrix.index.equals(other.matrix.index)
+            and other.matrix.columns.equals(other.matrix.columns)
+        ):
+            raise ValueError("The matrices must have the same index and columns.")
+
+        matrix_diff = (self.matrix - other.matrix).abs()
+
+        return add_matrix_sums(
+            translation.pandas_matrix_zone_translation(
+                matrix_diff,
+                self._translation_factors,
+                self._from_col,
+                self._to_col,
+                self._factors_col,
+            )
+        )
+
+    @property
     def describe(self) -> pd.DataFrame:
         """High level statistics on the original and, if provided, sectorised matrix."""
         if self._describe is None:
@@ -274,13 +296,14 @@ class MatrixReport:
     @property
     def sector_matrix(self) -> pd.DataFrame | None:
         """Sector matrix if translation vector provided, otherwise none."""
-
+        if isinstance(self._translated_matrix, pd.DataFrame):
+            return add_matrix_sums(self._translated_matrix)
         return self._translated_matrix
 
     @property
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
-        if self._translated_matrix is None:
+        if self._distribution is None:
             warnings.warn("Trip Length Distribution has not been set")
         return self._distribution
 
@@ -288,7 +311,7 @@ class MatrixReport:
     def vkms(self) -> pd.Series | None:
         """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
         if self._vkms is None:
-            warnings.warn("Trip Length Distribution has not been set")
+            warnings.warn("Trip VKMs has not been set")
         return self._vkms
 
     @property
@@ -315,10 +338,10 @@ class MatrixReport:
         cls,
         path: pathlib.Path,
         *,
-        translation_path: Optional[pathlib.Path] = None,
-        translation_from_col: Optional[str] = None,
-        translation_to_col: Optional[str] = None,
-        translation_factors_col: Optional[str] = None,
+        translation_path: pathlib.Path,
+        translation_from_col: str,
+        translation_to_col: str,
+        translation_factors_col: str,
     ) -> MatrixReport:
         """Create an instance of MatrixReport from file paths.
 
@@ -326,14 +349,14 @@ class MatrixReport:
         ----------
         path : pathlib.Path
             Path to the matrix csv.
-        translation_path : Optional[pathlib.Path], optional
-            Path to correspondence between matrix zoning and summary zoning, by default None
-        translation_from_col : Optional[str], optional
-            The column in the translation matrix with zoning to translate from, by default None.
-        translation_to_col : Optional[str], optional
-            The column in the translation matrix with zoning to translate to, by default None.
-        translation_factors_col : Optional[str], optional
-            The column in the translation matrix to use as factors, by default None.
+        translation_path : pathlib.Path
+            Path to correspondence between matrix zoning and summary zoning.
+        translation_from_col : str
+            The column in the translation matrix with zoning to translate from.
+        translation_to_col : str
+            The column in the translation matrix with zoning to translate to.
+        translation_factors_col : str
+            The column in the translation matrix to use as factors.
 
         Returns
         -------
@@ -341,11 +364,7 @@ class MatrixReport:
             Instance of MatrixReport created from the file paths.
         """
         matrix = pd.read_csv(path, index_col=0)
-
-        if translation_path is not None:
-            translation_factors = pd.read_csv(translation_path)
-        else:
-            translation_factors = None
+        translation_factors = pd.read_csv(translation_path)
 
         return cls(
             matrix,
@@ -439,9 +458,16 @@ def compare_matrices(
     comparisons["matrix difference"] = (
         matrix_report_a.sector_matrix - matrix_report_b.sector_matrix
     )
+
     comparisons["matrix percentage"] = (
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
     ) - 1
+
+    comparisons["matrix abs difference"] = matrix_report_a.abs_difference(matrix_report_b)
+
+    comparisons["matrix abs percentage"] = (
+        comparisons["matrix abs difference"] / matrix_report_a.sector_matrix
+    )
 
     comparisons["stats"] = pd.DataFrame(
         {
@@ -480,6 +506,27 @@ def compare_matrices(
         )
 
     return comparisons
+
+
+def add_matrix_sums(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a sum column and row to a dataframe containing a matrix in square format.
+
+    Does not change the original matrix.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Square matrix to add sum row and columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        square matrix with sum row and columns.
+    """
+    df_sums = df.copy()
+    df_sums.loc["sum"] = df_sums.sum(axis=0)
+    df_sums["sum"] = df_sums.sum(axis=1)
+    return df_sums
 
 
 def compare_matrices_and_output(

@@ -589,11 +589,13 @@ def pandas_long_matrix_zone_translation(
                 f"Extra columns found in matrix, dropping the following: {drop_cols}"
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
-        matrix = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
-        assert isinstance(matrix, pd.Series)
+        series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
+        assert isinstance(series_mat, pd.Series)
+    else:
+        series_mat = matrix
 
     # Convert to wide to translate
-    wide_mat = pd_utils.long_to_wide_infill(matrix=matrix)
+    wide_mat = pd_utils.long_to_wide_infill(matrix=series_mat)
 
     translated_wide_mat = pandas_matrix_zone_translation(
         matrix=wide_mat,
@@ -854,9 +856,7 @@ def pandas_vector_zone_translation(
     if not isinstance(factors, pd.Series):
         raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(factors, axis="index")
-        .groupby(level=[translation.to_column] + ind_names)
-        .sum()
+        vector.mul(factors, axis=0).groupby(level=[translation.to_column] + ind_names).sum()
     )
 
     if check_totals:

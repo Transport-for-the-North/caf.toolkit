@@ -33,6 +33,7 @@ dependencies = { "file" = "requirements.txt" }
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { "file" = "requirements_dev.txt" }
 docs = { "file" = "docs/requirements.txt" }
+sparse = {"file" = "requirements_sparse.txt"}
 
 # Dynamic versioning for editable installs
 [tool.setuptools.cmdclass]
@@ -57,6 +58,7 @@ disable = [
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",
+    "wrong-import-position", # Compatibility with isort
 ]
 
 [tool.isort]
@@ -99,7 +101,7 @@ add-ignore = [
 # Tests
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-addopts = '--cov=caf --cov-report=xml --doctest-modules -n auto --ignore=examples'
+addopts = '--cov=caf --cov-report=xml --doctest-modules -n auto --ignore=examples --junitxml=junit.xml -o junit_family=legacy'
 # addopts = '--cov=caf --cov-report=xml --doctest-modules'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = ["serial: marks tests to not run in parallel"]

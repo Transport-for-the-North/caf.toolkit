@@ -503,8 +503,8 @@ def long_product_infill(
         dtype = data.dtype
     else:
         selector = data.columns
-        if all(i == data.dtypes[0] for i in data.dtypes):
-            dtype = data.dtypes[0]
+        if all(i == data.dtypes.iloc[0] for i in data.dtypes):
+            dtype = data.dtypes.iloc[0]
         else:
             raise TypeError(
                 "All columns of the input data must have the same type for this to work."
