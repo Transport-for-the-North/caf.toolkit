@@ -21,14 +21,13 @@ class MatrixReport:
     ----------
     matrix : pd.DataFrame
          The matrix to be summarised.
-    translation : Optional[pd.DataFrame], optional
+    translation : pd.DataFrame
         A translation matrix to be applied to the matrix,.
-        If None no translations is applied, by default None.
-    translation_from_col : Optional[str], optional
+    translation_from_col : str
         The column in the translation matrix to translate from, by default None.
-    translation_to_col : Optional[str], optional
+    translation_to_col : str
         The column in the translation matrix to translate to, by default None.
-    translation_factors_col : Optional[str], optional
+    translation_factors_col : str
         The column in the translation matrix to use as factors, by default None.
 
     See Also
@@ -40,56 +39,28 @@ class MatrixReport:
         self,
         matrix: pd.DataFrame,
         *,
-        translation_factors: Optional[pd.DataFrame] = None,
-        translation_from_col: Optional[str] = None,
-        translation_to_col: Optional[str] = None,
-        translation_factors_col: Optional[str] = None,
+        translation_factors: pd.DataFrame,
+        translation_from_col: str,
+        translation_to_col: str,
+        translation_factors_col: str,
     ):
 
-        self._matrix = matrix  # .sort_index(axis=0).sort_index(axis=1)
-        self._translated_matrix: pd.DataFrame | None = None
+        self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
         self._vkms: pd.Series | None = None
-        self._translation_factors: pd.DataFrame | None = None
-        self._from_col: str | None = None
-        self._to_col: str | None = None
-        self._factors_col: str | None = None
+        self._translation_factors: pd.DataFrame = translation_factors
+        self._from_col: str = translation_from_col
+        self._to_col: str = translation_to_col
+        self._factors_col: str = translation_factors_col
 
-        if translation_factors is not None:
-            if (
-                (translation_factors_col is None)
-                or (translation_from_col is None)
-                or (translation_to_col is None)
-            ):
-                raise ValueError(
-                    "If translation is provided translation_from_col,"
-                    " translation_to_col and translation_factors_col "
-                    "must also be given"
-                )
-
-            self._translated_matrix = translation.pandas_matrix_zone_translation(
-                matrix,
-                translation_factors,
-                translation_from_col,
-                translation_to_col,
-                translation_factors_col,
-            )
-            self._translation_factors = translation_factors
-            self._from_col = translation_from_col
-            self._to_col = translation_to_col
-            self._factors_col = translation_factors_col
-
-        elif (
-            (translation_factors_col is not None)
-            or (translation_from_col is not None)
-            or (translation_to_col is not None)
-        ):
-            raise ValueError(
-                "If translation_from_col,"
-                " translation_to_col or translation_factors_col are provided,"
-                " translation must also be given"
-            )
+        self._translated_matrix: pd.DataFrame = translation.pandas_matrix_zone_translation(
+            matrix,
+            self._translation_factors,
+            self._from_col,
+            self._to_col,
+            self._factors_col,
+        )
 
     def calc_vehicle_kms(
         self,
@@ -119,7 +90,7 @@ class MatrixReport:
             Column in sector_zone_lookup that contains the sector ids,
             defaults to "sector_id"
         """
-        # cost_matrix = cost_matrix.sort_index(axis = 0).sort_index(axis=1)
+        cost_matrix = cost_matrix.sort_index(axis=0).sort_index(axis=1)
         if not (
             cost_matrix.index.equals(self._matrix.index)
             and cost_matrix.columns.equals(self._matrix.columns)
@@ -271,34 +242,34 @@ class MatrixReport:
     @property
     def matrix(self) -> pd.DataFrame:
         """Matrix in the original zoning system."""
-        return self._matrix
+        return self._matrix.copy()
 
-    def abs_difference(self, matrix_2: MatrixReport) -> pd.DataFrame:
+    def abs_difference(self, other: MatrixReport) -> pd.DataFrame:
         """Calculate the absolute difference between to matrices and sectorise output.
 
         Absolute difference is calculated in original zone system before aggregating
-        Parameters
-        ----------
-        matrix_2 : MatrixReport
-            _description_
 
         Returns
         -------
         pd.DataFrame
-            _description_
+            Square sector matrix containing the modulus of the difference
+            between the matrix and other. Note that the difference is calculated
+            at the zone level before summing the absolute values to sectors.
+
 
         Raises
         ------
         ValueError
-            _description_
+            If other.matrix does not have identical columns and/or indices to self.matrix
+
         """
         if not (
-            self.matrix.index.equals(matrix_2.matrix.index)
-            and matrix_2.matrix.columns.equals(matrix_2.matrix.columns)
+            self.matrix.index.equals(other.matrix.index)
+            and other.matrix.columns.equals(other.matrix.columns)
         ):
-            raise ValueError("Cost matrix must have the same index and columns as the matrix")
+            raise ValueError("The matrices must have the same index and columns.")
 
-        matrix_diff = (self.matrix - matrix_2.matrix).abs()
+        matrix_diff = (self.matrix - other.matrix).abs()
 
         return add_matrix_sums(
             translation.pandas_matrix_zone_translation(

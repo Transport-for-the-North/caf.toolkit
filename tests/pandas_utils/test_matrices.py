@@ -362,6 +362,24 @@ class TestMatrixComparison:
                 dtype=np.float64,
             ),
         )
+        pd.testing.assert_frame_equal(
+            comparison["matrix abs difference"],
+            pd.DataFrame(
+                0,
+                index=matrix_report.sector_matrix.index,
+                columns=matrix_report.sector_matrix.columns,
+                dtype=np.float64,
+            ),
+        )
+        pd.testing.assert_frame_equal(
+            comparison["matrix abs percentage"],
+            pd.DataFrame(
+                0,
+                index=matrix_report.sector_matrix.index,
+                columns=matrix_report.sector_matrix.columns,
+                dtype=np.float64,
+            ),
+        )
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_trip_ends(
