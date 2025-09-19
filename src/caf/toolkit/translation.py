@@ -713,6 +713,7 @@ def pandas_matrix_zone_translation(
 
     return translated
 
+
 @overload
 def pandas_vector_zone_translation(
     vector: pd.DataFrame,
@@ -724,6 +725,7 @@ def pandas_vector_zone_translation(
     # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
+
 @overload
 def pandas_vector_zone_translation(
     vector: pd.Series,
@@ -734,6 +736,7 @@ def pandas_vector_zone_translation(
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
+
 
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
