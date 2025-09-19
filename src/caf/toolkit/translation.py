@@ -35,9 +35,6 @@ DP_TOLERANCE = 6
 class _MultiVectorKwargs(TypedDict):
     """Typed dict for multi_vector_translation kwarg expansion."""
 
-    translation_from_col: str
-    translation_to_col: str
-    translation_factors_col: str
     translation_dtype: Optional[np.dtype]
     check_totals: bool
 
@@ -716,19 +713,6 @@ def pandas_matrix_zone_translation(
 
     return translated
 
-
-@overload
-def pandas_vector_zone_translation(
-    vector: pd.Series,
-    zone_correspondence: ZoneCorrespondence,
-    check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
-) -> pd.Series:
-    # pylint: disable=too-many-arguments
-    # pylint: disable=too-many-positional-arguments
-    ...  # pragma: no cover
-
-
 @overload
 def pandas_vector_zone_translation(
     vector: pd.DataFrame,
@@ -740,6 +724,16 @@ def pandas_vector_zone_translation(
     # pylint: disable=too-many-positional-arguments
     ...  # pragma: no cover
 
+@overload
+def pandas_vector_zone_translation(
+    vector: pd.Series,
+    zone_correspondence: ZoneCorrespondence,
+    check_totals: bool = True,
+    translation_dtype: Optional[np.dtype] = None,
+) -> pd.Series:
+    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-positional-arguments
+    ...  # pragma: no cover
 
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
@@ -1190,6 +1184,8 @@ class ZoneCorrespondencePath:
             from_col = self.from_col_name
             to_col = self.to_col_name
 
+        assert factors_col is not None
+
         return ZoneCorrespondence(
             translation,
             from_col,
@@ -1249,7 +1245,7 @@ class ZoneCorrespondence:
         return self.df[self.from_col_name].copy()
 
     @from_column.setter
-    def from_column(self, new_col: pd.Series) -> pd.Series:
+    def from_column(self, new_col: pd.Series) -> None:
         if not isinstance(new_col, pd.Series):
             raise TypeError(f"New col must be a Series not {type(new_col)}")
         if len(self.df) != len(new_col):
@@ -1263,7 +1259,7 @@ class ZoneCorrespondence:
         return self.df[self.to_col_name].copy()
 
     @to_column.setter
-    def to_column(self, new_col: pd.Series) -> pd.Series:
+    def to_column(self, new_col: pd.Series) -> None:
         if not isinstance(new_col, pd.Series):
             raise TypeError(f"New col must be a Series not {type(new_col)}")
         if len(self.df) != len(new_col):
@@ -1277,7 +1273,7 @@ class ZoneCorrespondence:
         return self.df[self.factors_col_name].copy()
 
     @factors_column.setter
-    def factors_column(self, new_col: Collection) -> pd.Series:
+    def factors_column(self, new_col: Collection) -> None:
         try:
             new_col = pd.Series(new_col)
         except (ValueError, TypeError) as e:
