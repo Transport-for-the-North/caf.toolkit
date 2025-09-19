@@ -21,6 +21,10 @@ a lot of the useful stuff from
 [NorMITs Demand](https://github.com/Transport-for-the-North/NorMITs-Demand)
 more widely available and easily accessible.
 
+> [!TIP]
+> For more detailed information including a user guide, tutorials and API reference see the full
+> [caf.toolkit documentation](https://caftoolkit.readthedocs.io/en/stable/)
+
 ## Common Analytical Framework
 
 This package is sits within the [Common Analytical Framework (CAF)](https://transport-for-the-north.github.io/caf_homepage/intro.html),
