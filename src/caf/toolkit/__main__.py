@@ -90,7 +90,7 @@ class TranslationArgs(_BaseTranslationArgs):
         """Run vector zone translation with the given arguments."""
         translation.vector_translation_from_file(
             vector_path=self.data_file,
-            translation_path=translation.ZoneCorrespondencePath(
+            zone_correspondence_path=translation.ZoneCorrespondencePath(
                 self.translation_file,
                 from_col_name=self.from_column,
                 to_col_name=self.to_column,

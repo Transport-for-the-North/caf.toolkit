@@ -192,20 +192,16 @@ def _pandas_matrix_validation(
         to be translated.
 
     row_translation:
-        A pandas DataFrame defining the weights to translate use when
+        `ZoneCorrespondence` object defining the weights to translate use when
         translating.
         Needs to contain columns:
         `translation_from_col`, `translation_to_col`, `translation_factors_col`.
 
     col_translation:
-        A pandas DataFrame defining the weights to translate use when
+        `ZoneCorrespondence` object defining the weights to translate use when
         translating.
         Needs to contain columns:
         `translation_from_col`, `translation_to_col`, `translation_factors_col`.
-
-    translation_from_col:
-        The name of the column in `translation` containing the current index
-        values of `vector`.
 
     name:
         The name to use in any warnings messages when they are raised.
@@ -519,7 +515,7 @@ def pandas_long_matrix_zone_translation(
     values_col:
         The name of the column in `matrix` detailing the values to translate.
 
-    translation:
+    zone_correspondence:
         A `ZoneCorrespondence` object defining the weights to use when translating.
         When `col_translation` is None, this defines the translation to use
         for both the rows and columns. When `col_translation` is set, this
@@ -622,7 +618,6 @@ def pandas_matrix_zone_translation(
         When `col_translation` is None, this defines the translation to use
         for both the rows and columns. When `col_translation` is set, this
         defines the translation to use for the rows.
-
 
     col_translation:
         A `ZoneCorrespondence` object defining the weights to use to translate the columns.
@@ -757,8 +752,8 @@ def pandas_vector_zone_translation(
     vector:
         The vector to translate. The index must be the values to be translated.
 
-    translation:
-        A ZoneCorrespondence object defining the weights to translate use when
+    zone_correspondence:
+        A `ZoneCorrespondence` object defining the weights to translate use when
         translating.
 
     check_totals:
@@ -935,7 +930,7 @@ def _multi_vector_trans_index(
 
 def vector_translation_from_file(
     vector_path: pathlib.Path,
-    translation_path: ZoneCorrespondencePath,
+    zone_correspondence_path: ZoneCorrespondencePath,
     output_path: pathlib.Path,
     *,
     vector_zone_column: str | int,
@@ -948,8 +943,8 @@ def vector_translation_from_file(
     ----------
     vector_path : pathlib.Path
         Path to CSV file containing data to be translated.
-    translation_path : pathlib.Path
-        Path to translation lookup CSV.
+    zone_correspondence_path : ZoneCorrespondencePath
+        Object defining the lookup CSV.
     output_path : pathlib.Path
         CSV path to save the translated data to.
     vector_zone_column : str | int
@@ -990,7 +985,7 @@ def vector_translation_from_file(
         LOG.error("no numeric columns in vector data to translate")
         return
 
-    lookup = translation_path.read()
+    lookup = zone_correspondence_path.read()
 
     translated = pandas_vector_zone_translation(
         vector,
@@ -1131,6 +1126,7 @@ class ZoneCorrespondencePath:
 
     @property
     def _use_cols(self) -> list[str]:
+        """Columns to use when reading in the csv translation vector."""
         cols = [self.from_col_name, self.to_col_name]
         if self.factors_col_name is not None:
             cols.append(self.factors_col_name)
@@ -1143,13 +1139,18 @@ class ZoneCorrespondencePath:
         """Read the translation file.
 
         Parameters
-        ---------
+        ----------
         factors_mandatory
             If True (default), an error will be raised if the factors
             column is not present.
         generic_column_names
             If True (default), the columns will be renamed
             to "from", "to" and "factors".
+
+        Returns
+        -------
+        ZoneCorrespondence
+            translation vector read from path.
         """
         if factors_mandatory and self.factors_col_name is None:
             raise ValueError("Factors column name is mandatory.")
@@ -1199,17 +1200,24 @@ class ZoneCorrespondencePath:
 
 @dataclasses.dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class ZoneCorrespondence:
-    """Container for a pandas based translation"""
+    """Container for a pandas based translation."""
 
-    df: pd.DataFrame
+    vector: pd.DataFrame
+    """Translation vector."""
     from_col_name: str = "from"
+    """From zone id column name in translation `vector`."""
     to_col_name: str = "to"
+    """To zone id column name in translation `vector`."""
     factors_col_name: str = "factors"
+    """Factors column name in translation `vector`."""
 
     def __post_init__(self) -> None:
+        """Format and check translation vector."""
         try:
-            self.df = self.df.reset_index()
-            self.df = self.df[[self.from_col_name, self.to_col_name, self.factors_col_name]]
+            self.vector = self.vector.reset_index()
+            self.vector = self.vector[
+                [self.from_col_name, self.to_col_name, self.factors_col_name]
+            ]
         except KeyError as e:
             raise KeyError(
                 "Zone correspondence must contain the columns "
@@ -1218,62 +1226,62 @@ class ZoneCorrespondence:
         self._validate_factors()
 
     def _validate_factors(self) -> None:
-
-        factor_type = self.df[self.factors_col_name].dtype.kind
+        """Validate the factors are in the right format and make logical sense."""
+        factor_type = self.vector[self.factors_col_name].dtype.kind
 
         if factor_type not in ("i", "f"):
             raise ValueError(
-                f"Factors must be numeric not {self.df[self.factors_col_name].dtype}"
+                f"Factors must be numeric not {self.vector[self.factors_col_name].dtype}"
             )
 
-        if self.df[self.factors_col_name].isna().any():
+        if self.vector[self.factors_col_name].isna().any():
             raise ValueError("Factors column contains NaNs")
 
-        factor_col_sums = self.df.groupby(self.from_col_name)[self.factors_col_name].sum()
+        factor_col_sums = self.vector.groupby(self.from_col_name)[self.factors_col_name].sum()
 
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
             raise ValueError("Factors cannot be greater than one.")
 
-        if any(self.df[self.from_col_name] < 0):
+        if any(self.vector[self.from_col_name] < 0):
             raise ValueError("Factors cannot be negative.")
 
     @property
     def translation_vector(self) -> pd.DataFrame:
         """Translation vector table."""
-        return self.df.set_index([self.from_col_name, self.to_col_name])
+        return self.vector.set_index([self.from_col_name, self.to_col_name])
 
     @property
     def from_column(self) -> pd.Series:
         """From zone column from the translation vector."""
-        return self.df[self.from_col_name].copy()
+        return self.vector[self.from_col_name].copy()
 
     @from_column.setter
     def from_column(self, new_col: pd.Series) -> None:
         if not isinstance(new_col, pd.Series):
             raise TypeError(f"New col must be a Series not {type(new_col)}")
-        if len(self.df) != len(new_col):
-            raise ValueError(f"New col len {len(new_col)} != df len {len(self.df)}")
+        if len(self.vector) != len(new_col):
+            raise ValueError(f"New col len {len(new_col)} != df len {len(self.vector)}")
 
-        self.df[self.from_col_name] = new_col
+        self.vector[self.from_col_name] = new_col
 
     @property
     def to_column(self) -> pd.Series:
         """To zone column from the translation vector."""
-        return self.df[self.to_col_name].copy()
+        return self.vector[self.to_col_name].copy()
 
     @to_column.setter
     def to_column(self, new_col: pd.Series) -> None:
         if not isinstance(new_col, pd.Series):
             raise TypeError(f"New col must be a Series not {type(new_col)}")
-        if len(self.df) != len(new_col):
-            raise ValueError(f"New col len {len(new_col)} != df len {len(self.df)}")
+        if len(self.vector) != len(new_col):
+            raise ValueError(f"New col len {len(new_col)} != df len {len(self.vector)}")
 
-        self.df[self.to_col_name] = new_col
+        self.vector[self.to_col_name] = new_col
 
     @property
     def factors_column(self) -> pd.Series:
         """Factors zone column from the translation vector."""
-        return self.df[self.factors_col_name].copy()
+        return self.vector[self.factors_col_name].copy()
 
     @factors_column.setter
     def factors_column(self, new_col: Collection) -> None:
@@ -1281,10 +1289,10 @@ class ZoneCorrespondence:
             new_col = pd.Series(new_col)
         except (ValueError, TypeError) as e:
             raise TypeError(f"New col must be a Series not {type(new_col)}") from e
-        if len(self.df) != len(new_col):
-            raise ValueError(f"New col len {len(new_col)} != df len {len(self.df)}")
+        if len(self.vector) != len(new_col):
+            raise ValueError(f"New col len {len(new_col)} != df len {len(self.vector)}")
 
-        self.df[self.factors_col_name] = new_col
+        self.vector[self.factors_col_name] = new_col
 
         self._validate_factors()
 

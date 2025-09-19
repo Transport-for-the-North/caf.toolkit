@@ -1612,7 +1612,7 @@ class TestVectorTranslationFromFile:
         output_path = vector_file_translation.vector_path.parent / "test_result.csv"
         translation.vector_translation_from_file(
             vector_path=vector_file_translation.vector_path,
-            translation_path=vector_file_translation.translation_path,
+            zone_correspondence_path=vector_file_translation.translation_path,
             output_path=output_path,
             vector_zone_column=vector_file_translation.vector_zone_column,
         )
