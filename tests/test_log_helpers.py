@@ -15,11 +15,13 @@ import platform
 import subprocess
 import warnings
 from typing import NamedTuple
+from unittest.mock import patch
 
 # Third Party
 import psutil
 import pydantic
 import pytest
+import tqdm.contrib.logging
 
 # Local Imports
 from caf.toolkit import (
@@ -406,7 +408,7 @@ class TestLogHelper:
         level: str,
         answer: int,
     ) -> None:
-        """Test initialising the logger without a file."""
+        """Test logging messages and number of handlers correspond to correct level."""
         root = "log_level_test"
         logger = logging.getLogger(root)
         assert len(logger.handlers) == 0, "Too many loggers"
@@ -421,6 +423,13 @@ class TestLogHelper:
             assert log.logger.handlers[0].level == answer
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
+
+    def test_tqdm_redirect(self, log_init: LogInitDetails) -> None:
+        """Tests tqdm.contrib.logging.logging_redirect_tqdm() function is called."""
+        root = "tqdm_test"
+        with patch("tqdm.contrib.logging.logging_redirect_tqdm") as mock_helper:
+            LogHelper(root, log_init.details)
+            mock_helper.assert_called_once()
 
     def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
         """Test logging to file within `with` statement.
