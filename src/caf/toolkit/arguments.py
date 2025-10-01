@@ -356,9 +356,8 @@ class ModelArguments:
                 "cannot add subcommands if add_arguments and add_config are both False."
             )
 
-        parser = subparsers.add_parser(name, **kwargs)
-
         if add_arguments:
+            parser = subparsers.add_parser(name, **kwargs)
             self.add_arguments(parser)
 
         if self._config and add_config:
