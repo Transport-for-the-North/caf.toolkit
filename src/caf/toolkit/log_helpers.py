@@ -26,8 +26,10 @@ import subprocess
 import sys
 import warnings
 from typing import Annotated, Any, Iterable, Optional
+from pathlib import Path
 
 # Third Party
+import yaml
 import psutil
 import pydantic
 from psutil import _common
@@ -846,3 +848,33 @@ def capture_warnings(
 
     if file_handler_args is not None:
         warning_logger.addHandler(get_file_handler(**file_handler_args))
+
+
+def write_metadata(path: Path, details: ToolDetails, **metadata: Any) -> None:
+    """
+    Write metadata (tool details, system information and any user specified
+    metadata) out to a user specified path.
+
+    Parameters
+    ----------
+    path: Path to output location
+    details: Information about the current tool based on the ToolDetails
+             dataclass.
+    metadata: Keyword arguments passed, in any form, that create user specific
+              metadata e.g. dictionary with key value paris of date, project,
+              owner, stakeholders etc.
+    """
+    if not path:
+        raise ValueError("Path required to write metadata.")
+    sys_info = SystemInformation.load()
+
+    yaml_content = {
+        "tool_details": details,
+        "system_information": sys_info,
+        "metadata": metadata
+    }
+
+    yaml_file_path = os.path.join(path, "metadata.yaml")
+
+    with open(yaml_file_path, "w") as file:
+        yaml.dump(yaml_content, file, sort_keys=False, default_flow_style=False)
