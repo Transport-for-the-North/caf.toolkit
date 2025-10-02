@@ -21,14 +21,8 @@ class MatrixReport:
     ----------
     matrix : pd.DataFrame
          The matrix to be summarised.
-    translation : pd.DataFrame
-        A translation matrix to be applied to the matrix,.
-    translation_from_col : str
-        The column in the translation matrix to translate from, by default None.
-    translation_to_col : str
-        The column in the translation matrix to translate to, by default None.
-    translation_factors_col : str
-        The column in the translation matrix to use as factors, by default None.
+    translation : translation.ZoneCorrespondence
+        A translation object to be applied to the matrix,.
 
     See Also
     --------
@@ -38,37 +32,24 @@ class MatrixReport:
     def __init__(
         self,
         matrix: pd.DataFrame,
-        *,
-        translation_factors: pd.DataFrame,
-        translation_from_col: str,
-        translation_to_col: str,
-        translation_factors_col: str,
+        translation_vector: translation.ZoneCorrespondence,
     ):
 
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
         self._vkms: pd.Series | None = None
-        self._translation_factors: pd.DataFrame = translation_factors
-        self._from_col: str = translation_from_col
-        self._to_col: str = translation_to_col
-        self._factors_col: str = translation_factors_col
+        self._translation_vector: pd.DataFrame = translation_vector
 
         self._translated_matrix: pd.DataFrame = translation.pandas_matrix_zone_translation(
-            matrix,
-            self._translation_factors,
-            self._from_col,
-            self._to_col,
-            self._factors_col,
+            matrix, self._translation_vector, check_totals=True
         )
 
     def calc_vehicle_kms(
         self,
         cost_matrix: pd.DataFrame,
         *,
-        sector_zone_lookup: pd.DataFrame | None = None,
-        zone_column: str = "zone_id",
-        sector_column: str = "sector_id",
+        sector_zone_lookup: translation.ZoneCorrespondence | None = None,
     ) -> None:
         """Calculate vehicle kms from the matrix passed on initialisation.
 
@@ -81,14 +62,8 @@ class MatrixReport:
         cost_matrix : pd.DataFrame
             Cost matrix corresponding with the inputted matrix.
         sector_zone_lookup: pd.DataFrame | None = None,
-            Lookup table to translate zones to sectors to create a
+            translation vector to translate zones to sectors to create a
             sectorised distribution
-        zone_column: str
-            Column in sector_zone_lookup that contains the zone ids,
-            defaults to "zone_id"
-        sector_column: str = "sector_id",
-            Column in sector_zone_lookup that contains the sector ids,
-            defaults to "sector_id"
         """
         cost_matrix = cost_matrix.sort_index(axis=0).sort_index(axis=1)
         if not (
@@ -105,9 +80,11 @@ class MatrixReport:
             self._vkms = pd.Series({"vkms": origin_kms.sum()}, name="vkms")
 
         else:
-            sector_replace = sector_zone_lookup.set_index(zone_column)[sector_column].to_dict()
-            sector_kms = origin_kms.rename(sector_replace).groupby(level=0).sum()
+            sector_kms = translation.pandas_vector_zone_translation(
+                origin_kms, sector_zone_lookup
+            )
             sector_kms.name = "vkms"
+            sector_kms.index.name = None
             self._vkms = sector_kms
 
     def trip_length_distribution(
@@ -115,9 +92,7 @@ class MatrixReport:
         cost_matrix: pd.DataFrame,
         bins: list[int],
         *,
-        sector_zone_lookup: pd.DataFrame | None = None,
-        zone_column: str = "zone_id",
-        sector_column: str = "sector_id",
+        sector_zone_lookup: translation.ZoneCorrespondence | None = None,
     ) -> None:
         """Calculate a distribution from the matrix passed on initialisation.
 
@@ -130,12 +105,8 @@ class MatrixReport:
             Cost matrix corresponding with the inputted matrix.
         bins : list[int]
             Bins to use for the distribution.
-        sector_zone_lookup: pd.DataFrame | None = None,
-            lookup table to translate zones to sectors to create a sectorised distribution
-        zone_column: str = "zone_id",
-            column in sector_zone_lookup that contains the zone ids
-        sector_column: str = "sector_id",
-            column in sector_zone_lookup that contains the sector ids
+        sector_zone_lookup: translation.ZoneCorrespondence | None = None,
+            Lookup vector to translate zones to sectors to create a sectorised distribution
         """
         try:
             cost_matrix.index = pd.to_numeric(cost_matrix.index, downcast="integer")  # type: ignore[call-overload]
@@ -157,16 +128,12 @@ class MatrixReport:
 
             return
 
-        for col in [zone_column, sector_column]:
-            if col not in sector_zone_lookup.columns:
-                raise KeyError(f"{col} not in sector zone lookup columns")
-
         index_check: bool = (
-            sector_zone_lookup[zone_column].sort_values().tolist()
+            sector_zone_lookup.from_column.sort_values().tolist()
             == self._matrix.sort_index().index.tolist()
         )
         col_check: bool = (
-            sector_zone_lookup[zone_column].sort_values().tolist()
+            sector_zone_lookup.from_column.sort_values().tolist()
             == self._matrix.columns.sort_values().tolist()
         )
 
@@ -174,20 +141,23 @@ class MatrixReport:
             raise KeyError("Zones in sector_zone_lookup must contain all zones ")
 
         stacked_distribution = []
-        for sector in sector_zone_lookup[sector_column].unique():
-            zones = sector_zone_lookup.loc[
-                sector_zone_lookup[sector_column] == sector, zone_column
+        for sector in sector_zone_lookup.to_column.unique():
+            zones = sector_zone_lookup.get_correspondence(sector, filter_on="to")[
+                sector_zone_lookup.from_col_name
             ]
+            if len(zones) == 0:
+                raise KeyError("No zones found")
+
             cut_matrix = self._matrix.loc[zones, :]
             cut_cost_matrix = cost_matrix.loc[cut_matrix.index, cut_matrix.columns]  # type: ignore[index]
             sector_distribution = cost_utils.CostDistribution.from_data(
                 cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
             ).df
-            sector_distribution[sector_column] = sector
+            sector_distribution[sector_zone_lookup.to_col_name] = sector
             # sector_distribution.set_index([sector_column, "min", "max"], append=True)
             stacked_distribution.append(sector_distribution)
         self._distribution = pd.concat(stacked_distribution).set_index(
-            [sector_column, "min", "max"]
+            [sector_zone_lookup.to_col_name, "min", "max"]
         )
 
     def write_to_excel(
@@ -274,10 +244,7 @@ class MatrixReport:
         return add_matrix_sums(
             translation.pandas_matrix_zone_translation(
                 matrix_diff,
-                self._translation_factors,
-                self._from_col,
-                self._to_col,
-                self._factors_col,
+                self._translation_vector,
             )
         )
 
@@ -338,10 +305,8 @@ class MatrixReport:
         cls,
         path: pathlib.Path,
         *,
-        translation_path: pathlib.Path,
-        translation_from_col: str,
-        translation_to_col: str,
-        translation_factors_col: str,
+        translation_path: translation.ZoneCorrespondencePath,
+        factors_mandatory: bool = True,
     ) -> MatrixReport:
         """Create an instance of MatrixReport from file paths.
 
@@ -364,14 +329,11 @@ class MatrixReport:
             Instance of MatrixReport created from the file paths.
         """
         matrix = pd.read_csv(path, index_col=0)
-        translation_factors = pd.read_csv(translation_path)
+        translation_factors = translation_path.read(factors_mandatory=factors_mandatory)
 
         return cls(
             matrix,
             translation_factors=translation_factors,
-            translation_from_col=translation_from_col,
-            translation_to_col=translation_to_col,
-            translation_factors_col=translation_factors_col,
         )
 
 

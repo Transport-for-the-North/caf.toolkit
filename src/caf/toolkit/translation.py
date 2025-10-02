@@ -12,7 +12,16 @@ import logging
 import pathlib
 import warnings
 from collections.abc import Hashable
-from typing import Any, Collection, Literal, Optional, TypedDict, TypeVar, overload
+from typing import (
+    Any,
+    Collection,
+    Literal,
+    Optional,
+    Sequence,
+    TypedDict,
+    TypeVar,
+    overload,
+)
 
 # Third Party
 import numpy as np
@@ -29,6 +38,7 @@ _T = TypeVar("_T")
 
 LOG = logging.getLogger(__name__)
 DP_TOLERANCE = 6
+VALID_ZONE_ID_DTYPE = str | int
 
 
 # # # CLASSES # # #
@@ -1295,6 +1305,49 @@ class ZoneCorrespondence:
         self.vector[self.factors_col_name] = new_col
 
         self._validate_factors()
+
+    def get_correspondence(
+        self,
+        filter_zones: VALID_ZONE_ID_DTYPE | Sequence[VALID_ZONE_ID_DTYPE],
+        filter_on: Literal["from", "to"] = "from",
+    ) -> pd.DataFrame:
+        """Retrieve the correspondence for a subset of zones.
+
+        If the filter zones do not exist an empty dataframe is returned
+        Parameters
+        ----------
+        filter_zones : VALID_ZONE_ID_DTYPE | Sequence[VALID_ZONE_ID_DTYPE]
+            The zones for which to retrieve correspondence.
+        filter_on : Literal["from", "to"], optional
+            If set to "from" (default) the filter is applied to the from column in the
+            translation vector. If "to" the filter is applied to the to column.
+
+        Returns
+        -------
+        pd.DataFrame
+            All columns in the zone correspondence for the selected zones.
+        """
+
+        if not isinstance(filter_zones, Sequence):
+            filter_zones = [filter_zones]
+        if not isinstance(filter_zones, list):
+            filter_zones = [i for i in filter_zones]
+
+        assert isinstance(filter_zones, list)
+
+        if filter_on == "from":
+            filter_col: pd.Series = self.from_column
+            filter_col_name: str = self.from_col_name
+        elif filter_on == "to":
+            filter_col: pd.Series = self.to_column
+            filter_col_name: str = self.to_col_name
+        else:
+            raise ValueError(f"filter_on must be either 'from' or 'to', not {filter_on}")
+
+        if len(missing := (set(filter_zones) - set(filter_col.to_list()))) > 0:
+            raise KeyError(f"Zones {missing} not in {filter_col} column")
+
+        return self.vector[self.vector[filter_col_name].isin(filter_zones)]
 
     def copy(self) -> ZoneCorrespondence:
         """Deep copy of the ZoneCorrespondence object."""

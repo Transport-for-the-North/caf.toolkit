@@ -1659,6 +1659,48 @@ class TestMatrixTranslationFromFile:
         )
 
 
+class TestZoneCorrespondence:
+    """Tests for the `ZoneCorrespondencePath` function."""
+
+    @pytest.mark.parametrize("filter_on", ["from", "to"])
+    def test_get_correspondence(self, simple_pd_int_translation: PandasTranslation, filter_on):
+        """Test the get_correspondence function with one zone."""
+        test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
+            1, filter_on=filter_on
+        )
+
+        df = simple_pd_int_translation.zone_correspondence.vector
+
+        if filter_on == "from":
+            control = df[df[simple_pd_int_translation.zone_correspondence.from_col_name] == 1]
+        if filter_on == "to":
+            control = df[df[simple_pd_int_translation.zone_correspondence.to_col_name] == 1]
+
+        pd.testing.assert_frame_equal(test_result, control)
+
+    @pytest.mark.parametrize("filter_on", ["from", "to"])
+    def test_get_correspondence_multi_value(
+        self, simple_pd_int_translation: PandasTranslation, filter_on
+    ):
+        """Test the get_correspondence function with all zones."""
+        if filter_on == "from":
+            filter_values = list(
+                simple_pd_int_translation.zone_correspondence.from_column.unique()
+            )
+        elif filter_on == "to":
+            filter_values = list(
+                simple_pd_int_translation.zone_correspondence.to_column.unique()
+            )
+
+        test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
+            filter_values, filter_on=filter_on
+        )
+
+        control = simple_pd_int_translation.zone_correspondence.vector
+
+        pd.testing.assert_frame_equal(test_result, control)
+
+
 class TestZoneCorrespondencePath:
     """Tests for the `ZoneCorrespondencePath` function."""
 
