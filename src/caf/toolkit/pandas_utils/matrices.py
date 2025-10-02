@@ -333,7 +333,7 @@ class MatrixReport:
 
         return cls(
             matrix,
-            translation_factors=translation_factors,
+            translation_vector=translation_factors,
         )
 
 

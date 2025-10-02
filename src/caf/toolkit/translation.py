@@ -1331,7 +1331,7 @@ class ZoneCorrespondence:
         if not isinstance(filter_zones, Sequence):
             filter_zones = [filter_zones]
         if not isinstance(filter_zones, list):
-            filter_zones = [i for i in filter_zones]
+            filter_zones = list(filter_zones)
 
         assert isinstance(filter_zones, list)
 
