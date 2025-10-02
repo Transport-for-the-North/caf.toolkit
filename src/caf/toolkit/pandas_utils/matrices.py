@@ -5,7 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import pathlib
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 # Third Party
 import pandas as pd
@@ -375,45 +375,142 @@ class MatrixReport:
         )
 
 
-def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
-    """Create a high level summary of a matrix.
+# def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
+#     """Create a high level summary of a matrix.
+#
+#     Stack Matrix before calling pandas describe with additional metrics added.
+#
+#     Parameters
+#     ----------
+#     matrix : pd.DataFrame
+#         Matrix to be summarised.
+#     almost_zero : float, optional
+#         Below this value cells will be defined as almost zero.
+#         If not given, will be calculated as = 1 / (# of cells in the matrix).
+#
+#     Returns
+#     -------
+#     pd.Series
+#         Matrix summary statistics, expands upon the standard pandas.Series.describe.
+#         Includes
+#         5%, 25%, 50%, 75%, 95% Percentiles
+#         Mean
+#         Count (total, zeros and almost zeros)
+#         Standard Deviation
+#         Minimum and Maximum
+#     See Also
+#     --------
+#     `pandas.Series.describe`
+#     """
+#     if almost_zero is None:
+#         almost_zero = 1 / matrix.size
+#
+#     info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
+#     assert isinstance(info, pd.Series)  # To stop MyPy whinging
+#     info["columns"] = len(matrix.columns)
+#     info["rows"] = len(matrix.index)
+#     info["sum"] = matrix.sum().sum()
+#     info["zeros"] = (matrix == 0).sum().sum()
+#     info["almost_zeros"] = (matrix < almost_zero).sum().sum()
+#     info["NaNs"] = matrix.isna().sum().sum()
+#     return info
 
-    Stack Matrix before calling pandas describe with additional metrics added.
+def matrix_describe(
+    matrix: Union[pd.DataFrame, pd.Series],
+    almost_zero: Optional[float] = None,
+    validate: bool = False,
+    include_square: bool = False,
+) -> pd.Series:
+    """
+    Create a high level summary of a matrix.
+
+    Summarise a matrix in either square (DataFrame), long (Series with 2-level index),
+    or flat (1-level Series) form.
+
+    - DataFrame: treated as a 2D grid.
+    - Series (2-level MultiIndex (row, col)): unstacked to a 2D grid.
+    - Series (1-level Index): treated as an already-flattened vector (rows = N, cols = 1).
+
+    The default 'almost_zero' is 1 / (# of grid cells). For a flat Series, that's 1 / len(series).
 
     Parameters
     ----------
-    matrix : pd.DataFrame
+    matrix : pd.DataFrame | pd.Series
         Matrix to be summarised.
+        DataFrame => square format assumed.
+        Series    => long format assumed (2-level MultiIndex).
     almost_zero : float, optional
         Below this value cells will be defined as almost zero.
-        If not given, will be calculated as = 1 / (# of cells in the matrix).
+        If not given, will be calculated as = 1 / (# of cells in the matrix/grid).
+    validate : bool, optional (default False)
+        If True, run high-level checks such as:
+        - whether (# of rows) == (# of columns); raise ValueError if not.
 
     Returns
     -------
     pd.Series
         Matrix summary statistics, expands upon the standard pandas.Series.describe.
-        Includes
+        Includes:
         5%, 25%, 50%, 75%, 95% Percentiles
         Mean
         Count (total, zeros and almost zeros)
         Standard Deviation
         Minimum and Maximum
+        Plus rows, columns, sum, NaNs, and a 'square' flag.
+
     See Also
     --------
-    `pandas.Series.describe`
+    pandas.Series.describe
     """
-    if almost_zero is None:
-        almost_zero = 1 / matrix.size
+    grid = None
+    vector = None
 
-    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-    assert isinstance(info, pd.Series)  # To stop MyPy whinging
-    info["columns"] = len(matrix.columns)
-    info["rows"] = len(matrix.index)
-    info["sum"] = matrix.sum().sum()
-    info["zeros"] = (matrix == 0).sum().sum()
-    info["almost_zeros"] = (matrix < almost_zero).sum().sum()
-    info["NaNs"] = matrix.isna().sum().sum()
+    # Convert input to a 2D grid 'grid' and remember rows/cols
+    if isinstance(matrix, pd.DataFrame):
+        grid = matrix
+        vector = grid.stack()
+    elif isinstance(matrix, pd.Series):
+        if matrix.index.nlevels == 2:
+            # long format make a grid
+            grid = matrix.unstack()
+            vector = grid.stack()
+        elif matrix.index.nlevels == 1:
+            # Flat vector: stats from the series itself
+            vector = matrix.dropna()
+            grid = matrix.to_frame(name=matrix.name or "value")
+        else:
+            raise ValueError(
+                "Series must have either a 1-level index (flat) or a 2-level MultiIndex (row, col)."
+            )
+    else:
+        raise TypeError(
+            "matrix must be a pandas DataFrame or a pandas Series"
+        )
+
+    n_rows, n_cols = grid.shape[0], grid.shape[1]
+
+    # optional square check
+    if validate and n_rows != n_cols:
+        raise ValueError(f"Matrix is not square: rows={n_rows}, cols={n_cols}.")
+
+    # Determine the default almost_zero against the total number of cells
+    total_cells = int(n_rows) * int(n_cols)
+    if almost_zero is None:
+        almost_zero = 1 / total_cells if total_cells > 0 else float('inf')
+
+    # Vectorize values for describe (NaNs are dropped by describe)
+    info = vector.describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
+    assert isinstance(info, pd.Series)
+
+    info["columns"] = n_cols
+    info["rows"] = n_rows
+    info["sum"] = grid.sum().sum()
+    info["zeros"] = (grid == 0).sum().sum()
+    info["almost_zeros"] = (grid < almost_zero).sum().sum()
+    info["NaNs"] = grid.isna().sum().sum()
+
     return info
+
 
 
 def compare_matrices(
