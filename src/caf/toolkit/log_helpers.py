@@ -876,5 +876,5 @@ def write_metadata(path: Path, details: ToolDetails, **metadata: Any) -> None:
 
     yaml_file_path = os.path.join(path, "metadata.yaml")
 
-    with open(yaml_file_path, "w") as file:
+    with open(yaml_file_path, "w", encoding='utf-8') as file:
         yaml.dump(yaml_content, file, sort_keys=False, default_flow_style=False)
