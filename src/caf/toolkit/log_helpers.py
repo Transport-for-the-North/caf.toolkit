@@ -29,11 +29,11 @@ from typing import Annotated, Any, Iterable, Optional
 from pathlib import Path
 
 # Third Party
-import yaml
 import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
+from src.caf.toolkit import BaseConfig
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -850,31 +850,29 @@ def capture_warnings(
         warning_logger.addHandler(get_file_handler(**file_handler_args))
 
 
-def write_metadata(path: Path, details: ToolDetails, **metadata: Any) -> None:
+def write_metadata(output_path: Path, details: ToolDetails, **metadata: Any) -> None:
     """
     Write metadata (tool details, system information and any user specified
     metadata) out to a user specified path.
 
     Parameters
     ----------
-    path: Path to output location
+    output_path: Path to output location
     details: Information about the current tool based on the ToolDetails
              dataclass.
     metadata: Keyword arguments passed, in any form, that create user specific
               metadata e.g. dictionary with key value paris of date, project,
               owner, stakeholders etc.
     """
-    if not path:
+
+    class _Metadata(BaseConfig):
+        tool_details: ToolDetails
+        system_information: SystemInformation
+        metadata: dict
+
+    if not output_path:
         raise ValueError("Path required to write metadata.")
     sys_info = SystemInformation.load()
 
-    yaml_content = {
-        "tool_details": details,
-        "system_information": sys_info,
-        "metadata": metadata
-    }
-
-    yaml_file_path = os.path.join(path, "metadata.yaml")
-
-    with open(yaml_file_path, "w", encoding='utf-8') as file:
-        yaml.dump(yaml_content, file, sort_keys=False, default_flow_style=False)
+    yaml_file_path = os.path.join(output_path, "metadata.yaml")
+    _Metadata(sys_info, details, metadata).save_yaml(yaml_file_path)

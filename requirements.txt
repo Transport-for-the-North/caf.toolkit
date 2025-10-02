@@ -5,4 +5,3 @@ tqdm>=4.50.2
 pydantic>=2.5.0
 strictyaml>=1.6
 psutil>=5.9.0
-PyYAML>=6.0.2

@@ -28,12 +28,14 @@ from caf.toolkit import (
     TemporaryLogFile,
     ToolDetails,
     log_helpers,
+    BaseConfig
 )
 from caf.toolkit.log_helpers import (
     LoggingWarning,
     capture_warnings,
     get_logger,
     git_describe,
+    write_metadata
 )
 
 # # # Constants # # #
@@ -689,3 +691,65 @@ class TestCaptureWarnings:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestWriteMetadata:
+    """Test write metadata function"""
+
+    def test_path_error(self):
+        """Testing if no path is provided, the correct error is raised"""
+        with pytest.raises(ValueError, match="Path required to write metadata."):
+            write_metadata(path=None)
+
+    def test_write_metadata_functionality(self, monkeypatch, output_path):
+        """Testing main functionality of write_metadata"""
+        info = SystemInformation(user="test_user",
+            pc_name="test_pc",
+            python_version="3.2",
+            operating_system="Windows",
+            architecture="fake_architecture",
+            processor="fake_processor",
+            cpu_count=4,
+            total_ram=64)
+        monkeypatch.setattr(SystemInformation, "load", lambda : info) #does this need _ / self
+
+        details = ToolDetails(
+            name="fake_tool",
+            version="1.0.0",
+            homepage="https://example.com",
+            source_url="https://github.com/example/repo",
+            full_version="v1.0.0"
+        )
+
+        write_metadata(output_path=output_path,
+                       details=details,
+                       meta=1,
+                       meta1=[1, 2],
+                       meta2={"a": 1, "B": 2},
+                       meta3="string",
+                       meta4=2.0)
+
+        expected = {"tool_details": {"name": "fake_tool",
+                                     "version": "1.0.0",
+                                     "homepage": "https://example.com",
+                                     "source_url": "https://github.com/example/repo",
+                                     "full_version": "v1.0.0"},
+                    "system_information": {"user": "test_user",
+                                           "pc_name": "test_pc",
+                                           "python_version": "3.2",
+                                           "operating_system": "Windows",
+                                           "architecture": "fake_architecture",
+                                           "processor": "fake_processor",
+                                           "cpu_count": 4,
+                                           "total_ram": 64},
+                    "metadata": {"meta": 1,
+                                 "meta1": [1, 2],
+                                 "meta2": {"a": 1, "B": 2},
+                                 "meta3": "string",
+                                 "meta4": 2.0}}
+
+        meta_out = os.path.join(output_path, "metadata.yaml")
+        assert os.path.isfile(meta_out)
+
+        text = BaseConfig.load_yaml(meta_out)
+        assert text == expected
