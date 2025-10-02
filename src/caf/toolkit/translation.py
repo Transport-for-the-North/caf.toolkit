@@ -1339,8 +1339,8 @@ class ZoneCorrespondence:
             filter_col: pd.Series = self.from_column
             filter_col_name: str = self.from_col_name
         elif filter_on == "to":
-            filter_col: pd.Series = self.to_column
-            filter_col_name: str = self.to_col_name
+            filter_col = self.to_column
+            filter_col_name = self.to_col_name
         else:
             raise ValueError(f"filter_on must be either 'from' or 'to', not {filter_on}")
 
