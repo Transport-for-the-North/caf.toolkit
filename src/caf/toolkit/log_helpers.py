@@ -17,11 +17,13 @@ TemporaryLogFile
 from __future__ import annotations
 
 # Built-Ins
+from collections.abc import Sequence
 import functools
 import getpass
 import logging
 import os
 import platform
+import re
 import subprocess
 import sys
 import warnings
@@ -38,6 +40,7 @@ DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+LOG = logging.getLogger(__name__)
 
 # Get lookup between name of level and integer value
 # pylint: disable=no-member,protected-access
@@ -311,6 +314,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
+        allowed_packages: Sequence[str] | None = None
     ):
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
@@ -319,6 +323,11 @@ class LogHelper:
 
         self.tool_details = tool_details
         self._warning_logger: logging.Logger | None = None
+
+        if allowed_packages is None:
+            self.package_filter = None
+        else:
+            self.package_filter = PackageFilter(allowed_packages)
 
         if console:
             level = _CAF_LOG_LEVEL.upper().strip()
@@ -358,6 +367,9 @@ class LogHelper:
         handler : logging.Handler
             Handler to add.
         """
+        if self.package_filter is not None:
+            handler.addFilter(self.package_filter)
+
         self.logger.addHandler(handler)
 
         if self._warning_logger is not None:
@@ -574,6 +586,27 @@ class TemporaryLogFile:
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)
 
+
+class PackageFilter(logging.Filter):
+    """Logging filter which only allows given packages (and sub-packages)."""
+
+    def __init__(self, allowed_pkgs: Sequence[str]) -> None:
+        super().__init__()
+
+        pkgs = set(str(i).lower().strip() for i in allowed_pkgs)
+
+        # Build package match pattern
+        pkg_str = "|".join(re.escape(i) for i in pkgs)
+        self._pattern = re.compile(rf"^({pkg_str})(\..*)*$", re.I)
+
+        LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        matched = self._pattern.match(record.name.strip())
+        if matched is None:
+            return False
+
+        return True
 
 # # # FUNCTIONS # # #
 def write_information(
