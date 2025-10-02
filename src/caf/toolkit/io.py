@@ -382,3 +382,5 @@ def output_file_checks(func=None, /, *, wait_for_user_input: bool = True):
 
     # called without params
     return wrapper_func(func)
+
+# TODO add useful write out functions
