@@ -357,3 +357,28 @@ def find_file_with_name(
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
 
     return found[0]
+
+
+def output_file_checks(func=None, /, *, wait_for_user_input: bool = True):
+    def wrapper_func(output_function, *args, **kwargs):
+        waiting = False
+        while True:
+            try:
+                output_function(*args, **kwargs)
+                break
+            except PermissionError as e:
+                msg = f"Please close {e.filename}, then press enter. Cheers!"
+                if wait_for_user_input:
+                    input(msg)
+                else:
+                    if not waiting:
+                        print(msg)
+                        waiting = True
+                    time.sleep(1)
+
+    if func is None:
+        # called with params
+        return wrapper_func
+
+    # called without params
+    return wrapper_func(func)
