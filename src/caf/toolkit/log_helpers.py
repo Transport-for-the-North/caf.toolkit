@@ -33,7 +33,7 @@ import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
-from src.caf.toolkit import BaseConfig
+from caf.toolkit.config_base import BaseConfig
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -875,4 +875,6 @@ def write_metadata(output_path: Path, details: ToolDetails, **metadata: Any) -> 
     sys_info = SystemInformation.load()
 
     yaml_file_path = os.path.join(output_path, "metadata.yaml")
-    _Metadata(sys_info, details, metadata).save_yaml(yaml_file_path)
+    _Metadata(system_information=sys_info,
+              tool_details=details,
+              metadata=metadata).save_yaml(yaml_file_path)

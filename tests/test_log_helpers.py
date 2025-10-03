@@ -698,10 +698,17 @@ class TestWriteMetadata:
 
     def test_path_error(self):
         """Testing if no path is provided, the correct error is raised"""
+        details = ToolDetails(
+            name="fake_tool",
+            version="1.0.0",
+            homepage="https://example.com",
+            source_url="https://github.com/example/repo",
+            full_version="v1.0.0"
+        )
         with pytest.raises(ValueError, match="Path required to write metadata."):
-            write_metadata(path=None)
+            write_metadata(output_path=None, details=details)
 
-    def test_write_metadata_functionality(self, monkeypatch, output_path):
+    def test_write_metadata_functionality(self, monkeypatch, tmp_path):
         """Testing main functionality of write_metadata"""
         info = SystemInformation(user="test_user",
             pc_name="test_pc",
@@ -711,7 +718,7 @@ class TestWriteMetadata:
             processor="fake_processor",
             cpu_count=4,
             total_ram=64)
-        monkeypatch.setattr(SystemInformation, "load", lambda : info) #does this need _ / self
+        monkeypatch.setattr(SystemInformation, "load", lambda: info)
 
         details = ToolDetails(
             name="fake_tool",
@@ -721,7 +728,7 @@ class TestWriteMetadata:
             full_version="v1.0.0"
         )
 
-        write_metadata(output_path=output_path,
+        write_metadata(output_path=tmp_path,
                        details=details,
                        meta=1,
                        meta1=[1, 2],
@@ -748,8 +755,16 @@ class TestWriteMetadata:
                                  "meta3": "string",
                                  "meta4": 2.0}}
 
-        meta_out = os.path.join(output_path, "metadata.yaml")
+        class _Metadata(BaseConfig):
+            tool_details: ToolDetails
+            system_information: SystemInformation
+            metadata: dict
+
+        meta_out = os.path.join(tmp_path, "metadata.yaml")
         assert os.path.isfile(meta_out)
 
-        text = BaseConfig.load_yaml(meta_out)
+        text = _Metadata.load_yaml(meta_out)
+        if hasattr(text, "dict"):
+            # text = text.dict()
+            text = text.model_dump(mode="json")
         assert text == expected
