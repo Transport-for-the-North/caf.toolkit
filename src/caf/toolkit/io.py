@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 # Built-Ins
-import collections.abc
+import collections
+import itertools
 import logging
 import os
 import pathlib
 import re
+import string
 import time
 import warnings
+from collections.abc import Hashable, Sequence
 from typing import Literal
 
 # Third Party
@@ -20,6 +23,10 @@ from caf.toolkit.pandas_utils import utility
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
+
+NORMALISED_PUNTUATION = r"!#$%£&\-.<=>+^_~\(\)"
+NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNTUATION
+"""Characted allowed in normalised column names."""
 
 # # # CLASSES # # #
 
@@ -79,7 +86,9 @@ def safe_dataframe_to_csv(
             time.sleep(1)
 
 
-def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFrame:
+def read_csv(
+    path: os.PathLike, name: str | None = None, normalise_column_names: bool = False, **kwargs
+) -> pd.DataFrame:
     """Read CSV files, wraps `pandas.read_csv` to perform additional checks.
 
     Provides more detailed error messages about missing columns.
@@ -91,6 +100,9 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
     name : str, optional
         Human readable name of the file being read (used for error
         messages), if not given uses the filename.
+    normalise_columns : bool, default False
+        Replace spaces with underscores, convert to lowercase
+        and remove any characters not in :const:`NORMALISE_CHARACTERS`.
     kwargs : keyword arguments
         All other keyword arguments are passed to `pandas.read_csv`.
 
@@ -114,8 +126,16 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
     if not path.is_file():
         raise FileNotFoundError(f"{name} file does not exist: '{path}'")
 
+    column_lookup = None
+    if normalise_column_names:
+        column_lookup, usecols, dtype = _normalise_read_csv(path, **kwargs)
+        if usecols is not None:
+            kwargs["usecols"] = usecols
+        if isinstance(dtype, dict):
+            kwargs["dtype"] = dtype
+
     try:
-        df = pd.read_csv(path, **kwargs)
+        df: pd.DataFrame = pd.read_csv(path, **kwargs)
     except ValueError as err:
         match = re.match(
             r".*columns expected but not found:\s+\[((?:'[^']+',?\s?)+)\]",
@@ -144,7 +164,98 @@ def read_csv(path: os.PathLike, name: str | None = None, **kwargs) -> pd.DataFra
                     ) from err
         raise
 
+    if column_lookup is not None:
+        df = df.rename(columns=column_lookup)
     return df
+
+
+def _normalise_read_csv(
+    path: pathlib.Path,
+    usecols: Sequence[Hashable] | None = None,
+    dtype: type | dict[Hashable, type] | None = None,
+    **kwargs,
+) -> tuple[dict[str, str], list[Hashable] | None, type | dict[Hashable, type] | None]:
+    """Produce normalised column names and lookup from original.
+
+    Parameters
+    ----------
+    path
+        Path to the CSV.
+    usecols : Sequence[Hashable] | None, optional
+        Optional usecols parameters for :func:`pandas.read_csv`.
+    dtype : type | dict[Hashable, type] | None, optional
+        Optional dtype parameters for :func:`pandas.read_csv`.
+
+    Returns
+    -------
+    dict[str, str]
+        Lookup between the original CSV column names (keys)
+        and the normalised names (values).
+    list[Hashable] | None
+        Normalised usecols names, None if usecols isn't given.
+    dict[Hashable, type] | None]
+        Normalised dtype dictionary, None if dtype isn't a dictionary.
+    """
+    if "names" in kwargs:
+        raise ValueError("cannot normalise columns when new names are passed")
+    if "header" in kwargs:
+        if kwargs["header"] is None:
+            raise ValueError("cannot normalise columns when header is None")
+
+    df: pd.DataFrame = pd.read_csv(path, nrows=1, **kwargs)
+
+    if isinstance(df.columns, pd.MultiIndex):
+        raise NotImplementedError("cannot normalise columns on a MultiIndex")
+
+    original = df.columns.to_list()
+    if any(i is not None for i in df.index.names):
+        original.extend(df.index.names)  # type: ignore
+
+    lookup: dict[str, str] = {}
+    duplicates = collections.defaultdict(list)
+    for col in original:
+        normalised = _normalise_name(col)
+
+        if normalised in lookup.values():
+            duplicates[normalised].append(col)
+
+        lookup[col] = normalised
+
+    if len(duplicates) > 0:
+        raise ValueError(
+            f"multiple columns have the same name after normalisation:\n{duplicates}"
+        )
+
+    # Convert usecols and dtype to un-normalised names in CSV
+    def normal_check(value) -> bool:
+        return isinstance(value, str) and (value == _normalise_name(value))
+
+    if usecols is not None:
+        invalid = list(itertools.filterfalse(normal_check, usecols))
+        if len(invalid) > 0:
+            raise ValueError(
+                f"{len(invalid)} names given for usecols aren't normalised: "
+                + ", ".join(repr(i) for i in invalid)
+            )
+        usecols = [lookup[i] for i in usecols]
+
+    if isinstance(dtype, dict):
+        invalid = list(itertools.filterfalse(normal_check, dtype.keys()))
+        if len(invalid) > 0:
+            raise ValueError(
+                f"{len(invalid)} name given in dtype aren't normalised: "
+                + ", ".join(repr(i) for i in invalid)
+            )
+        dtype = {lookup[i]: j for i, j in dtype.items()}
+
+    return lookup, usecols, dtype
+
+
+def _normalise_name(col: str) -> str:
+    normalised = re.sub(r"\s*-\s*", "-", string=col.strip().lower())
+    normalised = re.sub(r"\s+", "_", normalised)
+    normalised = re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
+    return normalised
 
 
 def read_csv_matrix(
@@ -233,7 +344,7 @@ def read_csv_matrix(
 
 
 def find_file_with_name(
-    folder: pathlib.Path, name: str, suffixes: collections.abc.Sequence[str]
+    folder: pathlib.Path, name: str, suffixes: Sequence[str]
 ) -> pathlib.Path:
     """Find a file in a folder matching _any_ acceptable suffix.
 

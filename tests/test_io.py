@@ -157,10 +157,15 @@ class TestReadCSV:
 
         pd.testing.assert_frame_equal(data.data, read, check_dtype=False)
 
-    def test_full(self, data: DataFrameResults):
+    @pytest.mark.parametrize("normalise_column_names", [True, False])
+    def test_full(self, data: DataFrameResults, normalise_column_names: bool):
         """Test loading CSV with usecols, dtype and index_col parameters."""
         read = io.read_csv(
-            data.path, usecols=data.columns, dtype=data.dtypes, index_col=data.columns[0]
+            data.path,
+            usecols=data.columns,
+            dtype=data.dtypes,
+            normalise_column_names=normalise_column_names,
+            index_col=data.columns[0],
         )
 
         correct = data.data.set_index(data.columns[0])
