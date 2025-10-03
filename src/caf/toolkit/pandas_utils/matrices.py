@@ -374,6 +374,7 @@ class MatrixReport:
             translation_factors_col=translation_factors_col,
         )
 
+
 def matrix_describe(
     matrix: Union[pd.DataFrame, pd.Series],
     almost_zero: Optional[float] = None,
@@ -454,7 +455,7 @@ def matrix_describe(
     # Determine the default almost_zero against the total number of cells
     total_cells = int(n_rows) * int(n_cols)
     if almost_zero is None:
-        almost_zero = 1 / total_cells if total_cells > 0 else float('inf')
+        almost_zero = 1 / total_cells if total_cells > 0 else float("inf")
 
     # Vectorize values for describe (NaNs are dropped by describe)
     info = vector.describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
@@ -468,7 +469,6 @@ def matrix_describe(
     info["NaNs"] = grid.isna().sum().sum()
 
     return info
-
 
 
 def compare_matrices(
