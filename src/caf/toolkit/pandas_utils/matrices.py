@@ -374,52 +374,10 @@ class MatrixReport:
             translation_factors_col=translation_factors_col,
         )
 
-
-# def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
-#     """Create a high level summary of a matrix.
-#
-#     Stack Matrix before calling pandas describe with additional metrics added.
-#
-#     Parameters
-#     ----------
-#     matrix : pd.DataFrame
-#         Matrix to be summarised.
-#     almost_zero : float, optional
-#         Below this value cells will be defined as almost zero.
-#         If not given, will be calculated as = 1 / (# of cells in the matrix).
-#
-#     Returns
-#     -------
-#     pd.Series
-#         Matrix summary statistics, expands upon the standard pandas.Series.describe.
-#         Includes
-#         5%, 25%, 50%, 75%, 95% Percentiles
-#         Mean
-#         Count (total, zeros and almost zeros)
-#         Standard Deviation
-#         Minimum and Maximum
-#     See Also
-#     --------
-#     `pandas.Series.describe`
-#     """
-#     if almost_zero is None:
-#         almost_zero = 1 / matrix.size
-#
-#     info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-#     assert isinstance(info, pd.Series)  # To stop MyPy whinging
-#     info["columns"] = len(matrix.columns)
-#     info["rows"] = len(matrix.index)
-#     info["sum"] = matrix.sum().sum()
-#     info["zeros"] = (matrix == 0).sum().sum()
-#     info["almost_zeros"] = (matrix < almost_zero).sum().sum()
-#     info["NaNs"] = matrix.isna().sum().sum()
-#     return info
-
 def matrix_describe(
     matrix: Union[pd.DataFrame, pd.Series],
     almost_zero: Optional[float] = None,
     validate: bool = False,
-    include_square: bool = False,
 ) -> pd.Series:
     """
     Create a high level summary of a matrix.
