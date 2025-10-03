@@ -442,9 +442,7 @@ def matrix_describe(
                 "Series must have either a 1-level index (flat) or a 2-level MultiIndex (row, col)."
             )
     else:
-        raise TypeError(
-            "matrix must be a pandas DataFrame or a pandas Series"
-        )
+        raise TypeError("matrix must be a pandas DataFrame or a pandas Series")
 
     n_rows, n_cols = grid.shape[0], grid.shape[1]
 
