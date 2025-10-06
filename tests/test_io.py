@@ -87,6 +87,37 @@ def fix_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
     )
 
 
+@pytest.fixture(name="normalise_data", scope="module")
+def fix_normalise_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
+    """Create test DataFrame for normalise columns tests and save to CSV."""
+    data = pd.DataFrame(
+        {
+            "String WORDS": [f"test_{i}" for i in range(10)],
+            " integer - NUMBER   ": list(range(10)),
+            "Float    NUM (km)": [i * 0.75 for i in range(10)],
+        }
+    )
+
+    path = tmp_path_factory.mktemp("csv_data") / "test_data-hxoRI.csv"
+    data.to_csv(path, index=False)
+    assert path.is_file(), "error creating CSV file"
+
+    return DataFrameResults(
+        data=data.rename(
+            columns={
+                "String WORDS": "string_words",
+                " integer - NUMBER   ": "integer-number",
+                "Float    NUM (km)": "float_num_(km)",
+            }
+        ),
+        columns=["string_words", "integer-number", "float_num_(km)"],
+        dtypes={"string_words": str, "integer-number": int, "float_num_(km)": float},
+        path=path,
+        incorrect_columns=["missing_ZO3yM", "missing_9GISV"],
+        incorrect_dtypes={"string_words": int, "integer-number": str, "float_num_(km)": int},
+    )
+
+
 @pytest.fixture(name="matrix")
 def fix_matrix() -> pd.DataFrame:
     """Create matrix DataFrame for tests."""
@@ -201,6 +232,20 @@ class TestReadCSV:
         )
         with pytest.raises(ValueError, match=pattern):
             io.read_csv(data.path, name=name, dtype=data.incorrect_dtypes)
+
+    def test_normalise_columns(self, normalise_data: DataFrameResults):
+        """Test loading CSV and normalising columns."""
+        read = io.read_csv(
+            normalise_data.path,
+            usecols=normalise_data.columns,
+            dtype=normalise_data.dtypes,
+            normalise_column_names=True,
+            index_col=normalise_data.columns[0],
+        )
+
+        correct = normalise_data.data.set_index(normalise_data.columns[0])
+        # check_dtype set to False because this is very strict i.e. int32 != int64
+        pd.testing.assert_frame_equal(read, correct, check_dtype=False)
 
 
 class TestReadCSVMatrix:

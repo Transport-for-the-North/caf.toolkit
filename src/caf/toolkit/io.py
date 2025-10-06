@@ -12,8 +12,8 @@ import re
 import string
 import time
 import warnings
-from collections.abc import Hashable, Sequence
-from typing import Literal
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import Literal, TypeVar
 
 # Third Party
 import pandas as pd
@@ -128,11 +128,10 @@ def read_csv(
 
     column_lookup = None
     if normalise_column_names:
-        column_lookup, usecols, dtype = _normalise_read_csv(path, **kwargs)
-        if usecols is not None:
-            kwargs["usecols"] = usecols
-        if isinstance(dtype, dict):
-            kwargs["dtype"] = dtype
+        column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
+        for nm, value in zip(("usecols", "dtype", "index_col"), parameters):
+            if value is not None:
+                kwargs[nm] = value
 
     try:
         df: pd.DataFrame = pd.read_csv(path, **kwargs)
@@ -166,15 +165,26 @@ def read_csv(
 
     if column_lookup is not None:
         df = df.rename(columns=column_lookup)
+        if not all(i is None for i in df.index):
+            df.index.names = [
+                i if i is None else column_lookup.get(str(i), i) for i in df.index.names
+            ]
+
     return df
+
+
+_Usecols = TypeVar("_Usecols", Sequence[Hashable], Callable)
+_Dtype = TypeVar("_Dtype", type, dict[Hashable, type])
+_IndexCol = TypeVar("_IndexCol", Sequence[Hashable], Hashable, Literal[False])
 
 
 def _normalise_read_csv(
     path: pathlib.Path,
-    usecols: Sequence[Hashable] | None = None,
-    dtype: type | dict[Hashable, type] | None = None,
+    usecols: _Usecols | None = None,
+    dtype: _Dtype | None = None,
+    index_col: _IndexCol | None = None,
     **kwargs,
-) -> tuple[dict[str, str], list[Hashable] | None, type | dict[Hashable, type] | None]:
+) -> tuple[dict[str, str], _Usecols | None, _Dtype | None, _IndexCol | None]:
     """Produce normalised column names and lookup from original.
 
     Parameters
@@ -185,16 +195,20 @@ def _normalise_read_csv(
         Optional usecols parameters for :func:`pandas.read_csv`.
     dtype : type | dict[Hashable, type] | None, optional
         Optional dtype parameters for :func:`pandas.read_csv`.
+    index_col : Sequence[Hashable] | False, optional
+        Optional index_col parameters for :func:`pandas.read_csv`.
 
     Returns
     -------
     dict[str, str]
         Lookup between the original CSV column names (keys)
         and the normalised names (values).
-    list[Hashable] | None
+    Sequence[Hashable] | Callable | None
         Normalised usecols names, None if usecols isn't given.
-    dict[Hashable, type] | None]
+    type | dict[Hashable, type] | None
         Normalised dtype dictionary, None if dtype isn't a dictionary.
+    Hashable | Sequence[Hashable] | Literal[False] | None
+        Normalised index_col sequence, None if index_col not given.
     """
     if "names" in kwargs:
         raise ValueError("cannot normalise columns when new names are passed")
@@ -226,29 +240,37 @@ def _normalise_read_csv(
             f"multiple columns have the same name after normalisation:\n{duplicates}"
         )
 
+    flipped = {j: i for i, j in lookup.items()}
+
     # Convert usecols and dtype to un-normalised names in CSV
+    if isinstance(usecols, Sequence):
+        _validate_normal_columns(usecols, "usecols")
+        usecols = [flipped.get(str(i), i) for i in usecols]
+
+    if isinstance(dtype, dict):
+        _validate_normal_columns(dtype.keys(), "dtype")
+        dtype = {flipped.get(str(i), i): j for i, j in dtype.items()}
+
+    if isinstance(index_col, Hashable) and index_col is not False:
+        _validate_normal_columns([index_col], "index_col")
+        index_col = flipped.get(str(index_col), index_col)  # type: ignore
+    elif isinstance(index_col, Sequence) and index_col is not False:
+        _validate_normal_columns(index_col, "index_col")
+        index_col = [flipped.get(str(i), i) for i in index_col]
+
+    return lookup, usecols, dtype, index_col
+
+
+def _validate_normal_columns(columns: Iterable[Hashable], name: str):
     def normal_check(value) -> bool:
         return isinstance(value, str) and (value == _normalise_name(value))
 
-    if usecols is not None:
-        invalid = list(itertools.filterfalse(normal_check, usecols))
-        if len(invalid) > 0:
-            raise ValueError(
-                f"{len(invalid)} names given for usecols aren't normalised: "
-                + ", ".join(repr(i) for i in invalid)
-            )
-        usecols = [lookup[i] for i in usecols]
-
-    if isinstance(dtype, dict):
-        invalid = list(itertools.filterfalse(normal_check, dtype.keys()))
-        if len(invalid) > 0:
-            raise ValueError(
-                f"{len(invalid)} name given in dtype aren't normalised: "
-                + ", ".join(repr(i) for i in invalid)
-            )
-        dtype = {lookup[i]: j for i, j in dtype.items()}
-
-    return lookup, usecols, dtype
+    invalid = list(itertools.filterfalse(normal_check, columns))
+    if len(invalid) > 0:
+        raise ValueError(
+            f"{len(invalid)} names given for {name} aren't normalised: "
+            + ", ".join(repr(i) for i in invalid)
+        )
 
 
 def _normalise_name(col: str) -> str:
