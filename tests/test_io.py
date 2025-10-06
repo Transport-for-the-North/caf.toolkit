@@ -98,7 +98,7 @@ def fix_normalise_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameRes
         }
     )
 
-    path = tmp_path_factory.mktemp("csv_data") / "test_data-hxoRI.csv"
+    path = tmp_path_factory.mktemp("csv_data") / "test_data-afkljsh.csv"
     data.to_csv(path, index=False)
     assert path.is_file(), "error creating CSV file"
 
@@ -115,6 +115,30 @@ def fix_normalise_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameRes
         path=path,
         incorrect_columns=["missing_ZO3yM", "missing_9GISV"],
         incorrect_dtypes={"string_words": int, "integer-number": str, "float_num_(km)": int},
+    )
+
+
+@pytest.fixture(name="normalise_duplicates", scope="module")
+def fix_normalise_duplicates(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
+    """Create test DataFrame for normalise columns tests with duplicates."""
+    data = pd.DataFrame(
+        {
+            "String WORDS": [f"test_{i}" for i in range(10)],
+            "string_words": [f"test_{i}" for i in range(10, 20)],
+        }
+    )
+
+    path = tmp_path_factory.mktemp("csv_data") / "test_data-afkljsh.csv"
+    data.to_csv(path, index=False)
+    assert path.is_file(), "error creating CSV file"
+
+    return DataFrameResults(
+        data=data,
+        columns=["string_words"],
+        dtypes={"string_words": str},
+        path=path,
+        incorrect_columns=[],
+        incorrect_dtypes={"string_words": int},
     )
 
 
@@ -233,19 +257,48 @@ class TestReadCSV:
         with pytest.raises(ValueError, match=pattern):
             io.read_csv(data.path, name=name, dtype=data.incorrect_dtypes)
 
-    def test_normalise_columns(self, normalise_data: DataFrameResults):
+    @pytest.mark.parametrize("index_list", [True, False])
+    def test_normalise_columns(self, normalise_data: DataFrameResults, index_list: bool):
         """Test loading CSV and normalising columns."""
         read = io.read_csv(
             normalise_data.path,
             usecols=normalise_data.columns,
             dtype=normalise_data.dtypes,
             normalise_column_names=True,
-            index_col=normalise_data.columns[0],
+            index_col=[normalise_data.columns[0]] if index_list else normalise_data.columns[0],
         )
 
         correct = normalise_data.data.set_index(normalise_data.columns[0])
         # check_dtype set to False because this is very strict i.e. int32 != int64
         pd.testing.assert_frame_equal(read, correct, check_dtype=False)
+
+    @pytest.mark.parametrize("parameter, value", [("names", ["a"]), ("header", None)])
+    def test_normalise_invalid(
+        self, normalise_data: DataFrameResults, parameter: str, value: list[str] | Literal[0]
+    ):
+        """Test normalising column raises excepted errors with disallowed parameters."""
+        with pytest.raises(ValueError, match="cannot normalise columns when .*"):
+            io.read_csv(
+                normalise_data.path,
+                usecols=normalise_data.columns,
+                dtype=normalise_data.dtypes,
+                normalise_column_names=True,
+                index_col=normalise_data.columns[0],
+                **{parameter: value},
+            )
+
+    def test_duplicate_normalised_columns(self, normalise_duplicates: DataFrameResults):
+        """Test normalising columns raises an error when duplicates are found."""
+        with pytest.raises(
+            ValueError,
+            match="multiple columns have the same name after normalisation:.*",
+        ):
+            io.read_csv(
+                normalise_duplicates.path,
+                usecols=normalise_duplicates.columns,
+                dtype=normalise_duplicates.dtypes,
+                normalise_column_names=True,
+            )
 
 
 class TestReadCSVMatrix:

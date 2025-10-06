@@ -13,7 +13,7 @@ import string
 import time
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 # Third Party
 import pandas as pd
@@ -135,32 +135,8 @@ def read_csv(
 
     try:
         df: pd.DataFrame = pd.read_csv(path, **kwargs)
-    except ValueError as err:
-        match = re.match(
-            r".*columns expected but not found:\s+\[((?:'[^']+',?\s?)+)\]",
-            str(err),
-            re.IGNORECASE,
-        )
-        if match:
-            missing = re.findall(r"'([^']+)'", match.group(1))
-            raise MissingColumnsError(name, missing) from err
-
-        match = re.match(r"index (\S+) invalid", str(err), re.IGNORECASE)
-        if match:
-            raise MissingColumnsError(name, [match.group(1)]) from err
-
-        if isinstance(kwargs.get("dtype"), dict):
-            # Check what column can't be converted to dtypes
-            columns: dict[str, type] = kwargs.pop("dtype")
-            df = pd.read_csv(path, **kwargs)
-            for col, _type in columns.items():
-                try:
-                    df[col].astype(_type)
-                except ValueError:
-                    raise ValueError(
-                        f"Column '{col}' in {name} has values "
-                        f"which cannot be converted to {_type}"
-                    ) from err
+    except ValueError as exc:
+        _detailed_read_error(path, name, exc, kwargs)
         raise
 
     if column_lookup is not None:
@@ -171,6 +147,45 @@ def read_csv(
             ]
 
     return df
+
+
+def _detailed_read_error(
+    path: pathlib.Path, name: str, exc: ValueError, kwargs: dict[str, Any]
+):
+    """Parse `read_csv` error and provide more details.
+
+    Raises
+    ------
+    MissingColumnsError
+        If columns / indices are missing.
+    ValueError
+        If column data types are incorrect.
+    """
+    matched = re.match(
+        r".*columns expected but not found:\s+\[((?:'[^']+',?\s?)+)\]",
+        str(exc),
+        re.IGNORECASE,
+    )
+    if matched:
+        missing = re.findall(r"'([^']+)'", matched.group(1))
+        raise MissingColumnsError(name, missing) from exc
+
+    matched = re.match(r"index (\S+) invalid", str(exc), re.IGNORECASE)
+    if matched:
+        raise MissingColumnsError(name, [matched.group(1)]) from exc
+
+    if isinstance(kwargs.get("dtype"), dict):
+        # Check what column can't be converted to dtypes
+        columns: dict[str, type] = kwargs.pop("dtype")
+        df: pd.DataFrame = pd.read_csv(path, **kwargs)
+        for col, _type in columns.items():
+            try:
+                df[col].astype(_type)
+            except ValueError:
+                raise ValueError(
+                    f"Column '{col}' in {name} has values "
+                    f"which cannot be converted to {_type}"
+                ) from exc
 
 
 _Usecols = TypeVar("_Usecols", Sequence[Hashable], Callable)
