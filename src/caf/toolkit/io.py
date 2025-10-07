@@ -202,6 +202,9 @@ def _normalise_read_csv(
 ) -> tuple[dict[str, str], _Usecols | None, _Dtype | None, _IndexCol | None]:
     """Produce normalised column names and lookup from original.
 
+    Reads headers only from CSV to quickly obtain current
+    column names and produce normalised lookup.
+
     Parameters
     ----------
     path
