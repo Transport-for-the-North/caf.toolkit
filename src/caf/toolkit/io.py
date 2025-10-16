@@ -269,10 +269,13 @@ def _normalise_read_csv(
         _validate_normal_columns(dtype.keys(), "dtype")
         dtype = {flipped.get(str(i), i): j for i, j in dtype.items()}
 
-    if isinstance(index_col, Hashable) and index_col is not False:
+    if index_col is None or index_col is False:
+        return lookup, usecols, dtype, index_col
+
+    if isinstance(index_col, Hashable):
         _validate_normal_columns([index_col], "index_col")
         index_col = flipped.get(str(index_col), index_col)  # type: ignore
-    elif isinstance(index_col, Sequence) and index_col is not False:
+    elif isinstance(index_col, Sequence):
         _validate_normal_columns(index_col, "index_col")
         index_col = [flipped.get(str(i), i) for i in index_col]
 

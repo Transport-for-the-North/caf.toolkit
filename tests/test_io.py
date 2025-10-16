@@ -279,7 +279,10 @@ class TestReadCSV:
             index_col=index_col,
         )
 
-        correct = normalise_data.data.set_index(normalise_data.columns[0])
+        if index is False:
+            correct = normalise_data.data
+        else:
+            correct = normalise_data.data.set_index(normalise_data.columns[0])
         # check_dtype set to False because this is very strict i.e. int32 != int64
         pd.testing.assert_frame_equal(read, correct, check_dtype=False)
 
