@@ -230,9 +230,8 @@ def _normalise_read_csv(
     """
     if "names" in kwargs:
         raise ValueError("cannot normalise columns when new names are passed")
-    if "header" in kwargs:
-        if kwargs["header"] is None:
-            raise ValueError("cannot normalise columns when header is None")
+    if "header" in kwargs and kwargs["header"] is None:
+        raise ValueError("cannot normalise columns when header is None")
 
     df: pd.DataFrame = pd.read_csv(path, nrows=1, **kwargs)
 
