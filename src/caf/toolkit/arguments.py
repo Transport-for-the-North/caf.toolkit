@@ -281,6 +281,10 @@ class ModelArguments:
                 )
                 continue
 
+            # Boolean flags can't be defined as positional only
+            if field.is_required():
+                raise ValueError(f"{name} - boolean flags must have a default value")
+
             # Use the store true / false action for boolean flags
             # Use false as default if not given
             if default is None or not default:
