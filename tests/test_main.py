@@ -5,14 +5,17 @@
 from __future__ import annotations
 
 # Built-Ins
-import pathlib
 import sys
+from typing import TYPE_CHECKING
 
 # Third Party
 import pytest
 
 # Local Imports
 from caf.toolkit.__main__ import MatrixTranslationArgs, TranslationArgs, parse_args
+
+if TYPE_CHECKING:
+    import pathlib
 
 ##### CONSTANTS #####
 
@@ -98,7 +101,7 @@ class TestParseArgs:
             ("matrix_translate_config", "matrix-translate-config"),
         ],
     )
-    def test_load_config(self, request: pytest.FixtureRequest, fixture, name):
+    def test_load_config(self, request: pytest.FixtureRequest, fixture, name) -> None:
         """Test running with path to config."""
         expected, path = request.getfixturevalue(fixture)
 
@@ -108,7 +111,7 @@ class TestParseArgs:
 
         assert args == expected, "incorrect config arguments"
 
-    def test_complete_translate_parameters(self, dummy_files: dict[str, pathlib.Path]):
+    def test_complete_translate_parameters(self, dummy_files: dict[str, pathlib.Path]) -> None:
         """Test translate sub-command with full set of arguments."""
         expected = TranslationArgs(
             data_file=dummy_files["data_file"],
@@ -142,7 +145,7 @@ class TestParseArgs:
 
         assert args == expected, "incorrect translate parameters"
 
-    def test_complete_matrix_translate_parameters(self, dummy_files: dict[str, pathlib.Path]):
+    def test_complete_matrix_translate_parameters(self, dummy_files: dict[str, pathlib.Path]) -> None:
         """Test matrix_translate sub-command with full set of arguments."""
         expected = MatrixTranslationArgs(
             data_file=dummy_files["data_file"],

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 # Built-Ins
-import pathlib
 import warnings
+from typing import TYPE_CHECKING
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit import cost_utils, translation
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 class MatrixReport:
@@ -42,7 +45,7 @@ class MatrixReport:
         translation_from_col: str,
         translation_to_col: str,
         translation_factors_col: str,
-    ):
+    ) -> None:
 
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
@@ -557,10 +560,7 @@ def compare_matrices_and_output(
     """
     comparisons = compare_matrices(matrix_report_a, matrix_report_b, name_a, name_b)
     for name, result in comparisons.items():
-        if label is not None:
-            sheet_name = f"{label}_{name}"
-        else:
-            sheet_name = name
+        sheet_name = f"{label}_{name}" if label is not None else name
 
         if len(sheet_name) > 31:
             warnings.warn(

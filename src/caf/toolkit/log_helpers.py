@@ -24,14 +24,16 @@ import platform
 import subprocess
 import sys
 import warnings
-from collections.abc import Iterable
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 # Third Party
 import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -188,10 +190,7 @@ class SystemInformation:
         info = platform.uname()
 
         ram = psutil.virtual_memory()
-        if ram is None:
-            total_ram = None
-        else:
-            total_ram = ram.total
+        total_ram = None if ram is None else ram.total
 
         try:
             user = getpass.getuser()
@@ -312,7 +311,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
-    ):
+    ) -> None:
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
 
@@ -476,7 +475,7 @@ class LogHelper:
     def __exit__(self, exc_type, exc, exc_tb):
         """Write any error to the logger and closes the file."""
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
+            self.logger.critical("Oh no a critical error occurred")
         else:
             self.logger.info("Program completed without any critical errors")
 
@@ -570,7 +569,7 @@ class TemporaryLogFile:
         """Close temporary log file."""
         # pylint: disable=invalid-name
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
+            self.logger.critical("Oh no a critical error occurred")
 
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)

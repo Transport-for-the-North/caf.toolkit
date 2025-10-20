@@ -19,7 +19,7 @@ class DataGenerator(abc.ABC):
     length: int
     """ Number of rows to create."""
 
-    def __init__(self, name: str, length: int):
+    def __init__(self, name: str, length: int) -> None:
         self.name = name
         self.length = length
 
@@ -50,7 +50,7 @@ class ChoiceGenerator(DataGenerator):
 
     def __init__(
         self, name: str, length: int, values: set[int | str], all_values: bool = False
-    ):
+    ) -> None:
         super().__init__(name, length)
         self.values = values
 
@@ -100,7 +100,7 @@ class FloatGenerator(DataGenerator):
     upper_range: float
     """Upper range of data."""
 
-    def __init__(self, name: str, length: int, upper_range: float, lower_range: float = 0):
+    def __init__(self, name: str, length: int, upper_range: float, lower_range: float = 0) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:
@@ -142,7 +142,7 @@ class UniqueIdGenerator(DataGenerator):
     starting_val: int
     """Starting value for ID."""
 
-    def __init__(self, name: str, length: int, starting_val: int = 0):
+    def __init__(self, name: str, length: int, starting_val: int = 0) -> None:
         super().__init__(name, length)
         self.starting_val = starting_val
         if length <= 0 or not isinstance(length, int):
@@ -176,7 +176,7 @@ class IntGenerator(DataGenerator):
     upper_range: int
     """Upper range of data, maximum in generated data will be one less."""
 
-    def __init__(self, name: str, length: int, upper_range: int = 0, lower_range: int = 0):
+    def __init__(self, name: str, length: int, upper_range: int = 0, lower_range: int = 0) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:

@@ -6,7 +6,6 @@ import functools
 import logging
 import operator
 import warnings
-from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 # Third Party
@@ -14,6 +13,8 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     import sparse
 
 # Local Imports
@@ -37,7 +38,7 @@ def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
                 continue
         except TypeError:
             pass
-        value_maps[col] = dict(zip(vals, range(len(vals))))
+        value_maps[col] = dict(zip(vals, range(len(vals)), strict=False))
     return value_maps
 
 
@@ -124,7 +125,7 @@ def dataframe_to_n_dimensional_sparse_array(
     # Tidy and validate given DF
     mask = df[value_col] == fill_value
     df = df[~mask].copy()
-    df = df.reindex(columns=list(dimension_cols.keys()) + [value_col])
+    df = df.reindex(columns=[*list(dimension_cols.keys()), value_col])
 
     # Reduce inputs to just the needed columns
     dim_col_names = df.columns.tolist()
@@ -155,7 +156,7 @@ def dataframe_to_n_dimensional_sparse_array(
         )
 
     array = sparse.COO(
-        coords=np.array([df[col].values for col in dimension_cols.keys()]),
+        coords=np.array([df[col].values for col in dimension_cols]),
         data=np.array(df[value_col].values),
         shape=final_shape,
     )

@@ -5,12 +5,12 @@ zoning systems.
 """
 from __future__ import annotations
 
+import contextlib
+
 # Built-Ins
 import logging
-import pathlib
 import warnings
-from collections.abc import Hashable
-from typing import Any, Literal, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -20,6 +20,10 @@ from pydantic import FilePath, dataclasses
 # Local Imports
 from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Hashable
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -471,7 +475,7 @@ def numpy_vector_zone_translation(
                 "Set 'check_shapes' to True, or see above error for more "
                 "information."
             ) from err
-        raise err
+        raise
 
     if not check_totals:
         return out_vector
@@ -898,7 +902,7 @@ def pandas_vector_zone_translation(
     if not isinstance(factors, pd.Series):
         raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(factors, axis=0).groupby(level=[translation_to_col] + ind_names).sum()
+        vector.mul(factors, axis=0).groupby(level=[translation_to_col, *ind_names]).sum()
     )
 
     if check_totals:
@@ -961,14 +965,14 @@ def _multi_vector_trans_index(
                 "of the index. If this is unexpected, check your "
                 "inputs.", stacklevel=2
             )
-            vector.reset_index(inplace=True)
+            vector = vector.reset_index()
             (
                 vector[translation_from_col],
                 translation[translation_from_col],
             ) = pd_utils.cast_to_common_type(
                 [vector[translation_from_col], translation[translation_from_col]],
             )
-            vector.set_index(ind_names, inplace=True)
+            vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
             missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
@@ -1025,15 +1029,13 @@ def _load_translation(
     # Attempt to convert ID columns to integers,
     # but not necessarily a problem if they aren't
     for column in str_columns[:2]:
-        try:
+        with contextlib.suppress(ValueError):
             data[column] = pd.to_numeric(data[column], downcast="integer")
-        except ValueError:
-            pass
 
     columns = ("from_column", "to_column", "factors_column")
     LOG.info(
         "Translation loaded with following columns:\n\t%s",
-        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns)),
+        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns, strict=False)),
     )
 
     #  MyPy is confused about the tuple

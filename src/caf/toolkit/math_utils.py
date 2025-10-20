@@ -7,7 +7,6 @@ from __future__ import annotations
 # Built-Ins
 import math
 import warnings
-from collections.abc import Collection
 from typing import TYPE_CHECKING, Any
 
 # Third Party
@@ -16,6 +15,8 @@ import pandas as pd
 
 if TYPE_CHECKING:
     # Third Party
+    from collections.abc import Collection
+
     import sparse
 
 # # # CONSTANTS # # #
@@ -152,7 +153,7 @@ def root_mean_squared_error(
         ) from error
 
     squared_diffs: list[float] = list()
-    for i, (target, ach) in enumerate(zip(targets, achieved)):
+    for i, (target, ach) in enumerate(zip(targets, achieved, strict=False)):
         try:
             diffs = (target - ach) ** 2
         except ValueError as error:

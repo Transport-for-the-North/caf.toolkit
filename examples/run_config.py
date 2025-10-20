@@ -1,5 +1,5 @@
 """
-Using :class:`~caf.toolkit.BaseConfig`
+Using :class:`~caf.toolkit.BaseConfig`.
 ======================================
 
 The :class:`~caf.toolkit.BaseConfig` class in caf.toolkit is designed to load
@@ -66,7 +66,6 @@ class Config(ctk.BaseConfig):
 # Below shows how to load the config file and displays the class as text.
 
 parameters = Config.load_yaml(folder / "basic_config.yml")
-print(parameters)
 
 # %%
 # .. note::
@@ -81,7 +80,6 @@ print(parameters)
 # Use :meth:`~caf.toolkit.BaseConfig.to_yaml()` method to convert the class back to YAML,
 # or :meth:`~caf.toolkit.BaseConfig.save_yaml()` to save the class as a YAML file.
 
-print(parameters.to_yaml())
 
 # %%
 # Nesting
@@ -136,7 +134,6 @@ class NestingConfig(ctk.BaseConfig):
 # Below shows how to load the config file and displays the class as text.
 
 parameters = NestingConfig.load_yaml(folder / "nested_config.yml")
-print(parameters)
 
 # %%
 # Extra Validation
@@ -254,7 +251,6 @@ class ExtraValidatedConfig(ctk.BaseConfig):
 # Below shows how to load the config file and displays the class as text.
 
 parameters = ExtraValidatedConfig.load_yaml(folder / "validated_config.yml")
-print(parameters)
 
 
 # %%

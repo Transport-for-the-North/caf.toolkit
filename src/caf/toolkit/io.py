@@ -5,20 +5,22 @@ from __future__ import annotations
 import collections
 import itertools
 import logging
-import os
 import pathlib
 import re
 import string
 import time
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit.pandas_utils import utility
+
+if TYPE_CHECKING:
+    import os
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNT
 class MissingColumnsError(Exception):
     """Raised when columns are missing from input CSV."""
 
-    def __init__(self, name: str, columns: list[str], *args, **kwargs):
+    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:
         self.columns = columns
         cols = " and".join(", ".join(f"'{s}'" for s in columns).rsplit(",", 1))
         msg = f"Columns missing from {name}: {cols}"
@@ -76,11 +78,6 @@ def safe_dataframe_to_csv(
                 out_path = kwargs.get("path_or_buf")
                 if out_path is None:
                     out_path = args[0]
-                print(
-                    f"Cannot write to file at {out_path}.\n"
-                    "Please ensure it is not open anywhere.\n"
-                    "Waiting for permission to write...\n"
-                )
                 waiting = True
             time.sleep(1)
 
@@ -128,7 +125,7 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters):
+        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=False):
             if value is not None:
                 kwargs[nm] = value
 
@@ -150,7 +147,7 @@ def read_csv(
 
 def _detailed_read_error(
     path: pathlib.Path, name: str, exc: ValueError, kwargs: dict[str, Any]
-):
+) -> None:
     """Parse `read_csv` error and provide more details.
 
     Raises
@@ -280,7 +277,7 @@ def _normalise_read_csv(
     return lookup, usecols, dtype, index_col
 
 
-def _validate_normal_columns(columns: Iterable[Hashable], name: str):
+def _validate_normal_columns(columns: Iterable[Hashable], name: str) -> None:
     def normal_check(value) -> bool:
         return isinstance(value, str) and (value == _normalise_name(value))
 
@@ -295,8 +292,7 @@ def _validate_normal_columns(columns: Iterable[Hashable], name: str):
 def _normalise_name(col: str) -> str:
     normalised = re.sub(r"\s*-\s*", "-", string=col.strip().lower())
     normalised = re.sub(r"\s+", "_", normalised)
-    normalised = re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
-    return normalised
+    return re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
 
 
 def read_csv_matrix(

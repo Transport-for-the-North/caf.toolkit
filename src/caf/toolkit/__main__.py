@@ -84,7 +84,7 @@ class TranslationArgs(_BaseTranslationArgs):
         description="The column (name or position) in the data file containing the zone ids",
     )
 
-    def run(self):
+    def run(self) -> None:
         """Run vector zone translation with the given arguments."""
         translation.vector_translation_from_file(
             vector_path=self.data_file,
@@ -111,7 +111,7 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         " CSV file containing the matrix values",
     )
 
-    def run(self):
+    def run(self) -> None:
         """Run matrix zone translation with the given arguments."""
         translation.matrix_translation_from_file(
             matrix_path=self.data_file,
@@ -206,7 +206,7 @@ def _create_arg_parser():
     return parser
 
 
-def main():
+def main() -> None:
     """Parser command-line arguments and run CAF.toolkit functionality."""
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=arguments.TypeAnnotationWarning)

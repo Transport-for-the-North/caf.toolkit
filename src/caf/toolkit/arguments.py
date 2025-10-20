@@ -11,7 +11,7 @@ import os
 import pathlib
 import re
 import warnings
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 # Third Party
 import pydantic
@@ -19,6 +19,9 @@ import pydantic_core
 
 # Local Imports
 from caf.toolkit import config_base
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 ##### CONSTANTS #####
 
@@ -259,10 +262,7 @@ class ModelArguments:
         for name, field in self._model.model_fields.items():
             type_, _, nargs = parse_arg_details(str(field.annotation))
 
-            if field.is_required():
-                name_or_flags = [name]
-            else:
-                name_or_flags = [f"--{name}"]
+            name_or_flags = [name] if field.is_required() else [f"--{name}"]
 
             if field.default == pydantic_core.PydanticUndefined:
                 default = None
@@ -286,10 +286,7 @@ class ModelArguments:
 
             # Use the store true / false action for boolean flags
             # Use false as default if not given
-            if default is None or not default:
-                action = "store_true"
-            else:
-                action = "store_false"
+            action = "store_true" if default is None or not default else "store_false"
             parser.add_argument(*name_or_flags, action=action, help=description)
 
         parser.set_defaults(dataclass_parse_func=self._parse)
@@ -331,7 +328,7 @@ class ModelArguments:
         add_arguments: bool = True,
         add_config: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Add sub-commands for CLI arguments and config (if possible).
 
         Note: config sub-command won't be added if model provided to class

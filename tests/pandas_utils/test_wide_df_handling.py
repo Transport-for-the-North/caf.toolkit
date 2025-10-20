@@ -1,4 +1,4 @@
-"""Tests for the {} module"""
+"""Tests for the {} module."""
 # Built-Ins
 import dataclasses
 import operator
@@ -49,7 +49,7 @@ class WideMatrixData:
 
 @dataclasses.dataclass
 class ReportMatrixData(WideMatrixData):
-    """Store testing data for the wide_matrix_internal_external_report()"""
+    """Store testing data for the wide_matrix_internal_external_report()."""
 
     expected_report: pd.DataFrame
     int_select: list[int]
@@ -66,27 +66,27 @@ class ReportMatrixData(WideMatrixData):
 
 # # # FIXTURES # # #
 def random_matrix(shape: tuple[int,]) -> pd.DataFrame:
-    """Produce a random matrix of a given shape"""
+    """Produce a random matrix of a given shape."""
     rng = np.random.default_rng()
     return pd.DataFrame(rng.random(shape))
 
 
 @pytest.fixture(name="random_square_matrix", scope="function")
 def fixture_random_square_matrix(request) -> WideMatrixData:
-    """Fixture to create random matrix of set dimensions"""
+    """Fixture to create random matrix of set dimensions."""
     shape = (request.param, request.param)
     return WideMatrixData(matrix=random_matrix(shape))
 
 
 @pytest.fixture(name="non_square_matrix", scope="module")
 def fixture_non_square_matrix(request) -> WideMatrixData:
-    """Fixture to create random matrix of set dimensions"""
+    """Fixture to create random matrix of set dimensions."""
     return WideMatrixData(matrix=random_matrix(request.param))
 
 
 # # # TESTS # # #
 class TestGetWideMask:
-    """Tests for get_wide_mask()"""
+    """Tests for get_wide_mask()."""
 
     # TODO(BT): Add tests for datatypes. Different + fuzzy matching. Hoping some
     #  good test cases come out of real usage
@@ -97,7 +97,7 @@ class TestGetWideMask:
         self,
         random_square_matrix: WideMatrixData,
         select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.and_
         result = pd_utils.get_wide_mask(
@@ -122,7 +122,7 @@ class TestGetWideMask:
         random_square_matrix: WideMatrixData,
         index_select: list[int],
         col_select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.and_
         result = pd_utils.get_wide_mask(
@@ -150,7 +150,7 @@ class TestGetWideMask:
         random_square_matrix: WideMatrixData,
         select: list[int],
         join_fn: Callable,
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         result = pd_utils.get_wide_mask(
             random_square_matrix.matrix, select=select, join_fn=join_fn
@@ -167,7 +167,7 @@ class TestGetWideMask:
         np.testing.assert_array_equal(result, expected)
 
     @pytest.mark.parametrize("non_square_matrix", ((6, 5), (11, 13), (7,)), indirect=True)
-    def test_non_square_error(self, non_square_matrix: WideMatrixData):
+    def test_non_square_error(self, non_square_matrix: WideMatrixData) -> None:
         """Test an error is raised when the matrix is not square."""
         select = [1, 2]
         join_fn = operator.and_
@@ -177,7 +177,7 @@ class TestGetWideMask:
             pd_utils.get_wide_mask(non_square_matrix.matrix, select=select, join_fn=join_fn)
 
     @pytest.mark.parametrize("random_square_matrix", [5], indirect=True)
-    def test_bad_input_error(self, random_square_matrix: WideMatrixData):
+    def test_bad_input_error(self, random_square_matrix: WideMatrixData) -> None:
         """Test an error is raised when bad input is used."""
         select = [1, 2]
         join_fn = operator.and_
@@ -201,7 +201,7 @@ class TestGetWideMask:
         random_square_matrix: WideMatrixData,
         index_select: list[int],
         col_select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.and_
 
@@ -232,7 +232,7 @@ class TestGetWideMask:
         random_square_matrix: WideMatrixData,
         index_select: list[int],
         col_select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.and_
 
@@ -257,7 +257,7 @@ class TestGetWideMask:
 
 
 class TestInternalExternalHelpers:
-    """Tests for get_wide_internal_only_mask() and get_wide_all_external_mask()"""
+    """Tests for get_wide_internal_only_mask() and get_wide_all_external_mask()."""
 
     @pytest.mark.parametrize("random_square_matrix", (5, 11, 13), indirect=True)
     @pytest.mark.parametrize("select", [[0], [1, 2], [1, 3, 4]])
@@ -265,7 +265,7 @@ class TestInternalExternalHelpers:
         self,
         random_square_matrix: WideMatrixData,
         select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.and_
         result = pd_utils.get_wide_mask(
@@ -288,7 +288,7 @@ class TestInternalExternalHelpers:
         self,
         random_square_matrix: WideMatrixData,
         select: list[int],
-    ):
+    ) -> None:
         """Test that we get the correct mask for a square matrix."""
         join_fn = operator.or_
         result = pd_utils.get_wide_mask(
@@ -307,11 +307,11 @@ class TestInternalExternalHelpers:
 
 
 class TestWideMatrixIntExtReport:
-    """Tests for wide_matrix_internal_external_report()"""
+    """Tests for wide_matrix_internal_external_report()."""
 
     @pytest.fixture(name="correct_report", scope="class")
     def fixture_correct_report(self) -> ReportMatrixData:
-        """Create an example of a correct input and report"""
+        """Create an example of a correct input and report."""
         int_select = [0, 1, 2]
         ext_select = [3, 4]
         mat = pd.DataFrame(np.arange(25).reshape(5, -1))
@@ -364,12 +364,12 @@ class TestWideMatrixIntExtReport:
             ext_select=ext_select,
         )
 
-    def test_correct(self, correct_report: ReportMatrixData):
+    def test_correct(self, correct_report: ReportMatrixData) -> None:
         """Test that the correct result is produced with correct data."""
         result = pd_utils.wide_matrix_internal_external_report(**correct_report.get_kwargs())
         pd.testing.assert_frame_equal(result, correct_report.expected_report)
 
-    def test_missing_warn(self, missing_bad_report: ReportMatrixData):
+    def test_missing_warn(self, missing_bad_report: ReportMatrixData) -> None:
         """Test that a warning is raised when not all values used."""
         msg = "do not contain all values"
         with pytest.warns(UserWarning, match=msg):
@@ -378,7 +378,7 @@ class TestWideMatrixIntExtReport:
             )
         pd.testing.assert_frame_equal(result, missing_bad_report.expected_report)
 
-    def test_overlap_warn(self, overlap_bad_report: ReportMatrixData):
+    def test_overlap_warn(self, overlap_bad_report: ReportMatrixData) -> None:
         """Test that a warning is raised when not all values used."""
         msg = "overlapping values"
         with pytest.warns(UserWarning, match=msg):

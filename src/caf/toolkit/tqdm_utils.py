@@ -57,8 +57,8 @@ def std_out_err_redirect_tqdm():
         yield orig_out_err[0]
 
     # Relay exceptions
-    except Exception as exc:
-        raise exc
+    except Exception:
+        raise
 
     # Always restore sys.stdout/err if necessary
     finally:

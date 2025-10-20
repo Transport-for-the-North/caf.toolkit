@@ -5,13 +5,15 @@ from __future__ import annotations
 import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
-from pathlib import Path
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 # Third Party
 import pydantic
 import pydantic_core
 import strictyaml
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # # # CONSTANTS # # #
 
@@ -317,16 +319,13 @@ def write_config(
         comment_lines = other_comment.split("\n")
 
     if datetime_comment:
-        if name is not None:
-            name = f"{name} config"
-        else:
-            name = "Config"
+        name = f"{name} config" if name is not None else "Config"
 
         comment_lines.insert(0, f"{name} written on {dt.datetime.now():%Y-%m-%d at %H:%M}")
 
     if len(comment_lines) > 0:
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
-        yaml = "\n".join(comment_lines + [yaml])
+        yaml = "\n".join([*comment_lines, yaml])
 
     with open(path, "w", encoding="utf-8") as file:
         file.write(yaml)

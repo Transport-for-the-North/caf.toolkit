@@ -6,7 +6,7 @@ import copy
 import logging
 import os
 import warnings
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 # Third Party
 import numpy as np
@@ -15,6 +15,9 @@ import pandas as pd
 # Local Imports
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -72,7 +75,7 @@ class CostDistribution:
         avg_col: str = "avg",
         trips_col: str = "trips",
         weighted_avg_col: str | None = None,
-    ):
+    ) -> None:
         # Keep as private. These shouldn't be needed outside of this class
         self.__df = df
         self.__min_col = min_col
@@ -172,7 +175,7 @@ class CostDistribution:
         self.__df = pd_utils.reindex_cols(self.__df, list(req_cols.values()))
         return self
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get the number of bins in this cost distribution."""
         return len(self.bin_edges) - 1
 
@@ -594,7 +597,7 @@ def _validate_bin_edges(
                 "Either `bin_edges` needs to be set, or both `min_bounds` and "
                 "`max_bounds` needs to be set."
             )
-        bin_edges = [min_bounds[0]] + list(max_bounds)
+        bin_edges = [min_bounds[0], *list(max_bounds)]
     return bin_edges
 
 

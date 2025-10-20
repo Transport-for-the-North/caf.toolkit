@@ -1,4 +1,4 @@
-"""Tests for the {} module"""
+"""Tests for the {} module."""
 from __future__ import annotations
 
 # Built-Ins
@@ -22,7 +22,7 @@ from caf.toolkit import cost_utils, math_utils
 # # # DATACLASSES # # #
 @dataclasses.dataclass
 class CostDistFnResults:
-    """Inputs and expected results for a cost_distribution function"""
+    """Inputs and expected results for a cost_distribution function."""
 
     # Inputs
     matrix: np.ndarray
@@ -47,7 +47,7 @@ class CostDistFnResults:
 
 @dataclasses.dataclass
 class DynamicCostDistFnResults(CostDistFnResults):
-    """Inputs and expected results for a cost_distribution function"""
+    """Inputs and expected results for a cost_distribution function."""
 
     # Inputs
     n_bin_pow: float
@@ -168,7 +168,7 @@ class LogBinsResults:
 # # # FIXTURES # # #
 @pytest.fixture(name="cost_dist_1d", scope="class")
 def fixture_cost_dist_1d() -> CostDistFnResults:
-    """Create a 1D matrix to distribute"""
+    """Create a 1D matrix to distribute."""
     return CostDistFnResults(
         matrix=np.array([26.0, 43.0, 5.0, 8.0, 18.0, 51.0, 35.0, 39.0, 32.0, 37.0]),
         cost_matrix=np.array([77.0, 74.0, 53.0, 60.0, 94.0, 65.0, 13.0, 79.0, 39.0, 75.0]),
@@ -179,7 +179,7 @@ def fixture_cost_dist_1d() -> CostDistFnResults:
 
 @pytest.fixture(name="cost_dist_2d", scope="class")
 def fixture_cost_dist_2d() -> CostDistFnResults:
-    """Create a 2D matrix to distribute"""
+    """Create a 2D matrix to distribute."""
     matrix = np.array(
         [
             [60.0, 27.0, 79.0, 63.0, 8.0],
@@ -210,7 +210,7 @@ def fixture_cost_dist_2d() -> CostDistFnResults:
 
 @pytest.fixture(name="dynamic_cost_dist_1d", scope="class")
 def fixture_dynamic_cost_dist_1d(cost_dist_1d) -> DynamicCostDistFnResults:
-    """Create a 1d dynamic cost distribution and results"""
+    """Create a 1d dynamic cost distribution and results."""
     dynamic_bin_edges = np.array([0, 2, 6, 12, 20, 30, 42, 57, 74, 94, 110.0])
     distribution = np.array([0, 0, 0, 35, 0, 32, 5, 59, 145, 18])
     return DynamicCostDistFnResults(
@@ -226,7 +226,7 @@ def fixture_dynamic_cost_dist_1d(cost_dist_1d) -> DynamicCostDistFnResults:
 
 @pytest.fixture(name="dynamic_cost_dist_2d", scope="class")
 def fixture_dynamic_cost_dist_2d(cost_dist_2d) -> DynamicCostDistFnResults:
-    """Create a 2d dynamic cost distribution and results"""
+    """Create a 2d dynamic cost distribution and results."""
     distribution = np.array([0, 106, 69, 122, 62, 258, 178, 254, 148, 3])
     dynamic_bin_edges = np.array([0, 2, 6, 13, 21, 31, 44, 59, 77, 98, 110])
     return DynamicCostDistFnResults(
@@ -242,7 +242,7 @@ def fixture_dynamic_cost_dist_2d(cost_dist_2d) -> DynamicCostDistFnResults:
 
 @pytest.fixture(name="small_log_bins", scope="class")
 def fixture_small_log_bins():
-    """Create log bins with few values"""
+    """Create log bins with few values."""
     return LogBinsResults(
         max_value=10,
         n_bin_pow=0.51,
@@ -254,7 +254,7 @@ def fixture_small_log_bins():
 
 @pytest.fixture(name="med_log_bins", scope="class")
 def fixture_med_log_bins():
-    """Create log bins with few values"""
+    """Create log bins with few values."""
     return LogBinsResults(
         max_value=100,
         n_bin_pow=0.51,
@@ -266,7 +266,7 @@ def fixture_med_log_bins():
 
 @pytest.fixture(name="large_log_bins", scope="class")
 def fixture_large_log_bins():
-    """Create log bins with few values"""
+    """Create log bins with few values."""
     # fmt: off
     expected_bins = np.array(
         [0, 1, 4, 8, 14, 21, 30, 40, 52, 66, 81, 99, 118, 139, 161, 186, 213,
@@ -323,7 +323,7 @@ def fixture_cost_dist_2d_class_cols(cost_dist_2d) -> CostDistClassResults:
 
 @pytest.fixture(name="dynamic_cost_dist_1d_class", scope="class")
 def fixture_dynamic_cost_dist_1d_class(dynamic_cost_dist_1d) -> DynamicCostDistClassResults:
-    """Create a 1d dynamic cost distribution and results"""
+    """Create a 1d dynamic cost distribution and results."""
     return DynamicCostDistClassResults(
         matrix=dynamic_cost_dist_1d.matrix,
         cost_matrix=dynamic_cost_dist_1d.cost_matrix,
@@ -337,7 +337,7 @@ def fixture_dynamic_cost_dist_1d_class(dynamic_cost_dist_1d) -> DynamicCostDistC
 
 @pytest.fixture(name="dynamic_cost_dist_2d_class", scope="class")
 def fixture_dynamic_cost_dist_2d_class(dynamic_cost_dist_2d) -> DynamicCostDistClassResults:
-    """Create a 1d dynamic cost distribution and results"""
+    """Create a 1d dynamic cost distribution and results."""
     return DynamicCostDistClassResults(
         matrix=dynamic_cost_dist_2d.matrix,
         cost_matrix=dynamic_cost_dist_2d.cost_matrix,
@@ -364,14 +364,14 @@ class TestCostDistributionClassConstructors:
         "io_str",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_correct_init(self, io_str: str, request):
+    def test_correct_init(self, io_str: str, request) -> None:
         """Test the class constructor creates the correct DF internally."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = cost_utils.CostDistribution(**input_and_results.constructor_kwargs)
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.df)
 
-    def test_default_weighted_average(self, cost_dist_1d_class):
-        """Test that the weighted_avg col is set to the same as avg when not given"""
+    def test_default_weighted_average(self, cost_dist_1d_class) -> None:
+        """Test that the weighted_avg col is set to the same as avg when not given."""
         got = cost_utils.CostDistribution(
             **cost_dist_1d_class.constructor_kwargs_no_weighted_avg
         )
@@ -382,7 +382,7 @@ class TestCostDistributionClassConstructors:
         "io_str",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_init_wrong_col(self, io_str: str, request):
+    def test_init_wrong_col(self, io_str: str, request) -> None:
         """Test the class constructor throws errors with bad column names."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         with pytest.raises(ValueError, match="The following columns are missing"):
@@ -392,7 +392,7 @@ class TestCostDistributionClassConstructors:
         "io_str",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_correct_from_data_edges(self, io_str: str, request):
+    def test_correct_from_data_edges(self, io_str: str, request) -> None:
         """Test an alternate class constructor works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = cost_utils.CostDistribution.from_data(
@@ -406,7 +406,7 @@ class TestCostDistributionClassConstructors:
         "io_str",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_correct_from_data_bounds(self, io_str: str, request):
+    def test_correct_from_data_bounds(self, io_str: str, request) -> None:
         """Test an alternate class constructor works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = cost_utils.CostDistribution.from_data(
@@ -418,8 +418,8 @@ class TestCostDistributionClassConstructors:
         pd.testing.assert_frame_equal(cost_dist.df, input_and_results.default_name_df)
 
     @pytest.mark.parametrize("which_do", ["none", "min", "max"])
-    def test_bad_bounds(self, cost_dist_2d_class: CostDistFnResults, which_do: str):
-        """Check an error is raised when bad bounds given"""
+    def test_bad_bounds(self, cost_dist_2d_class: CostDistFnResults, which_do: str) -> None:
+        """Check an error is raised when bad bounds given."""
         # Determine the kwargs
         kwargs = {
             "matrix": cost_dist_2d_class.matrix,
@@ -447,7 +447,7 @@ class TestCostDistributionClassConstructors:
         "io_str",
         ["dynamic_cost_dist_1d_class", "dynamic_cost_dist_2d_class"],
     )
-    def test_correct_data_no_bins(self, io_str: str, request):
+    def test_correct_data_no_bins(self, io_str: str, request) -> None:
         """Test an alternate class constructor works correctly."""
         input_and_results: DynamicCostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = cost_utils.CostDistribution.from_data_no_bins(
@@ -462,8 +462,8 @@ class TestCostDistributionClassConstructors:
     @pytest.mark.parametrize(
         "io_str", ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"]
     )
-    def test_correct_from_file(self, io_str: str, request, tmp_path):
-        """Test that the constructor can be called correctly from file"""
+    def test_correct_from_file(self, io_str: str, request, tmp_path) -> None:
+        """Test that the constructor can be called correctly from file."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         expected_df = input_and_results.df
 
@@ -492,8 +492,8 @@ class TestCostDistributionClassConstructors:
         io_str: str,
         request,
         tmp_path,
-    ):
-        """Test that the constructor can be called correctly from file without weighted_avg col"""
+    ) -> None:
+        """Test that the constructor can be called correctly from file without weighted_avg col."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
 
         # Create path and write out df
@@ -527,32 +527,32 @@ class TestCostDistributionClassConstructors:
 class TestCostDistributionClassProperties:
     """Tests for the properties of CostDistribution class."""
 
-    def test_min_vals(self, io_str: str, request):
+    def test_min_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         np.testing.assert_almost_equal(cost_dist.min_vals, input_and_results.min_bounds)
 
-    def test_max_vals(self, io_str: str, request):
+    def test_max_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         np.testing.assert_almost_equal(cost_dist.max_vals, input_and_results.max_bounds)
 
-    def test_bin_edges(self, io_str: str, request):
+    def test_bin_edges(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         np.testing.assert_almost_equal(cost_dist.bin_edges, input_and_results.bin_edges)
 
-    def test_n_bins(self, io_str: str, request):
+    def test_n_bins(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         n_bins = len(input_and_results.bin_edges) - 1
         np.testing.assert_almost_equal(cost_dist.n_bins, n_bins)
 
-    def test_avg_vals(self, io_str: str, request):
+    def test_avg_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -561,7 +561,7 @@ class TestCostDistributionClassProperties:
         avg_vals = (bin_edges[:-1] + bin_edges[1:]) / 2
         np.testing.assert_almost_equal(cost_dist.avg_vals, avg_vals)
 
-    def test_weighted_avg_vals(self, io_str: str, request):
+    def test_weighted_avg_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -570,13 +570,13 @@ class TestCostDistributionClassProperties:
         avg_vals = (bin_edges[:-1] + bin_edges[1:]) / 2
         np.testing.assert_almost_equal(cost_dist.avg_vals, avg_vals)
 
-    def test_trip_vals(self, io_str: str, request):
+    def test_trip_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         np.testing.assert_almost_equal(cost_dist.trip_vals, input_and_results.distribution)
 
-    def test_band_share_vals(self, io_str: str, request):
+    def test_band_share_vals(self, io_str: str, request) -> None:
         """Test correct functionality."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -594,19 +594,19 @@ class TestCostDistributionClassProperties:
 class TestCostDistributionClassMethods:
     """Tests for the methods of CostDistribution class."""
 
-    def test_length(self, io_str: str, request):
+    def test_length(self, io_str: str, request) -> None:
         """Test the class __len__ method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         assert len(cost_dist) == len(input_and_results.bin_edges) - 1
 
-    def test_copy_equals(self, io_str: str, request):
+    def test_copy_equals(self, io_str: str, request) -> None:
         """Test the class copy and equal methods work correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
         assert cost_dist.copy() == cost_dist
 
-    def test_create_similar(self, io_str: str, request):
+    def test_create_similar(self, io_str: str, request) -> None:
         """Test the class create_similar method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -620,7 +620,7 @@ class TestCostDistributionClassMethods:
         got_df = cost_dist.create_similar(trip_vals=new_trip_vals).df
         pd.testing.assert_frame_equal(got_df, expected_df)
 
-    def test_bad_shape_create_similar(self, io_str: str, request):
+    def test_bad_shape_create_similar(self, io_str: str, request) -> None:
         """Test the class create_similar method correctly throws an error."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -636,7 +636,7 @@ class TestCostDistributionClassMethods:
         "io_str2",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_trip_residuals(self, io_str: str, io_str2: str, request):
+    def test_trip_residuals(self, io_str: str, io_str2: str, request) -> None:
         """Test the class residuals method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist1 = input_and_results.cost_dist_instance
@@ -651,7 +651,7 @@ class TestCostDistributionClassMethods:
         "io_str2",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_band_share_residuals(self, io_str: str, io_str2: str, request):
+    def test_band_share_residuals(self, io_str: str, io_str2: str, request) -> None:
         """Test the class residuals method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         input_and_results2: CostDistClassResults = request.getfixturevalue(io_str2)
@@ -672,7 +672,7 @@ class TestCostDistributionClassMethods:
         "io_str2",
         ["cost_dist_1d_class", "cost_dist_2d_class", "cost_dist_2d_class_cols"],
     )
-    def test_band_share_convergence(self, io_str: str, io_str2: str, request):
+    def test_band_share_convergence(self, io_str: str, io_str2: str, request) -> None:
         """Test the class convergence method works correctly."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         input_and_results2: CostDistClassResults = request.getfixturevalue(io_str2)
@@ -694,7 +694,7 @@ class TestCostDistributionClassMethods:
         ["trip_residuals", "band_share_residuals", "band_share_convergence"],
     )
     @pytest.mark.parametrize("bin_str", ["values", "shape"])
-    def test_bad_bin_edges(self, io_str: str, fn_str: str, bin_str: str, request):
+    def test_bad_bin_edges(self, io_str: str, fn_str: str, bin_str: str, request) -> None:
         """Test the class correctly throws an error with bad band edges."""
         input_and_results: CostDistClassResults = request.getfixturevalue(io_str)
         cost_dist = input_and_results.cost_dist_instance
@@ -730,14 +730,14 @@ class TestCostDistributionClassMethods:
 
 @pytest.mark.usefixtures("cost_dist_1d", "cost_dist_2d")
 class TestCostDistributionFunction:
-    """Tests for the cost distribution function"""
+    """Tests for the cost distribution function."""
 
     @pytest.mark.parametrize(
         "dist_str",
         ["cost_dist_1d", "cost_dist_2d"],
     )
-    def test_distribution_edges(self, dist_str: str, request):
-        """Check that the expected distribution is returned when band edges given"""
+    def test_distribution_edges(self, dist_str: str, request) -> None:
+        """Check that the expected distribution is returned when band edges given."""
         cost_dist = request.getfixturevalue(dist_str)
         result = cost_utils.cost_distribution(
             matrix=cost_dist.matrix,
@@ -750,8 +750,8 @@ class TestCostDistributionFunction:
         "dist_str",
         ["cost_dist_1d", "cost_dist_2d"],
     )
-    def test_distribution_bounds(self, dist_str: str, request):
-        """Check that the expected distribution is returned when bounds given"""
+    def test_distribution_bounds(self, dist_str: str, request) -> None:
+        """Check that the expected distribution is returned when bounds given."""
         cost_dist = request.getfixturevalue(dist_str)
         result = cost_utils.cost_distribution(
             matrix=cost_dist.matrix,
@@ -765,8 +765,8 @@ class TestCostDistributionFunction:
         "dist_str",
         ["cost_dist_1d", "cost_dist_2d"],
     )
-    def test_norm_distribution(self, dist_str: str, request):
-        """Check that the expected distribution is returned for normalised"""
+    def test_norm_distribution(self, dist_str: str, request) -> None:
+        """Check that the expected distribution is returned for normalised."""
         cost_dist = request.getfixturevalue(dist_str)
         dist, norm_dist = cost_utils.normalised_cost_distribution(
             matrix=cost_dist.matrix,
@@ -780,8 +780,8 @@ class TestCostDistributionFunction:
         "dist_str",
         ["cost_dist_1d", "cost_dist_2d"],
     )
-    def test_same_dist(self, dist_str: str, request):
-        """Check that the same distribution is returned for both functions"""
+    def test_same_dist(self, dist_str: str, request) -> None:
+        """Check that the same distribution is returned for both functions."""
         cost_dist = request.getfixturevalue(dist_str)
         dist1, _ = cost_utils.normalised_cost_distribution(
             matrix=cost_dist.matrix,
@@ -796,8 +796,8 @@ class TestCostDistributionFunction:
         np.testing.assert_almost_equal(dist1, dist2)
 
     @pytest.mark.parametrize("func_name", ["dist", "norm_dist"])
-    def test_no_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str):
-        """Check an error is raised when no bounds given"""
+    def test_no_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str) -> None:
+        """Check an error is raised when no bounds given."""
         msg = (
             "Either `bin_edges` needs to be set, or both `min_bounds` and "
             "`max_bounds` needs to be set."
@@ -816,8 +816,8 @@ class TestCostDistributionFunction:
             )
 
     @pytest.mark.parametrize("func_name", ["dist", "norm_dist"])
-    def test_only_min_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str):
-        """Check an error is raised when only min bounds given"""
+    def test_only_min_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str) -> None:
+        """Check an error is raised when only min bounds given."""
         msg = (
             "Either `bin_edges` needs to be set, or both `min_bounds` and "
             "`max_bounds` needs to be set."
@@ -837,8 +837,8 @@ class TestCostDistributionFunction:
             )
 
     @pytest.mark.parametrize("func_name", ["dist", "norm_dist"])
-    def test_only_max_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str):
-        """Check an error is raised when only max bounds given"""
+    def test_only_max_bounds(self, cost_dist_2d: CostDistFnResults, func_name: str) -> None:
+        """Check an error is raised when only max bounds given."""
         msg = (
             "Either `bin_edges` needs to be set, or both `min_bounds` and "
             "`max_bounds` needs to be set."
@@ -857,8 +857,8 @@ class TestCostDistributionFunction:
                 max_bounds=cost_dist_2d.max_bounds,
             )
 
-    def test_misaligned_bounds_dist(self, cost_dist_2d: CostDistFnResults):
-        """Check array of 0s is returned when bounds miss data"""
+    def test_misaligned_bounds_dist(self, cost_dist_2d: CostDistFnResults) -> None:
+        """Check array of 0s is returned when bounds miss data."""
         new_bin_edges = cost_dist_2d.bin_edges * 1000
         new_bin_edges[0] = 1000
         result = cost_utils.cost_distribution(
@@ -868,8 +868,8 @@ class TestCostDistributionFunction:
         )
         np.testing.assert_almost_equal(result, np.zeros_like(cost_dist_2d.distribution))
 
-    def test_misaligned_bounds_norm(self, cost_dist_2d: CostDistFnResults):
-        """Check array of 0s is returned when bounds miss data"""
+    def test_misaligned_bounds_norm(self, cost_dist_2d: CostDistFnResults) -> None:
+        """Check array of 0s is returned when bounds miss data."""
         new_bin_edges = cost_dist_2d.bin_edges * 1000
         new_bin_edges[0] = 1000
         result, norm_result = cost_utils.normalised_cost_distribution(
@@ -889,19 +889,19 @@ class TestCreateLogBins:
         "io_str",
         ["small_log_bins", "med_log_bins", "large_log_bins"],
     )
-    def test_correct_result(self, io_str: str, request):
-        """Check that the correct results are returned"""
+    def test_correct_result(self, io_str: str, request) -> None:
+        """Check that the correct results are returned."""
         input_and_results: LogBinsResults = request.getfixturevalue(io_str)
         result = cost_utils.create_log_bins(**input_and_results.get_kwargs())
         np.testing.assert_almost_equal(result, input_and_results.expected_bins)
 
-    def test_small_final_val(self, small_log_bins: LogBinsResults):
+    def test_small_final_val(self, small_log_bins: LogBinsResults) -> None:
         """Check an error is thrown when the max value is too small."""
         with pytest.raises(ValueError, match="lower than"):
             cost_utils.create_log_bins(**(small_log_bins.get_kwargs() | {"final_val": 0}))
 
     @pytest.mark.parametrize("n_bin_pow", [-1, 0, 1, 2])
-    def test_bad_power(self, small_log_bins: LogBinsResults, n_bin_pow: float):
+    def test_bad_power(self, small_log_bins: LogBinsResults, n_bin_pow: float) -> None:
         """Check an error is thrown when the power is an invalid value."""
         with pytest.raises(ValueError, match="should be in the range"):
             cost_utils.create_log_bins(
@@ -909,7 +909,7 @@ class TestCreateLogBins:
             )
 
     @pytest.mark.parametrize("log_factor", [-1, 0])
-    def test_bad_log_factor(self, small_log_bins: LogBinsResults, log_factor: float):
+    def test_bad_log_factor(self, small_log_bins: LogBinsResults, log_factor: float) -> None:
         """Check an error is thrown when the power is an invalid value."""
         with pytest.raises(ValueError, match="should be greater than 0"):
             cost_utils.create_log_bins(
@@ -928,7 +928,7 @@ class TestDynamicCostDistribution:
         "dist_str",
         ["dynamic_cost_dist_1d", "dynamic_cost_dist_2d"],
     )
-    def test_correct_distribution(self, dist_str: str, request):
+    def test_correct_distribution(self, dist_str: str, request) -> None:
         """Check that the expected distribution is returned."""
         cost_dist: DynamicCostDistFnResults = request.getfixturevalue(dist_str)
         result, bins = cost_utils.dynamic_cost_distribution(
@@ -942,7 +942,7 @@ class TestDynamicCostDistribution:
         "dist_str",
         ["dynamic_cost_dist_1d", "dynamic_cost_dist_2d"],
     )
-    def test_kwarg_passing(self, dist_str: str, request):
+    def test_kwarg_passing(self, dist_str: str, request) -> None:
         """Check that the expected distribution is returned."""
         cost_dist: DynamicCostDistFnResults = request.getfixturevalue(dist_str)
         result, bins = cost_utils.dynamic_cost_distribution(**cost_dist.get_kwargs())
@@ -951,11 +951,11 @@ class TestDynamicCostDistribution:
 
 
 class TestIntrazonalCostInfill:
-    """Tests for the intrazonal_cost_infill function"""
+    """Tests for the intrazonal_cost_infill function."""
 
     @dataclasses.dataclass
     class IzResults:
-        """Inputs and expected results for intrazonal_cost_infill()"""
+        """Inputs and expected results for intrazonal_cost_infill()."""
 
         # Inputs
         cost_matrix: np.ndarray
@@ -974,7 +974,7 @@ class TestIntrazonalCostInfill:
 
     @pytest.fixture(name="normal_array", scope="class")
     def fixture_normal_array(self):
-        """Create a simple test with no edge cases"""
+        """Create a simple test with no edge cases."""
         cost_matrix = np.array(
             [
                 [54.0, 72.0, 61.0, 97.0, 72.0],
@@ -1063,8 +1063,8 @@ class TestIntrazonalCostInfill:
     @pytest.mark.parametrize(
         "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
     )
-    def test_correct_result(self, io_str: str, request):
-        """Test that the correct results are achieved"""
+    def test_correct_result(self, io_str: str, request) -> None:
+        """Test that the correct results are achieved."""
         io: TestIntrazonalCostInfill.IzResults = request.getfixturevalue(io_str)
         result = cost_utils.intrazonal_cost_infill(**io.get_kwargs())
         np.testing.assert_almost_equal(result, io.result)
@@ -1073,7 +1073,7 @@ class TestIntrazonalCostInfill:
         "io_str", ["normal_array", "zeroes_array", "inf_array", "min_axis_array"]
     )
     @pytest.mark.parametrize("multiplier", [0, 0.5, 2])
-    def test_different_multiplier(self, io_str: str, multiplier: float, request):
+    def test_different_multiplier(self, io_str: str, multiplier: float, request) -> None:
         """Test that the multiplier is being applied correctly."""
         io: TestIntrazonalCostInfill.IzResults = request.getfixturevalue(io_str)
 
