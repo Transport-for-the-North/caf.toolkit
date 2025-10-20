@@ -50,8 +50,7 @@ if sys.version_info.minor <= 10:
     _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
     # getLevelNamesMapping added to logging in v3.11
-    # pylint: disable=no-member
-    _LEVEL_LOOKUP = logging.getLevelNamesMapping()
+    _LEVEL_LOOKUP = logging.getLevelNamesMapping()  # pylint: disable=no-member
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
