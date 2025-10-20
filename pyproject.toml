@@ -48,61 +48,109 @@ where = ["src"]
 "caf.toolkit" = ["py.typed"]
 
 # Linters
-[tool.black]
+[tool.ruff]
 line-length = 95
-target-version = ['py310']
+target-version = "py310"
+# fix = true
+extend-exclude = ["conf.py"]
+
+[tool.ruff.lint]
+select = [
+    "A",    # flake8-builtins
+    "E",    # pycodestyle
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "I",    # isort
+    "LOG",  # flake8-logging
+    "G",    # flake8-logging-format
+    "N",    # pep8-naming
+    "D",    # pydocstyle
+    "DOC",  # pydoclint
+    "PL",   # pylint
+    "BLE",  # flake8-blind-except
+    "ERA",  # eradicate (commented out code)
+    "TD",   # flake8-todos
+    "RET",  # flake8-return
+    "PTH",  # flake8-use-pathlib
+    "ANN",  # flake8-annotations
+    "S",    # flake8-bandit (security issues)
+    "ICN",  # flake8-import-conventions
+    "ARG",  # flake8-unused-arguments
+    "PIE",  # flake8-pie
+    "FURB", # refurb
+    "RUF",  # Ruff-specific rules
+    "TRY",  # tryceratops checks
+    "C90",  # mccabe (complex code)
+    "PD",   # pandas-vet (pandas best practices)
+    "TC",   # flake8-type-checking
+    "T20",  # flake8-print (disallow print statements)
+    "PGH",  # pygrep-hooks (noqa and type disable comments)
+]
+ignore = [
+    # These clash with the ruff formatter
+    "W191", # tab-indentation
+    "E111", # indentation-with-invalid-multiple
+    "E114", # indentation-with-invalid-multiple-comment
+    "E117", # over-indented
+    "D206", # docstring-tab-indentation
+    "D300", # triple-single-quotes
+
+    # "UP015", # redundant-open-modes (pyupgrade)
+    "TRY003", # long messages in exceptions (tryceratops)
+    "S101",  # use of assert (flake8-bandit)
+]
+extend-safe-fixes = [
+    "SIM117", # multiple-with-statements (flake8-simplify)
+    "B028",   # no-explicit-stack-level (flake8-bugbear)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pep8-naming]
+ignore-names = ["df", "fn", "ca", "tp", "x", "i"]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-statements = 100
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# these are only used while testing ruff implementation
+[tool.pylint.design]
+max-args = 10
+max-attributes = 15
+max-statements = 100
 
 [tool.pylint.messages_control]
 disable = [
-    "line-too-long",    # Compatibility with black
+    "line-too-long", # Handled by ruff
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",
-    "wrong-import-position", # Compatibility with isort
+    "wrong-import-position", # Compatibility with ruff
 ]
 
-[tool.isort]
-profile = "black"
-src_paths = ["src", "tests"]
-
-skip = ["__init__.py", "_version.py"]
-skip_glob = [".*"]
-
-# Section commenting
-import_heading_stdlib = "Built-Ins"
-import_heading_thirdparty = "Third Party"
-import_heading_firstparty = "Local Imports"
-
-# Pylint settings
 [tool.pylint.basic]
 good-names = ["df", "fn", "ca", "tp", "to", "x", "x1", "x2", "i", "f", "q"]
 extension-pkg-allow-list = ["pydantic"]
 
 [tool.pylint.main]
-ignore = ["__init__.py", "_version.py", "versioneer.py"]
-
-[tool.pylint.design]
-max-args = 10
-max-attributes = 15
-max-statements = 100
+ignore = ["__init__.py", "_version.py"]
 
 [tool.mypy]
 packages = ["caf.toolkit"]
 ignore_missing_imports = true
 allow_redefinition = true
 
-[tool.pydocstyle]
-convention = "numpy"
-match = '(?!_test)(?!test_)(?!__init__).*\.py'
-add-ignore = [
-    "D202", # Temporary compatibility with black
-]
-
 # Tests
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 addopts = '--cov=caf --cov-report=xml --doctest-modules -n auto --ignore=examples --junitxml=junit.xml -o junit_family=legacy'
-# addopts = '--cov=caf --cov-report=xml --doctest-modules'
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 markers = ["serial: marks tests to not run in parallel"]
 
