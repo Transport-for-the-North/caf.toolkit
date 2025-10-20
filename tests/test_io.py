@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the io module"""
 from __future__ import annotations
 
@@ -6,7 +5,8 @@ from __future__ import annotations
 import dataclasses
 import pathlib
 import re
-from typing import Iterator, Literal
+from collections.abc import Iterator
+from typing import Literal
 
 # Third Party
 import numpy as np
@@ -201,7 +201,7 @@ class TestReadCSV:
 
         if name is None:
             name = filename
-        error_pattern = re.compile(f"{name} file does not exist: '.*{filename}'", re.I)
+        error_pattern = re.compile(f"{name} file does not exist: '.*{filename}'", re.IGNORECASE)
 
         with pytest.raises(FileNotFoundError, match=error_pattern):
             io.read_csv(path / filename, name=name)
@@ -230,7 +230,7 @@ class TestReadCSV:
     def test_missing_columns(self, data: DataFrameResults):
         """Test missing columns error is raised."""
         name = "missing_columns"
-        pattern = re.compile(f"columns missing from {name}", re.I)
+        pattern = re.compile(f"columns missing from {name}", re.IGNORECASE)
         with pytest.raises(io.MissingColumnsError, match=pattern) as excinfo:
             io.read_csv(data.path, name=name, usecols=data.incorrect_columns)
 
@@ -252,7 +252,7 @@ class TestReadCSV:
         pattern = re.compile(
             f"column '{column_name}' in {name} has values which cannot be "
             f"converted to {data.incorrect_dtypes[column_name]}",
-            re.I,
+            re.IGNORECASE,
         )
         with pytest.raises(ValueError, match=pattern):
             io.read_csv(data.path, name=name, dtype=data.incorrect_dtypes)
@@ -325,7 +325,8 @@ class TestReadCSVMatrix:
         self, request, data_name: str, define_index: bool, guess_format: bool
     ):
         """Test reading matrix for square and long formats,
-        with and without defined index columns."""
+        with and without defined index columns.
+        """
         data: MatrixResults = request.getfixturevalue(data_name)
 
         if define_index:
@@ -360,7 +361,7 @@ class TestReadCSVMatrix:
             "matrix file (.*) doesn't contain the same "
             "index and columns, these are reindexed so all unique "
             "values from both are included",
-            re.I,
+            re.IGNORECASE,
         )
         with pytest.warns(RuntimeWarning, match=pattern):
             read = io.read_csv_matrix(path, "square")
@@ -378,7 +379,7 @@ class TestReadCSVMatrix:
         data = pd.DataFrame({"col1": [1, 2, 3], "col2": [1, 2, 3]})
         path = tmp_path / "test_matrix_incorrect.csv"
         data.to_csv(path, index=False)
-        pattern = re.compile("cannot determine format of matrix .*", re.I)
+        pattern = re.compile("cannot determine format of matrix .*", re.IGNORECASE)
         with pytest.raises(ValueError, match=pattern):
             io.read_csv_matrix(path)
 
@@ -388,7 +389,7 @@ class TestReadCSVMatrix:
         path.touch()
 
         format_ = "incorrect_17hSl"
-        pattern = re.compile(f"unknown format {format_}", re.I)
+        pattern = re.compile(f"unknown format {format_}", re.IGNORECASE)
         with pytest.raises(ValueError, match=pattern):
             io.read_csv_matrix(path, format_)
 

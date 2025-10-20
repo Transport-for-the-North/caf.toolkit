@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """Tests for the {} module"""
 # Built-Ins
 import dataclasses
 import operator
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 # Third Party
 import numpy as np

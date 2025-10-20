@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the config_base module in caf.toolkit
 """
@@ -7,7 +6,6 @@ import dataclasses
 import datetime
 import pathlib
 from pathlib import Path
-from typing import Optional
 
 # Third Party
 import pytest
@@ -41,9 +39,9 @@ class ConfigTestClass(BaseConfig):
     set: set[int]
     tuple: tuple[Path, Path]
     date_time: datetime.datetime
-    sub: Optional[SubClassTest] = None
+    sub: SubClassTest | None = None
     default: bool = True
-    option: Optional[int] = None
+    option: int | None = None
 
 
 # pylint: enable=too-few-public-methods
@@ -53,6 +51,7 @@ class ConfigTestClass(BaseConfig):
 def fixture_dir(tmp_path_factory):
     """
     Temp path for test i/o
+
     Parameters
     ----------
     tmp_path_factory
@@ -69,6 +68,7 @@ def fixture_dir(tmp_path_factory):
 def fixture_basic(path) -> ConfigTestClass:
     """
     Basic config for testing
+
     Parameters
     ----------
     path: Above fixture
@@ -136,6 +136,7 @@ class TestCreateConfig:
     def test_type(self, basic, param, type_iter):
         """
         Tests that all parameters are of the expected type.
+
         Parameters
         ----------
         basic: the test config
@@ -153,6 +154,7 @@ class TestCreateConfig:
     def test_default(self, basic, param, type_iter):
         """
         Tests default values are correctly written
+
         Parameters
         ----------
         basic: the test config
@@ -178,6 +180,7 @@ class TestCreateConfig:
         """
         Tests that the correct error is raised when the config is initialised
         with an incorrect type
+
         Parameters
         ----------
         basic: the test config. In this case the config is altered.
@@ -205,6 +208,7 @@ class TestYaml:
     def test_to_from_yaml(self, basic):
         """
         Test that when a config is converted to yaml and back it remains identical
+
         Parameters
         ----------
         basic: the test config
@@ -221,6 +225,7 @@ class TestYaml:
         """
         Test that custom subclasses are recognised and read correctly when
         converted to and from yaml
+
         Parameters
         ----------
         basic: test config
@@ -238,6 +243,7 @@ class TestYaml:
         """
         Test that when a config is saved to a yaml file then read in again it
         remains identical
+
         Parameters
         ----------
         basic: the test config
@@ -255,16 +261,16 @@ class TestYaml:
 class TestExample:
     """Test writing the example file is correct."""
 
-    def write_example(self, path_: pathlib.Path, comment_: Optional[str], /, **kwargs) -> str:
+    def write_example(self, path_: pathlib.Path, comment_: str | None, /, **kwargs) -> str:
         """Run `ConfigTestClass.write_example` and read output."""
         example_file = path_ / "test_example.yml"
         ConfigTestClass.write_example(example_file, comment_=comment_, **kwargs)
 
-        with open(example_file, "rt", encoding="utf-8") as file:
+        with open(example_file, encoding="utf-8") as file:
             return file.read()
 
     @pytest.mark.parametrize("comment", [None, "# config example comment"])
-    def test_default_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
+    def test_default_example(self, path: pathlib.Path, comment: str | None) -> None:
         """Write example without descriptions."""
         example = self.write_example(path, comment)
 
@@ -286,7 +292,7 @@ class TestExample:
         assert example == expected, "Write example without descriptions"
 
     @pytest.mark.parametrize("comment", [None, "# config example comment"])
-    def test_example(self, path: pathlib.Path, comment: Optional[str]) -> None:
+    def test_example(self, path: pathlib.Path, comment: str | None) -> None:
         """Write example with descriptions."""
         example_values = dict(
             dictionary="This is a dictionary",
@@ -331,7 +337,7 @@ class TestConfigComments:
         path = tmp_path / "test_datetime_comment.yml"
         basic.save_yaml(path)
 
-        with open(path, "rt", encoding="utf-8") as file:
+        with open(path, encoding="utf-8") as file:
             written = file.read()
 
         yaml = basic.to_yaml()
@@ -364,8 +370,8 @@ class TestConfigComments:
         self,
         basic: ConfigTestClass,
         tmp_path: pathlib.Path,
-        comment: Optional[str],
-        formatted: Optional[str],
+        comment: str | None,
+        formatted: str | None,
         format_: bool,
     ) -> None:
         """Test the formatted and unformatted custom comments."""
@@ -374,7 +380,7 @@ class TestConfigComments:
             path, datetime_comment=False, other_comment=comment, format_comment=format_
         )
 
-        with open(path, "rt", encoding="utf-8") as file:
+        with open(path, encoding="utf-8") as file:
             written = file.read()
 
         yaml = basic.to_yaml()

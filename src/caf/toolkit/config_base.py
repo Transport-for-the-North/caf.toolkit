@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
 from __future__ import annotations
 
@@ -7,7 +6,7 @@ import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, Optional, overload
+from typing import Any, overload
 
 # Third Party
 import pydantic
@@ -113,8 +112,7 @@ class BaseConfig(pydantic.BaseModel):
             Instance of class with attributes filled in from
             the YAML data.
         """
-
-        with open(path, "rt", encoding="utf-8") as file:
+        with open(path, encoding="utf-8") as file:
             text = file.read()
         return cls.from_yaml(text)
 
@@ -138,7 +136,7 @@ class BaseConfig(pydantic.BaseModel):
         self,
         path: Path,
         datetime_comment: bool = True,
-        other_comment: Optional[str] = None,
+        other_comment: str | None = None,
         format_comment: bool = False,
     ) -> None:
         """Write data from self to a YAML file.
@@ -169,7 +167,7 @@ class BaseConfig(pydantic.BaseModel):
 
     @classmethod
     def write_example(
-        cls, path_: Path, /, comment_: Optional[str] = None, **examples: str
+        cls, path_: Path, /, comment_: str | None = None, **examples: str
     ) -> None:
         """Write examples to a config file.
 
@@ -285,8 +283,8 @@ def write_config(
     path: Path,
     *,
     datetime_comment: bool = True,
-    name: Optional[str] = None,
-    other_comment: Optional[str] = None,
+    name: str | None = None,
+    other_comment: str | None = None,
     format_comment: bool = False,
 ) -> None:
     """Write data from self to a YAML file.
@@ -330,5 +328,5 @@ def write_config(
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
         yaml = "\n".join(comment_lines + [yaml])
 
-    with open(path, "wt", encoding="utf-8") as file:
+    with open(path, "w", encoding="utf-8") as file:
         file.write(yaml)

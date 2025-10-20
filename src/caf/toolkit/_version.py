@@ -2,6 +2,7 @@
 # `pip install -e .` / `python setup.py develop`
 def _get_version() -> str:
     from pathlib import Path
+
     from versioningit import get_version
 
     return get_version(

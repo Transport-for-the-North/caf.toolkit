@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """A toolbox of generic useful functionality.
 
 Most of these tools will be used elsewhere in the codebase too
 """
 # Built-Ins
 import functools
-from typing import Any, Callable, Iterable, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, TypeVar
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the `log_helpers` module in caf.toolkit
 """
@@ -174,7 +173,7 @@ def _log_messages(
 def _load_log(log_file: pathlib.Path) -> str:
     """Assert log file exists and load the text."""
     assert log_file.is_file(), "log file not created"
-    with open(log_file, "rt", encoding="utf-8") as file:
+    with open(log_file, encoding="utf-8") as file:
         text = file.read()
 
     return text
@@ -183,7 +182,7 @@ def _load_log(log_file: pathlib.Path) -> str:
 def _run_warnings() -> None:
     """Run all warnings."""
     for msg, warn in _LOG_WARNINGS:
-        warnings.warn(msg, warn)
+        warnings.warn(msg, warn, stacklevel=2)
 
 
 def _check_warnings(text: str) -> None:
@@ -518,11 +517,10 @@ class TestLogHelper:
         """Test LogHelper warns when no handlers are defined."""
         with pytest.warns(
             LoggingWarning, match="LogHelper initialised without any logging handlers"
-        ):
-            with LogHelper(
-                "test", log_init.details, console=False, warning_capture=False
-            ) as helper:
-                assert helper.logger.handlers == [], "incorrect handlers"
+        ), LogHelper(
+            "test", log_init.details, console=False, warning_capture=False
+        ) as helper:
+            assert helper.logger.handlers == [], "incorrect handlers"
 
     @pytest.mark.parametrize("warning_capture", [False, True])
     def test_add_handler(
@@ -685,7 +683,7 @@ class TestCaptureWarnings:
 
         assert log_file.is_file(), "log file not created"
 
-        with open(log_file, "rt", encoding="utf-8") as file:
+        with open(log_file, encoding="utf-8") as file:
             text = file.read()
 
         _check_warnings(text)

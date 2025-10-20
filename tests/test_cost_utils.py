@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the {} module"""
 from __future__ import annotations
 
@@ -1022,7 +1021,7 @@ class TestIntrazonalCostInfill:
 
     @pytest.fixture(name="zeroes_array", scope="class")
     def fixture_zeroes_array(self, normal_array):
-        """zero values should be returned in-place, expect in diagonal.
+        """Zero values should be returned in-place, expect in diagonal.
 
         Zero values should not count towards the minimum check.
         """

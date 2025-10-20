@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Library of multiprocessing functionality."""
 from __future__ import annotations
 
@@ -10,14 +9,10 @@ import os
 import time
 import traceback
 import warnings
+from collections.abc import Callable, Collection, Iterable, Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Collection,
-    Iterable,
-    Mapping,
-    Optional,
     TypeVar,
 )
 
@@ -73,7 +68,7 @@ def wait_for_pool_results(
     results: list[ApplyResult[_T]],
     terminate_process_event: Event,
     result_timeout: int,
-    pbar_kwargs: Optional[dict[str, Any]] = None,
+    pbar_kwargs: dict[str, Any] | None = None,
 ) -> list[_T]:
     """Wait for and grab results from a multiprocessing Pool.
 
@@ -218,11 +213,11 @@ def _call_order_wrapper(
 
 
 def _check_args_kwargs(
-    args: Optional[Collection[Iterable[Any]]] = None,
-    kwargs: Optional[Collection[Mapping[str, Any]]] = None,
-    args_default: Optional[Any] = None,
-    kwargs_default: Optional[Any] = None,
-    length: Optional[int] = None,
+    args: Collection[Iterable[Any]] | None = None,
+    kwargs: Collection[Mapping[str, Any]] | None = None,
+    args_default: Any | None = None,
+    kwargs_default: Any | None = None,
+    length: int | None = None,
 ) -> tuple[Collection[Iterable[Any]], Collection[Mapping[str, Any]]]:
     """Format args and kwargs correctly if only one set.
 
@@ -263,7 +258,7 @@ def _process_pool_wrapper_kwargs_in_order(
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: Optional[dict[str, Any]] = None,
+    pbar_kwargs: dict[str, Any] | None = None,
 ) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
@@ -317,7 +312,7 @@ def _process_pool_wrapper_kwargs_out_order(
     process_count: int,
     pool_maxtasksperchild: int,
     result_timeout: int,
-    pbar_kwargs: Optional[dict[str, Any]] = None,
+    pbar_kwargs: dict[str, Any] | None = None,
 ) -> list[_T]:
     """See `process_pool_wrapper()` for full documentation of this function.
 
@@ -364,13 +359,13 @@ def _process_pool_wrapper_kwargs_out_order(
 def multiprocess(
     fn: Callable[..., _T],
     *,
-    arg_list: Optional[Collection[Iterable[Any]]] = None,
-    kwarg_list: Optional[Collection[Mapping[str, Any]]] = None,
-    process_count: Optional[int] = None,
+    arg_list: Collection[Iterable[Any]] | None = None,
+    kwarg_list: Collection[Mapping[str, Any]] | None = None,
+    process_count: int | None = None,
     pool_maxtasksperchild: int = 4,
     in_order: bool = False,
     result_timeout: int = 86400,
-    pbar_kwargs: Optional[dict[str, Any]] = None,
+    pbar_kwargs: dict[str, Any] | None = None,
 ) -> list[_T]:
     """Run a function and arguments across multiple cores of a CPU.
 
@@ -496,7 +491,7 @@ def multiprocess(
             f"Process_count given is too high ({process_count}). It is greater "
             f"than one less than the CPU count found by Python "
             f"{cpu_count - 1:d}. Only do this if you know what you're "
-            f"doing otherwise it may intermittently freeze your system."
+            f"doing otherwise it may intermittently freeze your system.", stacklevel=2
         )
 
     # Determine the number of processes to use

@@ -119,8 +119,8 @@ def fixture_int_lower() -> DataGeneratorRun:
         random.IntGenerator("Steves_phone_number", 11, 9, 2),
         pd.Series(
             # fmt: off
-            [ 
-                7, 8, 3, 3, 7, 7, 
+            [
+                7, 8, 3, 3, 7, 7,
                 5, 3, 7, 5, 3,
             ],
             # fmt: om
@@ -141,7 +141,7 @@ def fixture_id_no_starting_val() -> DataGeneratorRun:
         pd.Series(
             # fmt: off
             [
-                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                 11, 12, 13, 14, 15, 16, 17, 18, 19,
             ],
             # fmt: on

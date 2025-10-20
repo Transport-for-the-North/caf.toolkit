@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """Helper functions for handling wide pandas DataFrames, usually as demand matrices."""
 # Built-Ins
 import logging
 import operator
 import warnings
-from typing import Any, Callable, Collection, Optional
+from collections.abc import Callable, Collection
+from typing import Any
 
 # Third Party
 import numpy as np
@@ -37,9 +37,9 @@ def _guess_pandas_dtype(things):
 
 def get_wide_mask(
     df: pd.DataFrame,
-    select: Optional[Collection[Any]] = None,
-    col_select: Optional[Collection[Any]] = None,
-    index_select: Optional[Collection[Any]] = None,
+    select: Collection[Any] | None = None,
+    col_select: Collection[Any] | None = None,
+    index_select: Collection[Any] | None = None,
     join_fn: Callable = operator.and_,
 ) -> np.ndarray:
     """Generate an index/column mask for a wide Pandas matrix.
@@ -152,11 +152,11 @@ def get_wide_mask(
     # Warn the user if nothing has matched
     if col_mask.sum() == 0:
         warnings.warn(
-            "No columns matched the given selection. Please check values and datatypes."
+            "No columns matched the given selection. Please check values and datatypes.", stacklevel=2
         )
     if index_mask.sum() == 0:
         warnings.warn(
-            "No index matched the given selection. Please check values and datatypes."
+            "No index matched the given selection. Please check values and datatypes.", stacklevel=2
         )
 
     # Combine to get the full mask
@@ -342,7 +342,7 @@ def wide_matrix_internal_external_report(
         warnings.warn(
             "internal_selection and external_selection having overlapping values. "
             "The produced report will contain double counting and could be "
-            f"unreliable. {overlap=}"
+            f"unreliable. {overlap=}", stacklevel=2
         )
 
     # Warn if not all given index and column values are included in the given selection
@@ -351,7 +351,7 @@ def wide_matrix_internal_external_report(
     if len(missing := df_ids - select_ids):
         warnings.warn(
             "The given selection of internal and external values do not contain "
-            f"all values in the dataframe index and columns. {missing=}"
+            f"all values in the dataframe index and columns. {missing=}", stacklevel=2
         )
 
     # Build the initial report

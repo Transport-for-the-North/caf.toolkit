@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.toolbox module"""
 from __future__ import annotations
 
 # Built-Ins
 import dataclasses
 import operator
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 # Third Party
-import numpy as np
 import pytest
 
 # Local Imports

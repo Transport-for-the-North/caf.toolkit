@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.translation module"""
 from __future__ import annotations
 
@@ -7,7 +6,7 @@ import copy
 import dataclasses
 import pathlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
 # Third Party
 import numpy as np
@@ -15,9 +14,8 @@ import pandas as pd
 import pytest
 
 # Local Imports
-from caf.toolkit import io
+from caf.toolkit import io, translation
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import translation
 
 # # # CONSTANTS # # #
 
@@ -30,7 +28,7 @@ class NumpyVectorResults:
     vector: np.ndarray
     translation: np.ndarray
     expected_result: np.ndarray
-    translation_dtype: Optional[type] = None
+    translation_dtype: type | None = None
 
     def input_kwargs(
         self,
@@ -55,8 +53,8 @@ class NumpyMatrixResults:
     translation: np.ndarray
     expected_result: np.ndarray
 
-    translation_dtype: Optional[type] = None
-    col_translation: Optional[np.ndarray] = None
+    translation_dtype: type | None = None
+    col_translation: np.ndarray | None = None
 
     def input_kwargs(
         self,
@@ -170,7 +168,7 @@ class PandasVectorResults:
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.Series = dataclasses.field(init=False)
     expected_result: pd.Series = dataclasses.field(init=False)
@@ -206,7 +204,7 @@ class PandasMultiVectorResults:
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.DataFrame = dataclasses.field(init=False)
     expected_result: pd.DataFrame = dataclasses.field(init=False)
@@ -256,7 +254,7 @@ class PandasMultiVectorSeriesResults(PandasMultiVectorResults):
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.Series = dataclasses.field(init=False)
     expected_result: pd.Series = dataclasses.field(init=False)
@@ -284,8 +282,8 @@ class PandasMatrixResults:
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
 
-    translation_dtype: Optional[type] = None
-    col_translation: Optional[PandasTranslation] = None
+    translation_dtype: type | None = None
+    col_translation: PandasTranslation | None = None
 
     def __post_init__(self, np_matrix: np.ndarray, np_expected_result: np.ndarray):
         """Convert numpy objects to pandas"""
@@ -339,8 +337,8 @@ class PandasLongMatrixResults:
     index_col_1_name: str = "production"
     index_col_2_name: str = "attraction"
     values_col: str = "values"
-    index_col_1_out_name: Optional[str] = None
-    index_col_2_out_name: Optional[str] = None
+    index_col_1_out_name: str | None = None
+    index_col_2_out_name: str | None = None
 
     def __post_init__(self, wide_results: PandasMatrixResults):
         """Produce the new expected input and outputs."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Common utility functions for file input and output."""
 from __future__ import annotations
 
@@ -74,7 +73,7 @@ def safe_dataframe_to_csv(
             written_to_file = True
         except PermissionError:
             if not waiting:
-                out_path = kwargs.get("path_or_buf", None)
+                out_path = kwargs.get("path_or_buf")
                 if out_path is None:
                     out_path = args[0]
                 print(
@@ -372,7 +371,7 @@ def read_csv_matrix(
             f"matrix file ({path.name}) doesn't contain the same "
             "index and columns, these are reindexed so all unique "
             "values from both are included",
-            RuntimeWarning,
+            RuntimeWarning, stacklevel=2,
         )
         # Reindex index to match columns then columns to match index
         if len(matrix.columns) > len(matrix.index):
@@ -494,13 +493,13 @@ def find_file_with_name(
         warnings.warn(
             f'Found {len(unexpected)} files named "{name}" with unexpected'
             f' suffixes ({", ".join(unexpected)}), these are ignored.',
-            RuntimeWarning,
+            RuntimeWarning, stacklevel=2,
         )
     if len(found) > 1:
         warnings.warn(
             f'Found {len(found)} files named "{name}" with the expected'
             " suffixes, the highest priority suffix is used.",
-            RuntimeWarning,
+            RuntimeWarning, stacklevel=2,
         )
 
     if len(found) == 0:

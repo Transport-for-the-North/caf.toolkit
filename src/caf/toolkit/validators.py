@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tools to validate items. These function return either True or False.
 
 These are mostly commonly used validations across the codebase.

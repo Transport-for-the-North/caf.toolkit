@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Conversion methods between numpy and pandas formats."""
 from __future__ import annotations
 
@@ -7,7 +6,8 @@ import functools
 import logging
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Collection, Literal, Optional, overload
+from collections.abc import Collection
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 # Third Party
 import numpy as np
@@ -94,7 +94,7 @@ def is_sparse_feasible(
         )
         with warnings.catch_warnings():
             warnings.filterwarnings(warning_action)
-            warnings.warn(msg, category=ResourceWarning)
+            warnings.warn(msg, stacklevel=2, category=ResourceWarning)
         return False
     return True
 
@@ -104,7 +104,7 @@ def dataframe_to_n_dimensional_sparse_array(
     dimension_cols: dict[Any, list[Any]],
     value_col: Any,
     *,
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = None,
     warning_action: WarningActionKind = "default",
     fill_value: np.number | int | float = 0,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
@@ -167,7 +167,7 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["allow", "feasible"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
@@ -177,7 +177,7 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["disallow"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
@@ -187,7 +187,7 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["force"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
     fill_val: Any = ...,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
@@ -197,7 +197,7 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: SparseLiteral = ...,
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
     fill_val: Any = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
@@ -206,7 +206,7 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: SparseLiteral = "disallow",
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = None,
     fill_val: Any = np.nan,
 ) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]:
     """Convert a pandas.DataFrame into an N-Dimensional numpy array.

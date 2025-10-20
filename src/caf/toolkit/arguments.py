@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functionality for handling command-line arguments."""
 
 ##### IMPORTS #####
@@ -12,7 +11,7 @@ import os
 import pathlib
 import re
 import warnings
-from typing import Iterable
+from collections.abc import Iterable
 
 # Third Party
 import pydantic
@@ -93,9 +92,9 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     types = set()
     optional = False
     for type_ in type_str.split("|"):
-        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.I)
+        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.IGNORECASE)
         if match is None:
-            warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning)
+            warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning, stacklevel=2)
             return str, optional
 
         value = match.group(2).strip().lower()
@@ -109,7 +108,7 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
         if name in types:
             return type_, optional
 
-    warnings.warn(f"unexpected types: {types}", TypeAnnotationWarning)
+    warnings.warn(f"unexpected types: {types}", TypeAnnotationWarning, stacklevel=2)
 
     return str, optional
 
@@ -179,7 +178,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
-            f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning
+            f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning, stacklevel=2
         )
         return str, False, None
 
@@ -209,7 +208,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
         nargs = "*"
 
     else:
-        warnings.warn(f"unexpected type annotation prefix: '{prefix}'", TypeAnnotationWarning)
+        warnings.warn(f"unexpected type annotation prefix: '{prefix}'", TypeAnnotationWarning, stacklevel=2)
         type_, optional = _parse_types(type_annotation)
 
     return type_, optional, nargs

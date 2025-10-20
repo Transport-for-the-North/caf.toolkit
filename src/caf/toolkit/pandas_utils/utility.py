@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
 from __future__ import annotations
 
 # Built-Ins
 import typing
-from typing import Literal, Sequence, overload
+from collections.abc import Sequence
+from typing import Literal, overload
 
 # Third Party
 import numpy as np

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for creating and managing a logger.
 
@@ -25,7 +24,8 @@ import platform
 import subprocess
 import sys
 import warnings
-from typing import Annotated, Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Annotated, Any
 
 # Third Party
 import psutil
@@ -105,9 +105,9 @@ class ToolDetails:
     ]
     """Version of the tool, should be in semantic versioning
     format https://semver.org/."""
-    homepage: Optional[pydantic.HttpUrl] = None
+    homepage: pydantic.HttpUrl | None = None
     """URL of the homepage for the tool."""
-    source_url: Optional[pydantic.HttpUrl] = None
+    source_url: pydantic.HttpUrl | None = None
     """URL of the source code repository for the tool."""
     full_version: str | None = pydantic.Field(default_factory=git_describe)
     """Full version from git describe output, None if git command fails.
@@ -177,9 +177,9 @@ class SystemInformation:
     """Name of the machine architecture e.g. "AMD64"."""
     processor: str
     """Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"."""
-    cpu_count: Optional[int]
+    cpu_count: int | None
     """Number of logical CPU cores on the machine."""
-    total_ram: Optional[int]
+    total_ram: int | None
     """Total virtual memory (bytes) on the machine."""
 
     @classmethod
@@ -329,7 +329,7 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
-                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'.", stacklevel=2
                 )
 
         if log_file is not None:
@@ -342,7 +342,7 @@ class LogHelper:
                 "LogHelper initialised without any logging handlers, "
                 "`logging.basicConfig` will be called with default parameters "
                 "at first log attempt if no handlers are added before that.",
-                LoggingWarning,
+                LoggingWarning, stacklevel=2,
             )
 
         if warning_capture:
@@ -633,8 +633,8 @@ def write_instantiate_message(
 def get_custom_logger(
     logger_name: str,
     code_version: str,
-    instantiate_msg: Optional[str] = None,
-    log_handlers: Optional[Iterable[logging.Handler]] = None,
+    instantiate_msg: str | None = None,
+    log_handlers: Iterable[logging.Handler] | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -689,8 +689,8 @@ def get_logger(
     logger_name: str,
     code_version: str,
     console_handler: bool = True,
-    instantiate_msg: Optional[str] = None,
-    log_file_path: Optional[os.PathLike] = None,
+    instantiate_msg: str | None = None,
+    log_file_path: os.PathLike | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -815,8 +815,8 @@ def get_file_handler(
 
 def capture_warnings(
     stream_handler: bool = True,
-    stream_handler_args: Optional[dict[str, Any]] = None,
-    file_handler_args: Optional[dict[str, Any]] = None,
+    stream_handler_args: dict[str, Any] | None = None,
+    file_handler_args: dict[str, Any] | None = None,
 ) -> None:
     """Capture warnings using logging.
 

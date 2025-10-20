@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 
 from __future__ import annotations
 
 # Built-Ins
 import functools
-from collections.abc import Hashable
-from typing import Any, Generator, overload
+from collections.abc import Generator, Hashable
+from typing import Any, overload
 
 # Third Party
 import numpy as np
@@ -656,7 +655,6 @@ def wide_to_long_infill(
     TypeError:
         If none of the `value_col_name` is not numeric and `check_totals` is True
     """
-
     if isinstance(df.index, pd.MultiIndex):
         raise ValueError(
             "This expects a single index in the input matrix, being "

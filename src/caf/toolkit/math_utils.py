@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A toolbox of useful math related functionality.
 
 Most will be used elsewhere in the codebase too
@@ -8,7 +7,8 @@ from __future__ import annotations
 # Built-Ins
 import math
 import warnings
-from typing import TYPE_CHECKING, Any, Collection, Union
+from collections.abc import Collection
+from typing import TYPE_CHECKING, Any
 
 # Third Party
 import numpy as np
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 # # # FUNCTIONS # # #
 def list_is_almost_equal(
-    vals: list[Union[int, float]],
+    vals: list[int | float],
     rel_tol: float = 0.0001,
     abs_tol: float = 0.0,
 ) -> bool:
@@ -66,8 +66,8 @@ def list_is_almost_equal(
 
 
 def is_almost_equal(
-    val1: Union[int, float],
-    val2: Union[int, float],
+    val1: int | float,
+    val2: int | float,
     rel_tol: float = 0.0001,
     abs_tol: float = 0.0,
 ) -> bool:
@@ -110,8 +110,8 @@ def is_almost_equal(
 
 
 def root_mean_squared_error(
-    targets: Collection[Union[np.ndarray, sparse.COO]],
-    achieved: Collection[Union[np.ndarray, sparse.COO]],
+    targets: Collection[np.ndarray | sparse.COO],
+    achieved: Collection[np.ndarray | sparse.COO],
 ) -> float:
     """Calculate the root-mean-squared error between targets and achieved.
 
@@ -226,7 +226,7 @@ def curve_convergence(
     if np.isnan(target).sum() > 0:
         warnings.warn(
             "Found NaN in the target while calculating curve_convergence. "
-            "A NaN value in target will mean 0 is always returned."
+            "A NaN value in target will mean 0 is always returned.", stacklevel=2
         )
         return 0
 
