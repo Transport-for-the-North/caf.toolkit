@@ -152,6 +152,14 @@ else:
         number: float | int
         path: pathlib.Path
         general_list: list[str | int]
+        boolean: bool = True
+
+
+class _InvalidBoolConfigTest(config_base.BaseConfig):
+    """Class for testing `ModelArguments` bool error."""
+
+    text: str
+    invalid: bool
 
 
 class TestModelArguments:
@@ -171,3 +179,12 @@ class TestModelArguments:
 
         arg_class = arguments.ModelArguments(_ArgumentsConfigTest)
         arg_class.add_subcommands(subparsers, "test")
+
+    def test_bool_error(self, parser: argparse.ArgumentParser) -> None:
+        """Test `add_subcommands` raises error for bool without default."""
+        subparsers = parser.add_subparsers()
+        arg_class = arguments.ModelArguments(_InvalidBoolConfigTest)
+
+        msg = "invalid - boolean flags must have a default value"
+        with pytest.raises(ValueError, match=msg):
+            arg_class.add_subcommands(subparsers, "test")
