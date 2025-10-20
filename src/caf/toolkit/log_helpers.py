@@ -17,7 +17,6 @@ TemporaryLogFile
 from __future__ import annotations
 
 # Built-Ins
-from collections.abc import Sequence
 import functools
 import getpass
 import logging
@@ -27,6 +26,7 @@ import re
 import subprocess
 import sys
 import warnings
+from collections.abc import Sequence
 from typing import Annotated, Any, Iterable, Optional
 
 # Third Party
@@ -41,6 +41,7 @@ DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 LOG = logging.getLogger(__name__)
+_WARNINGS_LOGGER_NAME = "py.warnings"
 
 # Get lookup between name of level and integer value
 # pylint: disable=no-member,protected-access
@@ -314,7 +315,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
-        allowed_packages: Sequence[str] | None = None
+        allowed_packages: Sequence[str] | None = None,
     ):
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
@@ -448,7 +449,7 @@ class LogHelper:
         """
         logging.captureWarnings(True)
 
-        self._warning_logger = logging.getLogger("py.warnings")
+        self._warning_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
 
         for handler in self.logger.handlers:
             if handler in self._warning_logger.handlers:
@@ -607,6 +608,17 @@ class PackageFilter(logging.Filter):
             return False
 
         return True
+
+    def __eq__(self, value) -> bool:
+        """Checks if filter pattern is the same."""
+        if super().__eq__(value):
+            return True
+        if not isinstance(value, self.__class__):
+            return False
+        if self._pattern == value._pattern:
+            return True
+        return False
+
 
 # # # FUNCTIONS # # #
 def write_information(

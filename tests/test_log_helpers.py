@@ -4,7 +4,6 @@ Tests for the `log_helpers` module in caf.toolkit
 """
 from __future__ import annotations
 
-# Built-Ins
 import collections
 import dataclasses
 import getpass
@@ -16,12 +15,11 @@ import subprocess
 import warnings
 from typing import NamedTuple
 
-# Third Party
+import _pytest.logging
 import psutil
 import pydantic
 import pytest
 
-# Local Imports
 from caf.toolkit import (
     LogHelper,
     SystemInformation,
@@ -30,7 +28,9 @@ from caf.toolkit import (
     log_helpers,
 )
 from caf.toolkit.log_helpers import (
+    _WARNINGS_LOGGER_NAME,
     LoggingWarning,
+    PackageFilter,
     capture_warnings,
     get_logger,
     git_describe,
@@ -551,6 +551,32 @@ class TestLogHelper:
                     ], "handler not added to warnings logger"
                 else:
                     assert warnings_logger.handlers == [], "handlers added to warnings logger"
+
+    def test_package_filters(self, log_init: LogInitDetails) -> None:
+        """Test PackageFilter is added to handlers correctly."""
+        root = ""
+        allowed = ["test"]
+        filter_ = PackageFilter(allowed)
+        # Handlers added for testing purposes can be ignored
+        pytest_handlers = (
+            # pylint: disable=protected-access
+            _pytest.logging._LiveLoggingNullHandler,
+            _pytest.logging._FileHandler,
+            _pytest.logging.LogCaptureHandler,
+        )
+
+        with LogHelper(root, log_init.details, allowed_packages=allowed):
+            warn_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
+            root_logger = logging.getLogger(root)
+
+            for logger in (root_logger, warn_logger):
+                assert len(logger.handlers) > len(pytest_handlers)
+                for handler in logger.handlers:
+                    if isinstance(handler, pytest_handlers):
+                        continue
+
+                    msg = f"missing on {logger.name} logger {type(handler)}"
+                    assert handler.filters == [filter_], msg
 
 
 class TestTemporaryLogFile:
