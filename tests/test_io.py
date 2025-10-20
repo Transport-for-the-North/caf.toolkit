@@ -257,18 +257,32 @@ class TestReadCSV:
         with pytest.raises(ValueError, match=pattern):
             io.read_csv(data.path, name=name, dtype=data.incorrect_dtypes)
 
-    @pytest.mark.parametrize("index_list", [True, False])
-    def test_normalise_columns(self, normalise_data: DataFrameResults, index_list: bool):
+    @pytest.mark.parametrize("index", ["single", "list", False])
+    def test_normalise_columns(
+        self, normalise_data: DataFrameResults, index: Literal["single", "list", False]
+    ):
         """Test loading CSV and normalising columns."""
+        if not index:
+            index_col = None
+        elif index == "single":
+            index_col = normalise_data.columns[0]
+        elif index == "list":
+            index_col = [normalise_data.columns[0]]
+        else:
+            raise ValueError(f"invalid {index=}")
+
         read = io.read_csv(
             normalise_data.path,
             usecols=normalise_data.columns,
             dtype=normalise_data.dtypes,
             normalise_column_names=True,
-            index_col=[normalise_data.columns[0]] if index_list else normalise_data.columns[0],
+            index_col=index_col,
         )
 
-        correct = normalise_data.data.set_index(normalise_data.columns[0])
+        if index is False:
+            correct = normalise_data.data
+        else:
+            correct = normalise_data.data.set_index(normalise_data.columns[0])
         # check_dtype set to False because this is very strict i.e. int32 != int64
         pd.testing.assert_frame_equal(read, correct, check_dtype=False)
 
