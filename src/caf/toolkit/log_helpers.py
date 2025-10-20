@@ -44,13 +44,14 @@ LOG = logging.getLogger(__name__)
 _WARNINGS_LOGGER_NAME = "py.warnings"
 
 # Get lookup between name of level and integer value
-# pylint: disable=no-member,protected-access
+_LEVEL_LOOKUP: dict[str, int]
 if sys.version_info.minor <= 10:
-    _LEVEL_LOOKUP: dict[str, int] = logging._nameToLevel.copy()
+    # pylint: disable=protected-access
+    _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
     # getLevelNamesMapping added to logging in v3.11
-    _LEVEL_LOOKUP: dict[str, int] = logging.getLevelNamesMapping()  # type: ignore
-# pylint: enable=no-member,protected-access
+    # pylint: disable=no-member
+    _LEVEL_LOOKUP = logging.getLevelNamesMapping()
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
