@@ -26,12 +26,14 @@ import subprocess
 import sys
 import warnings
 from typing import Annotated, Any, Iterable, Optional
+from pathlib import Path
 
 # Third Party
 import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
+from caf.toolkit.config_base import BaseConfig
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -847,3 +849,33 @@ def capture_warnings(
 
     if file_handler_args is not None:
         warning_logger.addHandler(get_file_handler(**file_handler_args))
+
+
+def write_metadata(output_path: Path, details: ToolDetails, **metadata: Any) -> None:
+    """
+    Write metadata (tool details, system information and any user specified
+    metadata) out to a user specified path.
+
+    Parameters
+    ----------
+    output_path: Path to output location
+    details: Information about the current tool based on the ToolDetails
+             dataclass.
+    metadata: Keyword arguments passed, in any form, that create user specific
+              metadata e.g. dictionary with key value paris of date, project,
+              owner, stakeholders etc.
+    """
+
+    class _Metadata(BaseConfig):
+        tool_details: ToolDetails
+        system_information: SystemInformation
+        metadata: dict
+
+    if not output_path:
+        raise ValueError("Path required to write metadata.")
+    sys_info = SystemInformation.load()
+
+    yaml_file_path = os.path.join(output_path, "metadata.yaml")
+    _Metadata(system_information=sys_info,
+              tool_details=details,
+              metadata=metadata).save_yaml(yaml_file_path)

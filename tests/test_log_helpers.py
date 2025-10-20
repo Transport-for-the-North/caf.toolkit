@@ -28,12 +28,14 @@ from caf.toolkit import (
     TemporaryLogFile,
     ToolDetails,
     log_helpers,
+    BaseConfig
 )
 from caf.toolkit.log_helpers import (
     LoggingWarning,
     capture_warnings,
     get_logger,
     git_describe,
+    write_metadata
 )
 
 # # # Constants # # #
@@ -689,3 +691,80 @@ class TestCaptureWarnings:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestWriteMetadata:
+    """Test write metadata function"""
+
+    def test_path_error(self):
+        """Testing if no path is provided, the correct error is raised"""
+        details = ToolDetails(
+            name="fake_tool",
+            version="1.0.0",
+            homepage="https://example.com",
+            source_url="https://github.com/example/repo",
+            full_version="v1.0.0"
+        )
+        with pytest.raises(ValueError, match="Path required to write metadata."):
+            write_metadata(output_path=None, details=details)
+
+    def test_write_metadata_functionality(self, monkeypatch, tmp_path):
+        """Testing main functionality of write_metadata"""
+        info = SystemInformation(user="test_user",
+            pc_name="test_pc",
+            python_version="3.2",
+            operating_system="Windows",
+            architecture="fake_architecture",
+            processor="fake_processor",
+            cpu_count=4,
+            total_ram=64)
+        monkeypatch.setattr(SystemInformation, "load", lambda: info)
+
+        details = ToolDetails(
+            name="fake_tool",
+            version="1.0.0",
+            homepage="https://example.com",
+            source_url="https://github.com/example/repo",
+            full_version="v1.0.0"
+        )
+
+        write_metadata(output_path=tmp_path,
+                       details=details,
+                       meta=1,
+                       meta1=[1, 2],
+                       meta2={"a": 1, "B": 2},
+                       meta3="string",
+                       meta4=2.0)
+
+        expected = {"tool_details": {"name": "fake_tool",
+                                     "version": "1.0.0",
+                                     "homepage": "https://example.com",
+                                     "source_url": "https://github.com/example/repo",
+                                     "full_version": "v1.0.0"},
+                    "system_information": {"user": "test_user",
+                                           "pc_name": "test_pc",
+                                           "python_version": "3.2",
+                                           "operating_system": "Windows",
+                                           "architecture": "fake_architecture",
+                                           "processor": "fake_processor",
+                                           "cpu_count": 4,
+                                           "total_ram": 64},
+                    "metadata": {"meta": 1,
+                                 "meta1": [1, 2],
+                                 "meta2": {"a": 1, "B": 2},
+                                 "meta3": "string",
+                                 "meta4": 2.0}}
+
+        class _Metadata(BaseConfig):
+            tool_details: ToolDetails
+            system_information: SystemInformation
+            metadata: dict
+
+        meta_out = os.path.join(tmp_path, "metadata.yaml")
+        assert os.path.isfile(meta_out)
+
+        text = _Metadata.load_yaml(meta_out)
+        if hasattr(text, "dict"):
+            # text = text.dict()
+            text = text.model_dump(mode="json")
+        assert text == expected
