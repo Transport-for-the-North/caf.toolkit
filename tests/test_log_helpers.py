@@ -734,3 +734,38 @@ class TestPackageFilter:
         """Test `__eq__` method works when not equal."""
         assert PackageFilter(["test"]) != PackageFilter(["test2"])
         assert PackageFilter(["test"]) != "test"
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test.test2", "test3.test"]])
+    @pytest.mark.parametrize("level", [logging.DEBUG, logging.CRITICAL])
+    def test_filter(self, allowed: list[str], level: int) -> None:
+        """Test filter method correctly returns true."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        for name in allowed:
+            assert filter_.filter(logging.LogRecord(name=name, level=level, **kwargs))
+            # Check sub-modules work
+            assert filter_.filter(
+                logging.LogRecord(name=f"{name}.extra", level=level, **kwargs)
+            )
+
+    @pytest.mark.parametrize("allowed", [["test", "invalid"], ["invalid"]])
+    def test_filter_false(self, allowed: list[str]) -> None:
+        """Test `filter` method correctly returns false."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "level": logging.info,
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        assert not filter_.filter(logging.LogRecord("test1.invalid", **kwargs))
