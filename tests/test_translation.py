@@ -1,4 +1,5 @@
 """Tests for the caf.toolkit.translation module."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -899,7 +900,9 @@ class TestNumpyVector:
     """Tests for caf.toolkit.translation.numpy_vector_zone_translation."""
 
     @pytest.mark.parametrize("check_totals", [True, False])
-    def test_dropped_totals(self, np_incomplete: NumpyVectorResults, check_totals: bool) -> None:
+    def test_dropped_totals(
+        self, np_incomplete: NumpyVectorResults, check_totals: bool
+    ) -> None:
         """Test for total checking with dropped demand."""
         kwargs = np_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
@@ -1127,7 +1130,9 @@ class TestPandasMultiVector:
         else:
             pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
-    def test_indexing_error(self, pd_multi_vector_multiindex: PandasMultiVectorResults) -> None:
+    def test_indexing_error(
+        self, pd_multi_vector_multiindex: PandasMultiVectorResults
+    ) -> None:
         """Check that an error is thrown when the index is not unique."""
         new_vector = pd_multi_vector_multiindex.vector.copy()
         new_vector["wrong_1"] = new_vector.index

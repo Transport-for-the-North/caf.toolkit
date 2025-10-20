@@ -1,4 +1,5 @@
 """Tests for the io module."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -151,7 +152,6 @@ def fix_matrix() -> pd.DataFrame:
     return pd.DataFrame(np.arange(9).reshape((3, 3)), index=index, columns=index)
 
 
-
 @pytest.fixture(name="square_matrix")
 def fix_square_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixResults:
     """Save matrix to CSV in square format."""
@@ -202,7 +202,9 @@ class TestReadCSV:
 
         if name is None:
             name = filename
-        error_pattern = re.compile(f"{name} file does not exist: '.*{filename}'", re.IGNORECASE)
+        error_pattern = re.compile(
+            f"{name} file does not exist: '.*{filename}'", re.IGNORECASE
+        )
 
         with pytest.raises(FileNotFoundError, match=error_pattern):
             io.read_csv(path / filename, name=name)
@@ -235,9 +237,9 @@ class TestReadCSV:
         with pytest.raises(io.MissingColumnsError, match=pattern) as excinfo:
             io.read_csv(data.path, name=name, usecols=data.incorrect_columns)
 
-            assert set(excinfo.value.columns) == set(
-                data.incorrect_columns
-            ), "incorrect columns in exception"
+            assert set(excinfo.value.columns) == set(data.incorrect_columns), (
+                "incorrect columns in exception"
+            )
 
     def test_incorrect_dtypes(self, data: DataFrameResults) -> None:
         """Test correct error is raised for incorrect dtypes."""
@@ -302,7 +304,9 @@ class TestReadCSV:
                 **{parameter: value},
             )
 
-    def test_duplicate_normalised_columns(self, normalise_duplicates: DataFrameResults) -> None:
+    def test_duplicate_normalised_columns(
+        self, normalise_duplicates: DataFrameResults
+    ) -> None:
         """Test normalising columns raises an error when duplicates are found."""
         with pytest.raises(
             ValueError,
@@ -429,7 +433,7 @@ class TestFindFile:
 
         warn_msg = (
             f'Found {len(extras)} files named "test_file" with unexpected'
-            rf' suffixes \({", ".join(re.escape(i) for i in extras)}\),'
+            rf" suffixes \({', '.join(re.escape(i) for i in extras)}\),"
             r" these are ignored\."
         )
         with pytest.warns(RuntimeWarning, match=warn_msg):

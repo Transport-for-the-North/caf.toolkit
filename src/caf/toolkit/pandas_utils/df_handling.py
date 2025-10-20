@@ -280,7 +280,6 @@ def filter_df_mask(
     return df[needed_cols].isin(df_filter).all(axis="columns")
 
 
-
 def filter_df(
     df: pd.DataFrame,
     df_filter: dict[str, Any],
@@ -476,7 +475,7 @@ def long_product_infill(
         mismatch = [i for i in data.index.names if i not in index_dict]
         if len(mismatch) > 0:
             raise ValueError(
-                f"{mismatch} levels were found in the input data, " f"but not in index_dict."
+                f"{mismatch} levels were found in the input data, but not in index_dict."
             )
 
     if len(data.index.names) == 1:
@@ -525,7 +524,6 @@ def long_product_infill(
             diff = data.sum().sum() - filled.sum().sum()
 
         if diff != 0:
-
             raise ValueError(
                 "The total has changed in infilling. If "
                 "you have set infill to anything other than zero "

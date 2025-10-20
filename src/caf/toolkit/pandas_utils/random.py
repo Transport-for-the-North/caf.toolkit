@@ -100,7 +100,9 @@ class FloatGenerator(DataGenerator):
     upper_range: float
     """Upper range of data."""
 
-    def __init__(self, name: str, length: int, upper_range: float, lower_range: float = 0) -> None:
+    def __init__(
+        self, name: str, length: int, upper_range: float, lower_range: float = 0
+    ) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:
@@ -176,7 +178,9 @@ class IntGenerator(DataGenerator):
     upper_range: int
     """Upper range of data, maximum in generated data will be one less."""
 
-    def __init__(self, name: str, length: int, upper_range: int = 0, lower_range: int = 0) -> None:
+    def __init__(
+        self, name: str, length: int, upper_range: int = 0, lower_range: int = 0
+    ) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:

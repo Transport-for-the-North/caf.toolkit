@@ -1,4 +1,5 @@
 """Common utility functions for handling date and times."""
+
 # Built-Ins
 import datetime
 import math

@@ -1,4 +1,5 @@
 """Conversion methods between numpy and pandas formats."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -270,9 +271,7 @@ def dataframe_to_n_dimensional_array(
     # Validate sparse_OK value
     valid_vals = SparseLiteral.__args__  # type: ignore
     if sparse_ok not in valid_vals:
-        raise ValueError(
-            f"Invalid value given for 'sparse_ok' expected one of: " f"{valid_vals}"
-        )
+        raise ValueError(f"Invalid value given for 'sparse_ok' expected one of: {valid_vals}")
 
     # Validate that only one value column exists
     value_cols = set(df.columns) - set(dimension_cols.keys())

@@ -425,7 +425,9 @@ class TestMatrixComparison:
         assert (trip_ends["row_sums_percentage"] == 0).all()
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
-    def test_comparison_stats(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame) -> None:
+    def test_comparison_stats(
+        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+    ) -> None:
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -512,7 +514,9 @@ class TestMatrixComparison:
         )
 
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
-    def test_comparison_vkms(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame) -> None:
+    def test_comparison_vkms(
+        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+    ) -> None:
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,

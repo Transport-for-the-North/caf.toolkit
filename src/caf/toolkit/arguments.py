@@ -97,7 +97,9 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     for type_ in type_str.split("|"):
         match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.IGNORECASE)
         if match is None:
-            warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning, stacklevel=2)
+            warnings.warn(
+                f"unexpect type format: '{type_}'", TypeAnnotationWarning, stacklevel=2
+            )
             return str, optional
 
         value = match.group(2).strip().lower()
@@ -181,7 +183,9 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
-            f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning, stacklevel=2
+            f"unexpected type annotation format: '{annotation}'",
+            TypeAnnotationWarning,
+            stacklevel=2,
         )
         return str, False, None
 
@@ -211,7 +215,11 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
         nargs = "*"
 
     else:
-        warnings.warn(f"unexpected type annotation prefix: '{prefix}'", TypeAnnotationWarning, stacklevel=2)
+        warnings.warn(
+            f"unexpected type annotation prefix: '{prefix}'",
+            TypeAnnotationWarning,
+            stacklevel=2,
+        )
         type_, optional = _parse_types(type_annotation)
 
     return type_, optional, nargs

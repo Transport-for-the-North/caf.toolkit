@@ -1,4 +1,5 @@
 """Basic utility functions for pandas objects."""
+
 from __future__ import annotations
 
 # Built-Ins

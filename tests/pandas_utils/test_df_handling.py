@@ -1,4 +1,5 @@
 """Tests for the caf.toolkit.pandas_utils.df_handling module."""
+
 # Built-Ins
 import dataclasses
 from typing import Any, NamedTuple
@@ -317,7 +318,9 @@ class TestChunkDf:
         expected_output = [df.copy()]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, chunk_size), strict=False):
+        for expected, got in zip(
+            expected_output, pd_utils.chunk_df(df, chunk_size), strict=False
+        ):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?

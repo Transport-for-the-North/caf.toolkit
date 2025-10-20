@@ -1,4 +1,5 @@
 """Common utility functions for file input and output."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -179,8 +180,7 @@ def _detailed_read_error(
                 df[col].astype(_type)
             except ValueError:
                 raise ValueError(
-                    f"Column '{col}' in {name} has values "
-                    f"which cannot be converted to {_type}"
+                    f"Column '{col}' in {name} has values which cannot be converted to {_type}"
                 ) from exc
 
 
@@ -367,7 +367,8 @@ def read_csv_matrix(
             f"matrix file ({path.name}) doesn't contain the same "
             "index and columns, these are reindexed so all unique "
             "values from both are included",
-            RuntimeWarning, stacklevel=2,
+            RuntimeWarning,
+            stacklevel=2,
         )
         # Reindex index to match columns then columns to match index
         if len(matrix.columns) > len(matrix.index):
@@ -488,14 +489,16 @@ def find_file_with_name(
     if len(unexpected) > 0:
         warnings.warn(
             f'Found {len(unexpected)} files named "{name}" with unexpected'
-            f' suffixes ({", ".join(unexpected)}), these are ignored.',
-            RuntimeWarning, stacklevel=2,
+            f" suffixes ({', '.join(unexpected)}), these are ignored.",
+            RuntimeWarning,
+            stacklevel=2,
         )
     if len(found) > 1:
         warnings.warn(
             f'Found {len(found)} files named "{name}" with the expected'
             " suffixes, the highest priority suffix is used.",
-            RuntimeWarning, stacklevel=2,
+            RuntimeWarning,
+            stacklevel=2,
         )
 
     if len(found) == 0:

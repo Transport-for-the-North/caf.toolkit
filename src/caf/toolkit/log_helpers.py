@@ -13,6 +13,7 @@ TemporaryLogFile
     Context manager for adding a log file handler to a logger and
     removing it when done.
 """
+
 from __future__ import annotations
 
 # Built-Ins
@@ -277,7 +278,7 @@ class LogHelper:
     and tool information to it automatically.
 
     >>> # Temp directory for testing purposes
-    >>> tmp_path = getfixture('tmp_path')
+    >>> tmp_path = getfixture("tmp_path")
     >>> path = tmp_path / "test.log"
     >>> details = ToolDetails("test", "1.2.3")
     >>>
@@ -328,7 +329,8 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
-                    " set to 'debug', 'info', 'warning', 'error', 'critical'.", stacklevel=2
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'.",
+                    stacklevel=2,
                 )
 
         if log_file is not None:
@@ -341,7 +343,8 @@ class LogHelper:
                 "LogHelper initialised without any logging handlers, "
                 "`logging.basicConfig` will be called with default parameters "
                 "at first log attempt if no handlers are added before that.",
-                LoggingWarning, stacklevel=2,
+                LoggingWarning,
+                stacklevel=2,
             )
 
         if warning_capture:
@@ -523,7 +526,7 @@ class TemporaryLogFile:
 
     The code below is defining the log file path for testing purposes.
 
-    >>> log_file = getfixture('tmp_path') / "test.log"
+    >>> log_file = getfixture("tmp_path") / "test.log"
 
     Setting up a new temporary log file for a single module can be done
     using the following:

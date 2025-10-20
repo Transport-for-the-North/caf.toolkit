@@ -1,4 +1,5 @@
 """Tests for the caf.toolkit.pandas_utils.numpy_conversions module."""
+
 # Built-Ins
 import dataclasses
 import math
@@ -239,7 +240,9 @@ class TestDataframeToNDimensionalArray:
                 )
 
     @pytest.mark.skipif(pytest.IN_GITHUB_ACTIONS, reason="Fails on GitHub actions")
-    def test_auto_sparse_conversion(self, conversion_data_massive: SparseConversionData) -> None:
+    def test_auto_sparse_conversion(
+        self, conversion_data_massive: SparseConversionData
+    ) -> None:
         """Test auto conversion to a sparse matrix when too big."""
         got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
             df=conversion_data_massive.pd_matrix,

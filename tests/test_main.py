@@ -145,7 +145,9 @@ class TestParseArgs:
 
         assert args == expected, "incorrect translate parameters"
 
-    def test_complete_matrix_translate_parameters(self, dummy_files: dict[str, pathlib.Path]) -> None:
+    def test_complete_matrix_translate_parameters(
+        self, dummy_files: dict[str, pathlib.Path]
+    ) -> None:
         """Test matrix_translate sub-command with full set of arguments."""
         expected = MatrixTranslationArgs(
             data_file=dummy_files["data_file"],

@@ -2,6 +2,7 @@
 
 These are mostly commonly used validations across the codebase.
 """
+
 # Built-Ins
 import logging
 from typing import Any

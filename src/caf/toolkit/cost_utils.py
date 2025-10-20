@@ -1,4 +1,5 @@
 """A toolbox of useful transport cost related functionality."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -122,7 +123,8 @@ class CostDistribution:
         if self.min_vals.min() != 0:
             warnings.warn(
                 "Minimum bound in min is not 0, consider recreating the"
-                " distribution so no short distance trips are missed", stacklevel=2
+                " distribution so no short distance trips are missed",
+                stacklevel=2,
             )
 
         # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
@@ -131,14 +133,16 @@ class CostDistribution:
         if gaps.any():
             warnings.warn(
                 "The bins do not nest (either overlapping or disjoint),"
-                " there is a risk you will miss trips during your analysis", stacklevel=2
+                " there is a risk you will miss trips during your analysis",
+                stacklevel=2,
             )
 
         zero_width = gaps = self.min_vals == self.max_vals
 
         if zero_width.any():
             warnings.warn(
-                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense", stacklevel=2
+                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense",
+                stacklevel=2,
             )
 
         return self
@@ -489,9 +493,7 @@ class CostDistribution:
             or not np.allclose(self.bin_edges, other.bin_edges)
         ):  # fmt: skip
             raise ValueError(
-                "Bin edges are not similar enough.\n"
-                f"{self.bin_edges=}\n"
-                f"{other.bin_edges=}"
+                f"Bin edges are not similar enough.\n{self.bin_edges=}\n{other.bin_edges=}"
             )
 
     def create_similar(self, trip_vals: np.ndarray) -> CostDistribution:
@@ -804,12 +806,12 @@ def create_log_bins(
 
     if not 0 < n_bin_pow < 1:
         raise ValueError(
-            f"`n_bin_pow` should be in the range (0, 1). Got a value of " f"{n_bin_pow}."
+            f"`n_bin_pow` should be in the range (0, 1). Got a value of {n_bin_pow}."
         )
 
     if log_factor <= 0:
         raise ValueError(
-            f"`log_factor` should be greater than 0. Got a value of " f"{log_factor}."
+            f"`log_factor` should be greater than 0. Got a value of {log_factor}."
         )
 
     # Calculate

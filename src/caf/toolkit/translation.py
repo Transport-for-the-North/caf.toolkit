@@ -3,6 +3,7 @@
 In transport, these tools are very useful for translating data between different
 zoning systems.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -174,7 +175,8 @@ def _pandas_vector_validation(
             f"Some zones in `{name}.index` have not been defined in "
             f"`from_unique_zones`. These zones will be dropped before "
             f"translating.\n"
-            f"Additional rows count: {len(missing_rows)}", stacklevel=2
+            f"Additional rows count: {len(missing_rows)}",
+            stacklevel=2,
         )
 
     # Check all needed values are in from_zone_col
@@ -183,7 +185,8 @@ def _pandas_vector_validation(
     if len(missing_zones) != 0:
         warnings.warn(
             f"Some zones in `{name}.index` are missing in `translation`. "
-            f"Missing zones count: {len(missing_zones)}", stacklevel=2
+            f"Missing zones count: {len(missing_zones)}",
+            stacklevel=2,
         )
 
 
@@ -236,7 +239,8 @@ def _pandas_matrix_validation(
             f"`row_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_rows)}\n"
-            f"Total value dropped: {total_value_dropped}", stacklevel=2
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
     # Throw a warning if any column values are in the matrix, but not in the
@@ -250,7 +254,8 @@ def _pandas_matrix_validation(
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
-            f"Total value dropped: {total_value_dropped}", stacklevel=2
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
 
@@ -587,13 +592,13 @@ def pandas_long_matrix_zone_translation(
     matrix = matrix.copy()
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
     if isinstance(matrix, pd.DataFrame):
-
         all_cols = matrix.columns.tolist()
         # Drop any columns we're not keeping
         drop_cols = set(all_cols) - set(keep_cols)
         if len(drop_cols) > 0:
             warnings.warn(
-                f"Extra columns found in matrix, dropping the following: {drop_cols}", stacklevel=2
+                f"Extra columns found in matrix, dropping the following: {drop_cols}",
+                stacklevel=2,
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
@@ -759,7 +764,8 @@ def pandas_matrix_zone_translation(
             f"dropping values. If the difference is small, it's likely a "
             f"rounding error.\n"
             f"Before: {matrix.to_numpy().sum()}\n"
-            f"After: {translated.to_numpy().sum()}", stacklevel=2
+            f"After: {translated.to_numpy().sum()}",
+            stacklevel=2,
         )
 
     return translated
@@ -910,7 +916,8 @@ def pandas_vector_zone_translation(
         if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
             warnings.warn(
                 "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original).", stacklevel=2
+                f"total is {overall_diff} (translated - original).",
+                stacklevel=2,
             )
 
     # Sometimes we need to remove the index name to make sure the same style of
@@ -944,7 +951,8 @@ def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list
         "`translation`. These zones will be dropped before translating.\n"
         f"Missing rows count: {len(missing_rows)}\n"
         f"Total value dropped: {total_value_dropped}\n"
-        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)", stacklevel=2,
+        f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+        stacklevel=2,
     )
     LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
@@ -963,7 +971,8 @@ def _multi_vector_trans_index(
                 "The input vector is MultiIndexed. The translation "
                 f"will be done using the {translation_from_col} level "
                 "of the index. If this is unexpected, check your "
-                "inputs.", stacklevel=2
+                "inputs.",
+                stacklevel=2,
             )
             vector = vector.reset_index()
             (
@@ -1061,7 +1070,8 @@ def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> Non
     if any_positions:
         warnings.warn(
             "column positions are given instead of names,"
-            " make sure the columns are in the correct order", stacklevel=2
+            " make sure the columns are in the correct order",
+            stacklevel=2,
         )
 
 
@@ -1281,7 +1291,6 @@ class ZoneCorrespondencePath:
 
     @property
     def _generic_column_name_lookup(self) -> dict[str, str]:
-
         lookup: dict[str, str] = {
             self.from_col_name: "from",
             self.to_col_name: "to",
@@ -1328,12 +1337,14 @@ class ZoneCorrespondencePath:
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
-                    " this does not make sense for a zone translation factor", stacklevel=2
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
             if (translation[self.factors_col_name] < 0).any():
                 warnings.warn(
                     "%s contains values less than one,"
-                    " this does not make sense for a zone translation factor", stacklevel=2
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
 
         if generic_column_names:
