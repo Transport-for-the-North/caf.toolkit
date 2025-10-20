@@ -611,7 +611,7 @@ class PackageFilter(logging.Filter):
 
     def __eq__(self, value) -> bool:
         """Checks if filter pattern is the same."""
-        if super().__eq__(value):
+        if value is self:
             return True
         if not isinstance(value, self.__class__):
             return False

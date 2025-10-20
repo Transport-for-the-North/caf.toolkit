@@ -718,3 +718,19 @@ class TestCaptureWarnings:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestPackageFilter:
+    """Tests for PackageFilter class."""
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test1", "test2"]])
+    def test_eq(self, allowed: list[str]) -> None:
+        """Test `__eq__` method works when equal."""
+        filter_ = PackageFilter(allowed)
+        assert filter_ == filter_  # pylint: disable=comparison-with-itself
+        assert filter_ == PackageFilter(allowed)
+
+    def test_not_eq(self) -> None:
+        """Test `__eq__` method works when not equal."""
+        assert PackageFilter(["test"]) != PackageFilter(["test2"])
+        assert PackageFilter(["test"]) != "test"
