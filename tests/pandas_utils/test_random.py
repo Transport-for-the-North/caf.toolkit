@@ -28,50 +28,26 @@ def fixture_choice_not_all_values() -> DataGeneratorRun:
     return DataGeneratorRun(
         random.ChoiceGenerator("Developers", 10, ["Matt", "Isaac", "Ben"]),
         pd.Series(
-            # fmt: off
-            [
-                "Ben",
-                "Ben",
-                "Matt",
-                "Matt",
-                "Ben",
-                "Ben",
-                "Isaac",
-                "Matt",
-                "Ben",
-                "Isaac",
-            ],
-            # fmt: on
+            ["Ben", "Ben", "Matt", "Matt", "Ben", "Ben", "Isaac", "Matt", "Ben", "Isaac"],
             name="Developers",
         ),
         np.random.default_rng(10),
-    )
+    )  # fmt: skip
 
 
 @pytest.fixture(name="choice_all_values", scope="function")
 def fixture_choice_all_values() -> DataGeneratorRun:
     """Test params for ChoiceGenerator with all values turned on."""
     return DataGeneratorRun(
-        random.ChoiceGenerator("Developers", 10, ["Matt", "Isaac", "Ben"], all_values=True),
+        random.ChoiceGenerator(
+            "Developers", 10, ["Matt", "Isaac", "Ben"], all_values=True
+        ),
         pd.Series(
-            # fmt: off
-            [
-                "Ben",
-                "Ben",
-                "Matt",
-                "Matt",
-                "Ben",
-                "Ben",
-                "Isaac",
-                "Matt",
-                "Isaac",
-                "Ben",
-            ],
-            # fmt: on
+            ["Ben", "Ben", "Matt", "Matt", "Ben", "Ben", "Isaac", "Matt", "Isaac", "Ben"],
             name="Developers",
         ),
         np.random.default_rng(10),
-    )
+    )  # fmt: skip
 
 
 @pytest.fixture(name="float_lower", scope="function")
@@ -80,24 +56,14 @@ def fixture_float_lower() -> DataGeneratorRun:
     return DataGeneratorRun(
         random.FloatGenerator("Steves_lucky_numbers", 10, 1000, 10),
         pd.Series(
-            # fmt: off
             [
-                956.441693,
-                215.604992,
-                830.160436,
-                157.789302,
-                517.676570,
-                144.560408,
-                692.146115,
-                843.330247,
-                431.253907,
-                957.356743,
+                956.441693, 215.604992, 830.160436, 157.789302, 517.676570,
+                144.560408, 692.146115, 843.330247, 431.253907, 957.356743,
             ],
-            # fmt: on
             name="Steves_lucky_numbers",
         ),
         np.random.default_rng(10),
-    )
+    )  # fmt: skip
 
 
 @pytest.fixture(name="float_no_lower", scope="function")
@@ -106,24 +72,14 @@ def fixture_float_no_lower() -> DataGeneratorRun:
     return DataGeneratorRun(
         random.FloatGenerator("Steves_lucky_numbers", 10, 1000),
         pd.Series(
-            # fmt: off
             [
-                956.001710,
-                207.681810,
-                828.444885,
-                149.282123,
-                512.804616,
-                135.919604,
-                689.036480,
-                841.747724,
-                425.508997,
-                956.926003,
+                956.001710, 207.681810, 828.444885, 149.282123, 512.804616,
+                135.919604, 689.036480, 841.747724, 425.508997, 956.926003
             ],
-            # fmt: on
-            name="Steves_lucky_numbers",
+            name="Steves_lucky_numbers"
         ),
         np.random.default_rng(10),
-    )
+    )  # fmt: skip
 
 
 @pytest.fixture(name="int_no_lower", scope="function")
@@ -131,24 +87,7 @@ def fixture_int_no_lower() -> DataGeneratorRun:
     """Test params for IntGenerator without lower value passed."""
     return DataGeneratorRun(
         random.IntGenerator("Steves_phone_number", 11, 9),
-        pd.Series(
-            # fmt: off
-            [
-                6,
-                8,
-                2,
-                1,
-                7,
-                7,
-                4,
-                1,
-                7,
-                4,
-                1,
-            ],
-            # fmt: on
-            name="Steves_phone_number",
-        ),
+        pd.Series([6, 8, 2, 1, 7, 7, 4, 1, 7, 4, 1], name="Steves_phone_number"),
         np.random.default_rng(10),
     )
 
@@ -158,24 +97,7 @@ def fixture_int_lower() -> DataGeneratorRun:
     """Test params for IntGenerator with lower value passed."""
     return DataGeneratorRun(
         random.IntGenerator("Steves_phone_number", 11, 9, 2),
-        pd.Series(
-            # fmt: off
-            [
-                7,
-                8,
-                3,
-                3,
-                7,
-                7,
-                5,
-                3,
-                7,
-                5,
-                3,
-            ],
-            # fmt: om
-            name="Steves_phone_number",
-        ),
+        pd.Series([7, 8, 3, 3, 7, 7, 5, 3, 7, 5, 3], name="Steves_phone_number"),
         np.random.default_rng(10),
     )
 
@@ -189,30 +111,7 @@ def fixture_id_no_starting_val() -> DataGeneratorRun:
             20,
         ),
         pd.Series(
-            # fmt: off
-            [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-            ],
-            # fmt: on
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
             name="Steves_least_favourite_numbers",
         ),
         np.random.default_rng(10),
@@ -225,30 +124,7 @@ def fixture_id_starting_val() -> DataGeneratorRun:
     return DataGeneratorRun(
         random.UniqueIdGenerator("Steves_least_favourite_numbers", 20, 4),
         pd.Series(
-            # fmt: off
-            [
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-            ],
-            # fmt: on
+            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
             name="Steves_least_favourite_numbers",
         ),
         np.random.default_rng(10),
@@ -276,4 +152,6 @@ class TestRandomBuild:
         run: DataGeneratorRun = request.getfixturevalue(data_generator_run)
         test_values = run.data_generator.generate(run.generator)
         # Setting dtype to False since local run and github run choose different bit-ness
-        pd.testing.assert_series_equal(test_values, run.expected_output, check_dtype=False)
+        pd.testing.assert_series_equal(
+            test_values, run.expected_output, check_dtype=False
+        )
