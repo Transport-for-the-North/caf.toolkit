@@ -6,13 +6,15 @@ from __future__ import annotations
 import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
-from pathlib import Path
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 # Third Party
 import pydantic
 import pydantic_core
 import strictyaml
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # # # CONSTANTS # # #
 
@@ -327,7 +329,7 @@ def write_config(
 
     if len(comment_lines) > 0:
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
-        yaml = "\n".join(comment_lines + [yaml])
+        yaml = "\n".join([*comment_lines, yaml])
 
     with open(path, "wt", encoding="utf-8") as file:
         file.write(yaml)

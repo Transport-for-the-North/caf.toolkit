@@ -106,6 +106,7 @@ ignore = [
 ]
 unfixable = [
     "T20", # print-statements (flake8-print)
+    "B905", # zip without strict, fix defaults to False
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]

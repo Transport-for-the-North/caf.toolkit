@@ -4,8 +4,7 @@ from __future__ import annotations
 
 # Built-Ins
 import functools
-from collections.abc import Generator, Hashable
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 # Third Party
 import numpy as np
@@ -13,6 +12,9 @@ import pandas as pd
 
 # Local Imports
 from caf.toolkit import toolbox
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Hashable
 
 # # # CONSTANTS # # #
 
@@ -50,7 +52,7 @@ class ChunkDf:
         self,
         df: pd.DataFrame,
         chunk_size: int,
-    ):
+    ) -> None:
         if not isinstance(chunk_size, int):
             raise TypeError(f"chunk_size must be an integer. Given: {chunk_size}")
 
@@ -275,9 +277,7 @@ def filter_df_mask(
             df_filter[key] = [value]
 
     needed_cols = list(df_filter.keys())
-    mask = df[needed_cols].isin(df_filter).all(axis="columns")
-
-    return mask
+    return df[needed_cols].isin(df_filter).all(axis="columns")
 
 
 def filter_df(
@@ -312,13 +312,12 @@ def filter_df(
     mask = filter_df_mask(df=df, df_filter=df_filter)
     return_df = df[mask].copy()
 
-    if throw_error:
-        if return_df.empty:
-            raise ValueError(
-                "An empty dataframe was returned after applying the filter. "
-                "Are you sure the correct data was passed in?\n"
-                f"Given filter: {df_filter}"
-            )
+    if throw_error and return_df.empty:
+        raise ValueError(
+            "An empty dataframe was returned after applying the filter. "
+            "Are you sure the correct data was passed in?\n"
+            f"Given filter: {df_filter}"
+        )
 
     return return_df
 
@@ -473,7 +472,7 @@ def long_product_infill(
             index_dict[ind] = vals.tolist()
 
     else:
-        mismatch = [i for i in data.index.names if i not in index_dict.keys()]
+        mismatch = [i for i in data.index.names if i not in index_dict]
         if len(mismatch) > 0:
             raise ValueError(
                 f"{mismatch} levels were found in the input data, but not in index_dict."
@@ -736,6 +735,6 @@ def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
         )
 
     return pd.Index(
-        data=list(dimension_cols.values())[0],
-        name=list(dimension_cols.keys())[0],
+        data=next(iter(dimension_cols.values())),
+        name=next(iter(dimension_cols.keys())),
     )

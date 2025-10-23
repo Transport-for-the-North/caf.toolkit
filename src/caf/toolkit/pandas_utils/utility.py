@@ -4,12 +4,14 @@ from __future__ import annotations
 
 # Built-Ins
 import typing
-from collections.abc import Sequence
 from typing import Literal, overload
 
 # Third Party
 import numpy as np
 import pandas as pd
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # # # CONSTANTS # # #
 

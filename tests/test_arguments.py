@@ -53,7 +53,7 @@ class TestParseArgDetails:
     """Tests for `parse_arg_details` function."""
 
     @pytest.mark.parametrize("test_data", CORRECT_ANNOTATIONS)
-    def test_correct(self, test_data: tuple[str, tuple[type, bool, int | str | None]]):
+    def test_correct(self, test_data: tuple[str, tuple[type, bool, int | str | None]]) -> None:
         """Test annotations the function can handle."""
         annotation, expected = test_data
         type_, optional, nargs = arguments.parse_arg_details(annotation)
@@ -105,7 +105,7 @@ class TestGetenvBool:
 
     _variable_name = "TEST_TOOLKIT_ENV_VARIABLE"
 
-    def test_default(self):
+    def test_default(self) -> None:
         """Test that the default parameter is correctly returned."""
         os.environ[self._variable_name] = ""
 
@@ -113,19 +113,19 @@ class TestGetenvBool:
         assert not arguments.getenv_bool(self._variable_name, False)
 
     @pytest.mark.parametrize("value", ["TRUE", "Yes", "y", "1", "true  "])
-    def test_true(self, value: str):
+    def test_true(self, value: str) -> None:
         """Test the possible values for True."""
         os.environ[self._variable_name] = value
         assert arguments.getenv_bool(self._variable_name, False)
 
     @pytest.mark.parametrize("value", ["false", "no", "n", "0", "FALSE", "n "])
-    def test_false(self, value: str):
+    def test_false(self, value: str) -> None:
         """Test the possible values for False."""
         os.environ[self._variable_name] = value
         assert not arguments.getenv_bool(self._variable_name, True)
 
     @pytest.mark.parametrize("value", ["10", "01", "wrong", "t", "f"])
-    def test_invalid(self, value: str):
+    def test_invalid(self, value: str) -> None:
         """Test an invalid value raises the correct error."""
         pattern = (
             r"unexpected value (.*) for '.*' env "
@@ -169,7 +169,7 @@ class TestModelArguments:
         reason="uses | in type annotations which was added in 3.10",
     )
     @pytest.mark.filterwarnings("error")
-    def test_add_subcommands(self, parser: argparse.ArgumentParser):
+    def test_add_subcommands(self, parser: argparse.ArgumentParser) -> None:
         """Test the `add_subcommands` method works without errors / warnings.
 
         **Doesn't check the correct sub-commands have been added.**

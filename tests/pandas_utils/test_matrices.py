@@ -49,7 +49,7 @@ def fixture_cost_matrix():
 
 @pytest.fixture(name="translation_vector", scope="session")
 def fixture_translation() -> pd.DataFrame:
-    """Translation to test matrix report functionality"""
+    """Translation to test matrix report functionality."""
     trans_data = []
 
     for i in range(MATRIX_SIZE):
@@ -61,7 +61,7 @@ def fixture_translation() -> pd.DataFrame:
 class TestMatrices:
     """Test Matrices functionality."""
 
-    def test_matrix_describe(self, matrix: pd.DataFrame):
+    def test_matrix_describe(self, matrix: pd.DataFrame) -> None:
         """Test that the matrix describe function produces the expected outputs."""
         test = pd_utils.matrix_describe(matrix)
 
@@ -77,7 +77,7 @@ class TestMatrices:
 
         pd.testing.assert_series_equal(test, control, check_exact=False)
 
-    def test_trip_ends(self, matrix, translation_vector):
+    def test_trip_ends(self, matrix, translation_vector) -> None:
         """Test the trip ends property produces the expected output."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -107,7 +107,7 @@ class TestMatrices:
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-    ):
+    ) -> None:
         """Test whether trip length distribution calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -133,7 +133,7 @@ class TestMatrices:
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-    ):
+    ) -> None:
         """Test whether multi area vkm calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -164,7 +164,7 @@ class TestMatrices:
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-    ):
+    ) -> None:
         """Test whether vkm calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -190,7 +190,7 @@ class TestMatrices:
         matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-    ):
+    ) -> None:
         """Test whether the multi area TLD works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -232,7 +232,7 @@ class TestMatrices:
         translation_vector: pd.DataFrame,
         cost_matrix: pd.DataFrame,
         tmp_path: pathlib.Path,
-    ):
+    ) -> None:
         """Test whether writing out the matrix report classes executes without erroring."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -269,7 +269,7 @@ class TestCompareMatricesAndOutput:
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
         translation_vector: pd.DataFrame,
-    ):
+    ) -> None:
         """Check that compare_matrices_and_output writes the expected
         sheets.
 
@@ -318,16 +318,16 @@ class TestCompareMatricesAndOutput:
         output = pd.read_excel(path, sheet_name=None)
 
         for sheet in expected_sheets:
-            assert sheet in output.keys(), f"{sheet} not in output"
+            assert sheet in output, f"{sheet} not in output"
 
 
 class TestMatrixComparison:
-    """Test the compare_matrices function"""
+    """Test the compare_matrices function."""
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_sector_matrix(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
-    ):
+    ) -> None:
         """Test sector matrix comparison produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -383,8 +383,8 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_trip_ends(
         self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
-    ):
-        """Test Trip End Comparison produces expected results"""
+    ) -> None:
+        """Test Trip End Comparison produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
             translation_factors=translation_vector,
@@ -425,7 +425,9 @@ class TestMatrixComparison:
         assert (trip_ends["row_sums_percentage"] == 0).all()
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
-    def test_comparison_stats(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
+    def test_comparison_stats(
+        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+    ) -> None:
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -512,7 +514,9 @@ class TestMatrixComparison:
         )
 
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
-    def test_comparison_vkms(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame):
+    def test_comparison_vkms(
+        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+    ) -> None:
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -541,7 +545,7 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_multi_vkms(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
-    ):
+    ) -> None:
         """Checks Multi-Area Vkms comparisons functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -570,7 +574,7 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_multi_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
-    ):
+    ) -> None:
         """Check Multi-Area TLDs functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -606,7 +610,7 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_tlds(
         self, matrix: pd.DataFrame, cost_matrix: pd.DataFrame, translation_vector: pd.DataFrame
-    ):
+    ) -> None:
         """Check TLD comparison functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,

@@ -1,6 +1,4 @@
-"""
-Tests for the `log_helpers` module in caf.toolkit
-"""
+"""Tests for the `log_helpers` module in caf.toolkit."""
 
 from __future__ import annotations
 
@@ -10,11 +8,10 @@ import dataclasses
 import getpass
 import logging
 import os
-import pathlib
 import platform
 import subprocess
 import warnings
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 # Third Party
 import psutil
@@ -35,6 +32,9 @@ from caf.toolkit.log_helpers import (
     get_logger,
     git_describe,
 )
+
+if TYPE_CHECKING:
+    import pathlib
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -175,15 +175,13 @@ def _load_log(log_file: pathlib.Path) -> str:
     """Assert log file exists and load the text."""
     assert log_file.is_file(), "log file not created"
     with open(log_file, "rt", encoding="utf-8") as file:
-        text = file.read()
-
-    return text
+        return file.read()
 
 
 def _run_warnings() -> None:
     """Run all warnings."""
     for msg, warn in _LOG_WARNINGS:
-        warnings.warn(msg, warn)
+        warnings.warn(msg, warn, stacklevel=2)
 
 
 def _check_warnings(text: str) -> None:
@@ -198,7 +196,7 @@ def _check_warnings(text: str) -> None:
 class TestGitDescribe:
     """Tests for `git_describe` function."""
 
-    def test_valid(self, monkeypatch: pytest.MonkeyPatch):
+    def test_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test function correctly returns the string result if command is successful."""
         describe = "v1.0-1-abc123"
 
@@ -209,7 +207,7 @@ class TestGitDescribe:
 
         assert git_describe() == describe
 
-    def test_invalid(self, monkeypatch: pytest.MonkeyPatch):
+    def test_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test None is returned whenever the subprocess returns a non-zero code."""
 
         def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:

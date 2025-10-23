@@ -7,7 +7,6 @@ import functools
 import logging
 import operator
 import warnings
-from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 # Third Party
@@ -15,6 +14,8 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     import sparse
 
 # Local Imports
@@ -95,7 +96,7 @@ def is_sparse_feasible(
         )
         with warnings.catch_warnings():
             warnings.filterwarnings(warning_action)
-            warnings.warn(msg, category=ResourceWarning)
+            warnings.warn(msg, stacklevel=2, category=ResourceWarning)
         return False
     return True
 
@@ -125,7 +126,7 @@ def dataframe_to_n_dimensional_sparse_array(
     # Tidy and validate given DF
     mask = df[value_col] == fill_value
     df = df[~mask].copy()
-    df = df.reindex(columns=list(dimension_cols.keys()) + [value_col])
+    df = df.reindex(columns=[*list(dimension_cols.keys()), value_col])
 
     # Reduce inputs to just the needed columns
     dim_col_names = df.columns.tolist()
@@ -156,7 +157,7 @@ def dataframe_to_n_dimensional_sparse_array(
         )
 
     array = sparse.COO(
-        coords=np.array([df[col].values for col in dimension_cols.keys()]),
+        coords=np.array([df[col].values for col in dimension_cols]),
         data=np.array(df[value_col].values),
         shape=final_shape,
     )

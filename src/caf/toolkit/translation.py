@@ -6,12 +6,12 @@ zoning systems.
 
 from __future__ import annotations
 
+import contextlib
+
 # Built-Ins
 import logging
-import pathlib
 import warnings
-from collections.abc import Hashable
-from typing import Any, Literal, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -21,6 +21,10 @@ from pydantic import FilePath, dataclasses
 # Local Imports
 from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Hashable
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -171,7 +175,8 @@ def _pandas_vector_validation(
             f"Some zones in `{name}.index` have not been defined in "
             f"`from_unique_zones`. These zones will be dropped before "
             f"translating.\n"
-            f"Additional rows count: {len(missing_rows)}"
+            f"Additional rows count: {len(missing_rows)}",
+            stacklevel=2,
         )
 
     # Check all needed values are in from_zone_col
@@ -180,7 +185,8 @@ def _pandas_vector_validation(
     if len(missing_zones) != 0:
         warnings.warn(
             f"Some zones in `{name}.index` are missing in `translation`. "
-            f"Missing zones count: {len(missing_zones)}"
+            f"Missing zones count: {len(missing_zones)}",
+            stacklevel=2,
         )
 
 
@@ -233,7 +239,8 @@ def _pandas_matrix_validation(
             f"`row_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_rows)}\n"
-            f"Total value dropped: {total_value_dropped}"
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
     # Throw a warning if any column values are in the matrix, but not in the
@@ -247,7 +254,8 @@ def _pandas_matrix_validation(
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
-            f"Total value dropped: {total_value_dropped}"
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
 
@@ -472,7 +480,7 @@ def numpy_vector_zone_translation(
                 "Set 'check_shapes' to True, or see above error for more "
                 "information."
             ) from err
-        raise err
+        raise
 
     if not check_totals:
         return out_vector
@@ -589,7 +597,8 @@ def pandas_long_matrix_zone_translation(
         drop_cols = set(all_cols) - set(keep_cols)
         if len(drop_cols) > 0:
             warnings.warn(
-                f"Extra columns found in matrix, dropping the following: {drop_cols}"
+                f"Extra columns found in matrix, dropping the following: {drop_cols}",
+                stacklevel=2,
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
@@ -755,7 +764,8 @@ def pandas_matrix_zone_translation(
             f"dropping values. If the difference is small, it's likely a "
             f"rounding error.\n"
             f"Before: {matrix.to_numpy().sum()}\n"
-            f"After: {translated.to_numpy().sum()}"
+            f"After: {translated.to_numpy().sum()}",
+            stacklevel=2,
         )
 
     return translated
@@ -898,7 +908,7 @@ def pandas_vector_zone_translation(
     if not isinstance(factors, pd.Series):
         raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(factors, axis=0).groupby(level=[translation_to_col] + ind_names).sum()
+        vector.mul(factors, axis=0).groupby(level=[translation_to_col, *ind_names]).sum()
     )
 
     if check_totals:
@@ -906,7 +916,8 @@ def pandas_vector_zone_translation(
         if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
             warnings.warn(
                 "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original)."
+                f"total is {overall_diff} (translated - original).",
+                stacklevel=2,
             )
 
     # Sometimes we need to remove the index name to make sure the same style of
@@ -941,6 +952,7 @@ def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list
         f"Missing rows count: {len(missing_rows)}\n"
         f"Total value dropped: {total_value_dropped}\n"
         f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+        stacklevel=2,
     )
     LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
@@ -959,16 +971,17 @@ def _multi_vector_trans_index(
                 "The input vector is MultiIndexed. The translation "
                 f"will be done using the {translation_from_col} level "
                 "of the index. If this is unexpected, check your "
-                "inputs."
+                "inputs.",
+                stacklevel=2,
             )
-            vector.reset_index(inplace=True)
+            vector = vector.reset_index()
             (
                 vector[translation_from_col],
                 translation[translation_from_col],
             ) = pd_utils.cast_to_common_type(
                 [vector[translation_from_col], translation[translation_from_col]],
             )
-            vector.set_index(ind_names, inplace=True)
+            vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
             missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
@@ -1025,10 +1038,8 @@ def _load_translation(
     # Attempt to convert ID columns to integers,
     # but not necessarily a problem if they aren't
     for column in str_columns[:2]:
-        try:
+        with contextlib.suppress(ValueError):
             data[column] = pd.to_numeric(data[column], downcast="integer")
-        except ValueError:
-            pass
 
     columns = ("from_column", "to_column", "factors_column")
     LOG.info(
@@ -1059,7 +1070,8 @@ def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> Non
     if any_positions:
         warnings.warn(
             "column positions are given instead of names,"
-            " make sure the columns are in the correct order"
+            " make sure the columns are in the correct order",
+            stacklevel=2,
         )
 
 
@@ -1325,12 +1337,14 @@ class ZoneCorrespondencePath:
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
-                    " this does not make sense for a zone translation factor"
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
             if (translation[self.factors_col_name] < 0).any():
                 warnings.warn(
                     "%s contains values less than one,"
-                    " this does not make sense for a zone translation factor"
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
 
         if generic_column_names:

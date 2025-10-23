@@ -25,14 +25,16 @@ import platform
 import subprocess
 import sys
 import warnings
-from collections.abc import Iterable
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 # Third Party
 import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -129,7 +131,8 @@ class ToolDetails:
         # pylint false positive for __dataclass_fields__ no-member
         # pylint: disable=no-member
         length = functools.reduce(
-            max, (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None)
+            max,
+            (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None),
         )
 
         for name in self.__dataclass_fields__:
@@ -313,7 +316,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
-    ):
+    ) -> None:
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
 
@@ -330,7 +333,8 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
-                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'.",
+                    stacklevel=2,
                 )
 
         if log_file is not None:
@@ -344,6 +348,7 @@ class LogHelper:
                 "`logging.basicConfig` will be called with default parameters "
                 "at first log attempt if no handlers are added before that.",
                 LoggingWarning,
+                stacklevel=2,
             )
 
         if warning_capture:
@@ -477,7 +482,10 @@ class LogHelper:
     def __exit__(self, exc_type, exc, exc_tb):
         """Write any error to the logger and closes the file."""
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         else:
             self.logger.info("Program completed without any critical errors")
 
@@ -571,15 +579,19 @@ class TemporaryLogFile:
         """Close temporary log file."""
         # pylint: disable=invalid-name
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
-
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)
 
 
 # # # FUNCTIONS # # #
 def write_information(
-    logger: logging.Logger, tool_details: ToolDetails | None = None, system_info: bool = True
+    logger: logging.Logger,
+    tool_details: ToolDetails | None = None,
+    system_info: bool = True,
 ) -> None:
     """Write tool and system information to `logger`.
 

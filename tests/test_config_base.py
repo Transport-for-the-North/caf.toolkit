@@ -1,6 +1,4 @@
-"""
-Tests for the config_base module in caf.toolkit
-"""
+"""Tests for the config_base module in caf.toolkit."""
 
 # Built-Ins
 import dataclasses
@@ -24,7 +22,7 @@ from caf.toolkit import BaseConfig
 
 @dataclasses.dataclass
 class SubClassTest:
-    """Subclass to be included as a parameter in ConfigTestClass"""
+    """Subclass to be included as a parameter in ConfigTestClass."""
 
     whole: int
     decimal: float
@@ -32,7 +30,7 @@ class SubClassTest:
 
 # pylint: disable=too-few-public-methods
 class ConfigTestClass(BaseConfig):
-    """Class created to test BaseConfig"""
+    """Class created to test BaseConfig."""
 
     dictionary: dict[str, float]
     path: Path
@@ -51,7 +49,7 @@ class ConfigTestClass(BaseConfig):
 @pytest.fixture(name="path", scope="session")
 def fixture_dir(tmp_path_factory):
     """
-    Temp path for test i/o
+    Temp path for test i/o.
 
     Parameters
     ----------
@@ -61,14 +59,13 @@ def fixture_dir(tmp_path_factory):
     -------
     None
     """
-    path = tmp_path_factory.mktemp("dir")
-    return path
+    return tmp_path_factory.mktemp("dir")
 
 
 @pytest.fixture(name="basic", scope="session")
 def fixture_basic(path) -> ConfigTestClass:
     """
-    Basic config for testing
+    Basic config for testing.
 
     Parameters
     ----------
@@ -85,7 +82,7 @@ def fixture_basic(path) -> ConfigTestClass:
     conf_tuple = tuple([(path / "tuple_1"), (path / "tuple_2")])
     conf_date_time = datetime.datetime(2000, 1, 1, 10, 30)
     conf_opt = 4
-    conf = ConfigTestClass(
+    return ConfigTestClass(
         dictionary=conf_dict,
         path=conf_path,
         list=conf_list,
@@ -94,7 +91,6 @@ def fixture_basic(path) -> ConfigTestClass:
         date_time=conf_date_time,
         option=conf_opt,
     )
-    return conf
 
 
 class DummyDatetime(datetime.datetime):
@@ -117,9 +113,7 @@ def fixture_monkeypatch_datetime_now(monkeypatch: pytest.MonkeyPatch) -> DummyDa
 
 
 class TestCreateConfig:
-    """
-    Class for testing basic creation of configs using the BaseConfig
-    """
+    """Class for testing basic creation of configs using the BaseConfig."""
 
     @pytest.mark.parametrize(
         "param, type_iter",
@@ -134,7 +128,7 @@ class TestCreateConfig:
             ("option", int),
         ],
     )
-    def test_type(self, basic, param, type_iter):
+    def test_type(self, basic, param, type_iter) -> None:
         """
         Tests that all parameters are of the expected type.
 
@@ -152,9 +146,9 @@ class TestCreateConfig:
         assert isinstance(val, type_iter)
 
     @pytest.mark.parametrize("param, type_iter", [("default", True), ("option", None)])
-    def test_default(self, basic, param, type_iter):
+    def test_default(self, basic, param, type_iter) -> None:
         """
-        Tests default values are correctly written
+        Tests default values are correctly written.
 
         Parameters
         ----------
@@ -177,10 +171,10 @@ class TestCreateConfig:
         val = config.model_dump()[param]
         assert val == type_iter
 
-    def test_wrong_type(self, basic):
+    def test_wrong_type(self, basic) -> None:
         """
         Tests that the correct error is raised when the config is initialised
-        with an incorrect type
+        with an incorrect type.
 
         Parameters
         ----------
@@ -202,13 +196,11 @@ class TestCreateConfig:
 
 
 class TestYaml:
-    """
-    Class for testing configs being converted to and from yaml, as well as saved and loaded.
-    """
+    """Class for testing configs being converted to and from yaml, as well as saved and loaded."""
 
-    def test_to_from_yaml(self, basic):
+    def test_to_from_yaml(self, basic) -> None:
         """
-        Test that when a config is converted to yaml and back it remains identical
+        Test that when a config is converted to yaml and back it remains identical.
 
         Parameters
         ----------
@@ -222,10 +214,10 @@ class TestYaml:
         conf = ConfigTestClass.from_yaml(yaml)
         assert conf == basic
 
-    def test_custom_sub(self, basic):
+    def test_custom_sub(self, basic) -> None:
         """
         Test that custom subclasses are recognised and read correctly when
-        converted to and from yaml
+        converted to and from yaml.
 
         Parameters
         ----------
@@ -240,10 +232,10 @@ class TestYaml:
         yam = conf.to_yaml()
         assert isinstance(ConfigTestClass.from_yaml(yam).sub, SubClassTest)
 
-    def test_save_load(self, basic, path):
+    def test_save_load(self, basic, path) -> None:
         """
         Test that when a config is saved to a yaml file then read in again it
-        remains identical
+        remains identical.
 
         Parameters
         ----------

@@ -6,20 +6,22 @@ from __future__ import annotations
 import collections
 import itertools
 import logging
-import os
 import pathlib
 import re
 import string
 import time
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit.pandas_utils import utility
+
+if TYPE_CHECKING:
+    import os
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNT
 class MissingColumnsError(Exception):
     """Raised when columns are missing from input CSV."""
 
-    def __init__(self, name: str, columns: list[str], *args, **kwargs):
+    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:
         self.columns = columns
         cols = " and".join(", ".join(f"'{s}'" for s in columns).rsplit(",", 1))
         msg = f"Columns missing from {name}: {cols}"
@@ -87,7 +89,10 @@ def safe_dataframe_to_csv(
 
 
 def read_csv(
-    path: os.PathLike, name: str | None = None, normalise_column_names: bool = False, **kwargs
+    path: os.PathLike,
+    name: str | None = None,
+    normalise_column_names: bool = False,
+    **kwargs,
 ) -> pd.DataFrame:
     """Read CSV files, wraps `pandas.read_csv` to perform additional checks.
 
@@ -129,7 +134,7 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters):
+        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
             if value is not None:
                 kwargs[nm] = value
 
@@ -151,7 +156,7 @@ def read_csv(
 
 def _detailed_read_error(
     path: pathlib.Path, name: str, exc: ValueError, kwargs: dict[str, Any]
-):
+) -> None:
     """Parse `read_csv` error and provide more details.
 
     Raises
@@ -280,7 +285,7 @@ def _normalise_read_csv(
     return lookup, usecols, dtype, index_col
 
 
-def _validate_normal_columns(columns: Iterable[Hashable], name: str):
+def _validate_normal_columns(columns: Iterable[Hashable], name: str) -> None:
     def normal_check(value) -> bool:
         return isinstance(value, str) and (value == _normalise_name(value))
 
@@ -295,8 +300,7 @@ def _validate_normal_columns(columns: Iterable[Hashable], name: str):
 def _normalise_name(col: str) -> str:
     normalised = re.sub(r"\s*-\s*", "-", string=col.strip().lower())
     normalised = re.sub(r"\s+", "_", normalised)
-    normalised = re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
-    return normalised
+    return re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
 
 
 def read_csv_matrix(
@@ -372,6 +376,7 @@ def read_csv_matrix(
             "index and columns, these are reindexed so all unique "
             "values from both are included",
             RuntimeWarning,
+            stacklevel=2,
         )
         # Reindex index to match columns then columns to match index
         if len(matrix.columns) > len(matrix.index):
@@ -494,12 +499,14 @@ def find_file_with_name(
             f'Found {len(unexpected)} files named "{name}" with unexpected'
             f" suffixes ({', '.join(unexpected)}), these are ignored.",
             RuntimeWarning,
+            stacklevel=2,
         )
     if len(found) > 1:
         warnings.warn(
             f'Found {len(found)} files named "{name}" with the expected'
             " suffixes, the highest priority suffix is used.",
             RuntimeWarning,
+            stacklevel=2,
         )
 
     if len(found) == 0:

@@ -51,9 +51,9 @@ def list_safe_remove(
     for item in remove:
         try:
             lst.remove(item)
-        except ValueError as exception:
+        except ValueError:
             if throw_error:
-                raise exception
+                raise
 
     return lst
 
@@ -79,9 +79,8 @@ def is_none_like(obj: Any) -> bool:
     if obj is None:
         return True
 
-    if isinstance(obj, str):
-        if obj.lower().strip() == "none":
-            return True
+    if isinstance(obj, str) and obj.lower().strip() == "none":
+        return True
 
     if isinstance(obj, list):
         return all(is_none_like(x) for x in obj)

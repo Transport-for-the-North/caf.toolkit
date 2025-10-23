@@ -5,18 +5,16 @@ Most will be used elsewhere in the codebase too
 
 from __future__ import annotations
 
-# Built-Ins
 import math
 import warnings
-from collections.abc import Collection
 from typing import TYPE_CHECKING, Any
 
-# Third Party
 import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    # Third Party
+    from collections.abc import Collection
+
     import sparse
 
 # # # CONSTANTS # # #
@@ -226,7 +224,8 @@ def curve_convergence(
     if np.isnan(target).sum() > 0:
         warnings.warn(
             "Found NaN in the target while calculating curve_convergence. "
-            "A NaN value in target will mean 0 is always returned."
+            "A NaN value in target will mean 0 is always returned.",
+            stacklevel=2,
         )
         return 0
 

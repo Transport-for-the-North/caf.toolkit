@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 # Built-Ins
-import pathlib
 import warnings
+from typing import TYPE_CHECKING
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit import cost_utils, translation
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 class MatrixReport:
@@ -42,7 +45,7 @@ class MatrixReport:
         translation_from_col: str,
         translation_to_col: str,
         translation_factors_col: str,
-    ):
+    ) -> None:
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
@@ -230,7 +233,8 @@ class MatrixReport:
                 self.sector_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
             else:
                 warnings.warn(
-                    "Cannot output sectorised matrix unless you pass the translation vector on init"
+                    "Cannot output sectorised matrix unless you pass the translation vector on init",
+                    stacklevel=2,
                 )
 
         if self.distribution is not None:
@@ -301,14 +305,14 @@ class MatrixReport:
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
         if self._distribution is None:
-            warnings.warn("Trip Length Distribution has not been set")
+            warnings.warn("Trip Length Distribution has not been set", stacklevel=2)
         return self._distribution
 
     @property
     def vkms(self) -> pd.Series | None:
         """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
         if self._vkms is None:
-            warnings.warn("Trip VKMs has not been set")
+            warnings.warn("Trip VKMs has not been set", stacklevel=2)
         return self._vkms
 
     @property
@@ -563,6 +567,7 @@ def compare_matrices_and_output(
 
         if len(sheet_name) > 31:
             warnings.warn(
-                f"Sheet name {sheet_name} is over 31 characters and will be truncated"
+                f"Sheet name {sheet_name} is over 31 characters and will be truncated",
+                stacklevel=2,
             )
         result.to_excel(excel_writer, sheet_name=sheet_name)

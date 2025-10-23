@@ -10,7 +10,6 @@ import os
 import time
 import traceback
 import warnings
-from collections.abc import Callable, Collection, Iterable, Mapping
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,6 +25,7 @@ from caf.toolkit import tqdm_utils
 # Need for type-hints
 if TYPE_CHECKING:
     # Built-Ins
+    from collections.abc import Callable, Collection, Iterable, Mapping
     from multiprocessing.pool import ApplyResult, Pool
     from multiprocessing.synchronize import Event
 
@@ -45,7 +45,7 @@ def create_kill_pool_fn(
     a Pool. This is mostly used to give a clean error output when an error occurs.
     """
 
-    def kill_pool(process_error=None, process_callback=True):
+    def kill_pool(process_error=None, process_callback=True) -> None:
         """Print error and kill pool completely.
 
         Needs to accept a `process_error` arg to be used as a callback in
@@ -293,11 +293,11 @@ def _process_pool_wrapper_kwargs_in_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
-        except BaseException as exception:
+        except BaseException:
             # If any exception, clean up and re-raise
             kill_pool(process_callback=False)
             traceback.print_exc()
-            raise exception
+            raise
     del pool
 
     # Order the results, and separate from enumerator
@@ -347,11 +347,11 @@ def _process_pool_wrapper_kwargs_out_order(
                 pbar_kwargs=pbar_kwargs,
             )
 
-        except BaseException as exception:
+        except BaseException:
             # If any exception, clean up and re-raise
             kill_pool(process_callback=False)
             traceback.print_exc()
-            raise exception
+            raise
 
     del pool
     return results
@@ -492,7 +492,8 @@ def multiprocess(
             f"Process_count given is too high ({process_count}). It is greater "
             f"than one less than the CPU count found by Python "
             f"{cpu_count - 1:d}. Only do this if you know what you're "
-            f"doing otherwise it may intermittently freeze your system."
+            f"doing otherwise it may intermittently freeze your system.",
+            stacklevel=2,
         )
 
     # Determine the number of processes to use

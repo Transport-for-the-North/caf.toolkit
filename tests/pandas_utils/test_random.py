@@ -12,7 +12,7 @@ from caf.toolkit.pandas_utils import random
 
 @dataclasses.dataclass
 class DataGeneratorRun:
-    """Data generator, the expected output from the numpy generator provided"""
+    """Data generator, the expected output from the numpy generator provided."""
 
     data_generator: random.DataGenerator
     """Data generator to test."""
@@ -271,7 +271,7 @@ class TestRandomBuild:
     )
     def test_choice_not_all_values(
         self, data_generator_run: str, request: pytest.FixtureRequest
-    ):
+    ) -> None:
         """Tests whether data generators produce the expected output."""
         run: DataGeneratorRun = request.getfixturevalue(data_generator_run)
         test_values = run.data_generator.generate(run.generator)
