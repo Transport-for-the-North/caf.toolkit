@@ -33,7 +33,7 @@ dependencies = { "file" = "requirements.txt" }
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { "file" = "requirements_dev.txt" }
 docs = { "file" = "docs/requirements.txt" }
-sparse = {"file" = "requirements_sparse.txt"}
+sparse = { "file" = "requirements_sparse.txt" }
 
 # Dynamic versioning for editable installs
 [tool.setuptools.cmdclass]
@@ -52,7 +52,7 @@ where = ["src"]
 line-length = 95
 target-version = "py310"
 # fix = true
-extend-exclude = ["conf.py"]
+extend-exclude = ["conf.py", "_version.py"]
 
 [tool.ruff.lint]
 select = [
@@ -98,13 +98,26 @@ ignore = [
     "D206", # docstring-tab-indentation
     "D300", # triple-single-quotes
 
-    # "UP015", # redundant-open-modes (pyupgrade)
+    "UP015",  # redundant-open-modes (pyupgrade)
     "TRY003", # long messages in exceptions (tryceratops)
-    "S101",  # use of assert (flake8-bandit)
+    "SIM108", # one line if else (flake8-bandit)
+    "S311",   # random.random not allowed (flake8-bandit)
+    "DOC502", # docstring-extraneous-exception (sometimes necessary)
 ]
-extend-safe-fixes = [
-    "SIM117", # multiple-with-statements (flake8-simplify)
-    "B028",   # no-explicit-stack-level (flake8-bugbear)
+unfixable = [
+    "T20", # print-statements (flake8-print)
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"] # allow unused imports
+"tests/*" = [
+    "S101", # use of assert in tests
+    "DOC",  # docstring issues
+]
+"examples/*" = [
+    "T20",  # allow print statements
+    "D205", # allow one-liner docstrings
+    "D400", # allow missing first line in docstrings
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -120,7 +133,7 @@ max-statements = 100
 [tool.ruff.format]
 docstring-code-format = true
 
-# these are only used while testing ruff implementation
+# Only necessary until pylint is fully covered by ruff
 [tool.pylint.design]
 max-args = 10
 max-attributes = 15
@@ -128,7 +141,7 @@ max-statements = 100
 
 [tool.pylint.messages_control]
 disable = [
-    "line-too-long", # Handled by ruff
+    "line-too-long",         # Handled by ruff
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",
@@ -136,7 +149,6 @@ disable = [
 ]
 
 [tool.pylint.basic]
-good-names = ["df", "fn", "ca", "tp", "to", "x", "x1", "x2", "i", "f", "q"]
 extension-pkg-allow-list = ["pydantic"]
 
 [tool.pylint.main]
