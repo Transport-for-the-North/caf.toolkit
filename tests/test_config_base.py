@@ -88,7 +88,7 @@ class DummyDatetime(datetime.datetime):
     """Dummy sub-class to return constant value for now."""
 
     @classmethod
-    def now(cls, tz=None) -> Self: # noqa: ANN001
+    def now(cls, tz=None) -> Self:  # noqa: ANN001
         "Constant time of 0."
         return cls.fromtimestamp(0, tz)
 

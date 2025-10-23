@@ -171,7 +171,7 @@ def fix_square_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixRes
 @pytest.fixture(name="long_matrix")
 def fix_long_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixResults:
     """Save matrix to CSV in long format."""
-    long = matrix.stack()
+    long = matrix.stack()  # noqa: PD013
     indices = ["origin", "destination"]
     long.index.names = indices
     matrix.index.name = indices[0]

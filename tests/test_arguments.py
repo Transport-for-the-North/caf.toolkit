@@ -165,7 +165,7 @@ class TestModelArguments:
     """Tests for the `ModelArguments` class."""
 
     @pytest.mark.skipif(
-        sys.version_info.minor <= 9,
+        sys.version_info.minor <= 9,  # noqa: PLR2004
         reason="uses | in type annotations which was added in 3.10",
     )
     @pytest.mark.filterwarnings("error")

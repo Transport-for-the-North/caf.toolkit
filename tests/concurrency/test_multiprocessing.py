@@ -30,7 +30,7 @@ class FunctionAndArguments(NamedTuple):
 
 
 @pytest.fixture(name="callee", scope="module")
-def fixture_callee():
+def fixture_callee() -> FunctionAndArguments:
     """Build the function and arguments to call it with."""
     # Init
     n_repeats = 10
@@ -82,7 +82,7 @@ class TestMultiprocessOrder:
         """Test running multiprocess out of order."""
         # Generate baseline to compare
         expected_results = list()
-        for args, kwargs in zip(callee.arg_list, callee.kwarg_list):
+        for args, kwargs in zip(callee.arg_list, callee.kwarg_list, strict=True):
             expected_results.append(callee.fn(*args, **kwargs))
 
         # Run and check
@@ -100,8 +100,8 @@ class TestMultiprocessArgsKwargs:
     """Tests caf.toolkit.concurrency.multiprocess args and kwargs."""
 
     @staticmethod
-    def kwargs_only_function(iterator: Iterable, reverse: bool = False):
-        """Wrapper of sorted to accept kwargs only."""
+    def kwargs_only_function(iterator: Iterable, reverse: bool = False) -> list:
+        """Wrap sorted to accept kwargs only."""
         return sorted(iterator, reverse=reverse)
 
     def test_args_only(self, callee: FunctionAndArguments) -> None:
@@ -125,7 +125,7 @@ class TestMultiprocessArgsKwargs:
         # Generate baseline to compare
         kwarg_list = list()
         expected_results = list()
-        for args, kwargs in zip(callee.arg_list, callee.kwarg_list):
+        for args, kwargs in zip(callee.arg_list, callee.kwarg_list, strict=True):
             new_kwargs = kwargs.copy()
             new_kwargs.update({"iterator": next(iter(args))})
             kwarg_list.append(new_kwargs)
@@ -145,15 +145,13 @@ class TestMultiprocessErrors:
     """Tests caf.toolkit.concurrency.multiprocess error production."""
 
     @staticmethod
-    def error_throw_function(*args, **kwargs) -> NoReturn:
+    def error_throw_function(*_, **__) -> NoReturn:  # noqa: ANN002, ANN003
         """Throw an error."""
         raise OSError
 
     @staticmethod
-    def wait_function(*args, **kwargs) -> None:
+    def wait_function(*_, **__) -> None:  # noqa: ANN002, ANN003
         """Wait for timeout error."""
-        del args
-        del kwargs
         time.sleep(100)
 
     def test_no_args_kwargs(self, callee: FunctionAndArguments) -> None:
@@ -215,7 +213,10 @@ class TestMultiprocessProcessCount:
 
         # Run and check
         results = concurrency.multiprocess(
-            fn=callee.fn, arg_list=callee.arg_list, in_order=True, process_count=process_count
+            fn=callee.fn,
+            arg_list=callee.arg_list,
+            in_order=True,
+            process_count=process_count,
         )
 
         assert results == expected_results

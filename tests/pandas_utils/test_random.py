@@ -1,4 +1,5 @@
 """Tests for the pandas utils random module."""
+
 # Built-Ins
 import dataclasses
 
@@ -155,6 +156,4 @@ class TestRandomBuild:
         run: DataGeneratorRun = request.getfixturevalue(data_generator_run)
         test_values = run.data_generator.generate(run.generator)
         # Setting dtype to False since local run and github run choose different bit-ness
-        pd.testing.assert_series_equal(
-            test_values, run.expected_output, check_dtype=False
-        )
+        pd.testing.assert_series_equal(test_values, run.expected_output, check_dtype=False)

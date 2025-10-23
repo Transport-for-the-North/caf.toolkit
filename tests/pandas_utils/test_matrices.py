@@ -69,7 +69,7 @@ class TestMatrices:
 
         almost_zero = 1 / matrix.size
 
-        control = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
+        control = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])  # noqa: PD013
         control["columns"] = len(matrix.columns)
         control["rows"] = len(matrix.index)
         control["sum"] = matrix.sum().sum()
@@ -629,7 +629,7 @@ class TestMatrixComparison:
             check_exact=False,
         )
 
-        assert len(comparison["TLD comparison"].columns) == 6
+        assert len(comparison["TLD comparison"].columns) == 6  # noqa: PLR2004
 
     @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_tlds(
@@ -664,4 +664,4 @@ class TestMatrixComparison:
             check_exact=False,
         )
 
-        assert len(comparison["TLD comparison"].columns) == 6
+        assert len(comparison["TLD comparison"].columns) == 6  # noqa: PLR2004
