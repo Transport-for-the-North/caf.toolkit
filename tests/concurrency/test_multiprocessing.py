@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.concurrency.multiprocessing module"""
 
 # Built-Ins
 import multiprocessing as mp
 import os
 import time
-from typing import Any, Callable, Iterable, NamedTuple
+from collections.abc import Callable, Iterable
+from typing import Any, NamedTuple
 
 # Third Party
 import numpy as np
@@ -147,7 +147,7 @@ class TestMultiprocessErrors:
     @staticmethod
     def error_throw_function(*args, **kwargs):
         """Throw an error"""
-        raise IOError
+        raise OSError
 
     @staticmethod
     def wait_function(*args, **kwargs):

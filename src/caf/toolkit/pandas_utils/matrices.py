@@ -5,7 +5,6 @@ from __future__ import annotations
 # Built-Ins
 import pathlib
 import warnings
-from typing import Optional
 
 # Third Party
 import pandas as pd
@@ -192,7 +191,7 @@ class MatrixReport:
     def write_to_excel(
         self,
         writer: pd.ExcelWriter,
-        label: Optional[str] = None,
+        label: str | None = None,
         output_sector_matrix: bool = False,
     ) -> None:
         """Write the report to an Excel file.
@@ -211,7 +210,6 @@ class MatrixReport:
         ValueError
             If the `label` is over 30 characters long.
         """
-
         if label is not None:
             sheet_prefix: str = f"{label}_"
         else:
@@ -374,7 +372,7 @@ class MatrixReport:
         )
 
 
-def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
+def matrix_describe(matrix: pd.DataFrame, almost_zero: float | None = None) -> pd.Series:
     """Create a high level summary of a matrix.
 
     Stack Matrix before calling pandas describe with additional metrics added.
@@ -397,6 +395,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
         Count (total, zeros and almost zeros)
         Standard Deviation
         Minimum and Maximum
+
     See Also
     --------
     `pandas.Series.describe`
@@ -446,7 +445,6 @@ def compare_matrices(
     ValueError
         if either matrix report does not have a sector matrix.
     """
-
     comparisons = {}
     if matrix_report_a.sector_matrix is None or matrix_report_b.sector_matrix is None:
         raise ValueError("matrix reports must be sectorised to perform a comparison")
@@ -535,7 +533,7 @@ def compare_matrices_and_output(
     *,
     name_a: str = "a",
     name_b: str = "b",
-    label: Optional[str] = None,
+    label: str | None = None,
 ) -> None:
     """Compare two matrix reports.
 

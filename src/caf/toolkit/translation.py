@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tools to convert numpy/pandas vectors/matrices between different index systems.
 
 In transport, these tools are very useful for translating data between different
@@ -12,7 +11,7 @@ import logging
 import pathlib
 import warnings
 from collections.abc import Hashable
-from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
+from typing import Any, Literal, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -20,9 +19,8 @@ import pandas as pd
 from pydantic import FilePath, dataclasses
 
 # Local Imports
-from caf.toolkit import io, math_utils
+from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import validators
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -37,7 +35,7 @@ class _MultiVectorKwargs(TypedDict):
     translation_from_col: str
     translation_to_col: str
     translation_factors_col: str
-    translation_dtype: Optional[np.dtype]
+    translation_dtype: np.dtype | None
     check_totals: bool
 
 
@@ -54,7 +52,7 @@ def _check_matrix_translation_shapes(
         raise ValueError(
             f"The given matrix is not square. Matrix needs to be square "
             f"for the numpy zone translations to work.\n"
-            f"Given matrix shape: {str(matrix.shape)}"
+            f"Given matrix shape: {matrix.shape!s}"
         )
 
     # Check translations are the same shape
@@ -258,8 +256,8 @@ def numpy_matrix_zone_translation(
     matrix: np.ndarray,
     translation: np.ndarray,
     *,
-    col_translation: Optional[np.ndarray] = None,
-    translation_dtype: Optional[np.dtype] = None,
+    col_translation: np.ndarray | None = None,
+    translation_dtype: np.dtype | None = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
@@ -373,7 +371,7 @@ def numpy_matrix_zone_translation(
 def numpy_vector_zone_translation(
     vector: np.ndarray,
     translation: np.ndarray,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
@@ -501,10 +499,10 @@ def pandas_long_matrix_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    col_translation: Optional[pd.DataFrame] = None,
-    translation_dtype: Optional[np.dtype] = None,
-    index_col_1_out_name: Optional[str] = None,
-    index_col_2_out_name: Optional[str] = None,
+    col_translation: pd.DataFrame | None = None,
+    translation_dtype: np.dtype | None = None,
+    index_col_1_out_name: str | None = None,
+    index_col_2_out_name: str | None = None,
     check_totals: bool = True,
 ) -> pd.Series:
     # pylint: disable=too-many-positional-arguments
@@ -629,8 +627,8 @@ def pandas_matrix_zone_translation(
     translation_from_col: str,
     translation_to_col: str,
     translation_factors_col: str,
-    col_translation: Optional[pd.DataFrame] = None,
-    translation_dtype: Optional[np.dtype] = None,
+    col_translation: pd.DataFrame | None = None,
+    translation_dtype: np.dtype | None = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-positional-arguments
@@ -771,7 +769,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str,
     translation_factors_col: str,
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -786,7 +784,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str,
     translation_factors_col: str,
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -800,7 +798,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str,
     translation_factors_col: str,
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -854,7 +852,6 @@ def pandas_vector_zone_translation(
     `pandas_single_vector_zone_translation()`
     `pandas_multi_vector_zone_translation()`
     """
-
     vector = vector.copy()
     translation = translation.copy()
 

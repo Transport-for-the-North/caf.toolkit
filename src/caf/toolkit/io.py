@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Common utility functions for file input and output."""
 
 from __future__ import annotations
@@ -75,7 +74,7 @@ def safe_dataframe_to_csv(
             written_to_file = True
         except PermissionError:
             if not waiting:
-                out_path = kwargs.get("path_or_buf", None)
+                out_path = kwargs.get("path_or_buf")
                 if out_path is None:
                     out_path = args[0]
                 print(

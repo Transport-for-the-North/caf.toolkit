@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.math_utils module"""
 
 from __future__ import annotations
@@ -9,7 +8,7 @@ import importlib
 import math
 import random
 import sys
-from typing import Collection
+from collections.abc import Collection
 
 # Third Party
 import numpy as np

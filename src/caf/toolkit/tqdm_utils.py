@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A collection of utilities to manage tqdm write outs to terminal."""
 
 # Built-Ins

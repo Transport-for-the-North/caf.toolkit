@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functionality for handling command-line arguments."""
 
 ##### IMPORTS #####
@@ -12,7 +11,7 @@ import os
 import pathlib
 import re
 import warnings
-from typing import Iterable
+from collections.abc import Iterable
 
 # Third Party
 import pydantic
@@ -93,7 +92,7 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     types = set()
     optional = False
     for type_ in type_str.split("|"):
-        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.I)
+        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.IGNORECASE)
         if match is None:
             warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning)
             return str, optional

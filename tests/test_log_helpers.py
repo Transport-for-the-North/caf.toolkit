@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the `log_helpers` module in caf.toolkit
 """
@@ -517,13 +516,15 @@ class TestLogHelper:
 
     def test_no_handlers_warning(self, log_init: LogInitDetails) -> None:
         """Test LogHelper warns when no handlers are defined."""
-        with pytest.warns(
-            LoggingWarning, match="LogHelper initialised without any logging handlers"
-        ):
-            with LogHelper(
+        with (
+            pytest.warns(
+                LoggingWarning, match="LogHelper initialised without any logging handlers"
+            ),
+            LogHelper(
                 "test", log_init.details, console=False, warning_capture=False
-            ) as helper:
-                assert helper.logger.handlers == [], "incorrect handlers"
+            ) as helper,
+        ):
+            assert helper.logger.handlers == [], "incorrect handlers"
 
     @pytest.mark.parametrize("warning_capture", [False, True])
     def test_add_handler(

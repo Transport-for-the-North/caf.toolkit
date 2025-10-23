@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.pandas_utils.numpy_conversions module"""
 
 # Built-Ins

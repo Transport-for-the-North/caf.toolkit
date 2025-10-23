@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A toolbox of useful transport cost related functionality."""
 
 from __future__ import annotations
@@ -8,7 +7,7 @@ import copy
 import logging
 import os
 import warnings
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 # Third Party
 import numpy as np
@@ -73,7 +72,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: Optional[str] = None,
+        weighted_avg_col: str | None = None,
     ):
         # Keep as private. These shouldn't be needed outside of this class
         self.__df = df
@@ -296,9 +295,9 @@ class CostDistribution:
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
         *,
-        min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-        max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-        bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+        min_bounds: Sequence[float] | np.ndarray | None = None,
+        max_bounds: Sequence[float] | np.ndarray | None = None,
+        bin_edges: Sequence[float] | np.ndarray | None = None,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -413,7 +412,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: Optional[str] = None,
+        weighted_avg_col: str | None = None,
     ) -> CostDistribution:
         """Build an instance from a file on disk.
 
@@ -583,9 +582,9 @@ class CostDistribution:
 
 # # # FUNCTIONS # # #
 def _validate_bin_edges(
-    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+    min_bounds: Sequence[float] | np.ndarray | None = None,
+    max_bounds: Sequence[float] | np.ndarray | None = None,
+    bin_edges: Sequence[float] | np.ndarray | None = None,
 ) -> np.ndarray | Sequence[float]:
     # Use bounds to calculate bin edges
     if bin_edges is None:
@@ -601,9 +600,9 @@ def _validate_bin_edges(
 def normalised_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: Optional[list[float] | np.ndarray] = None,
-    max_bounds: Optional[list[float] | np.ndarray] = None,
-    bin_edges: Optional[list[float] | np.ndarray] = None,
+    min_bounds: list[float] | np.ndarray | None = None,
+    max_bounds: list[float] | np.ndarray | None = None,
+    bin_edges: list[float] | np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate the normalised distribution of costs across a matrix.
@@ -704,9 +703,9 @@ def dynamic_cost_distribution(
 def cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+    min_bounds: Sequence[float] | np.ndarray | None = None,
+    max_bounds: Sequence[float] | np.ndarray | None = None,
+    bin_edges: Sequence[float] | np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Calculate the distribution of costs across a matrix.

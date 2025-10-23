@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Front-end module for running toolkit functionality from command-line."""
 
 ##### IMPORTS #####
@@ -11,7 +10,6 @@ import logging
 import pathlib
 import sys
 import warnings
-from typing import Union
 
 # Third Party
 import pydantic
@@ -41,17 +39,17 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         default=pathlib.Path("translated.csv"),
         description="Location to save the translated output",
     )
-    from_column: Union[int, str] = pydantic.Field(
+    from_column: int | str = pydantic.Field(
         default=0,
         description="The column (name or position) in the translation"
         " file containing the zone ids to translate from",
     )
-    to_column: Union[int, str] = pydantic.Field(
+    to_column: int | str = pydantic.Field(
         default=1,
         description="The column (name or position) in the translation"
         " file containing the zone ids to translate to",
     )
-    factor_column: Union[int, str] = pydantic.Field(
+    factor_column: int | str = pydantic.Field(
         default=2,
         description="The column (name or position) in the translation"
         " file containing the weightings between from and to zones",
@@ -81,7 +79,7 @@ class _BaseTranslationArgs(config_base.BaseConfig):
 class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
 
-    zone_column: Union[int, str] = pydantic.Field(
+    zone_column: int | str = pydantic.Field(
         default=0,
         description="The column (name or position) in the data file containing the zone ids",
     )
@@ -102,12 +100,12 @@ class TranslationArgs(_BaseTranslationArgs):
 class MatrixTranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for matrix zone translation."""
 
-    zone_column: tuple[Union[int, str], Union[int, str]] = pydantic.Field(
+    zone_column: tuple[int | str, int | str] = pydantic.Field(
         default=(0, 1),
         description="The 2 columns (name or position) in"
         " the matrix file containing the zone ids",
     )
-    value_column: Union[int, str] = pydantic.Field(
+    value_column: int | str = pydantic.Field(
         default=2,
         description="The column (name or position) in the"
         " CSV file containing the matrix values",

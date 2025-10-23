@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """Helper functions for handling wide pandas DataFrames, usually as demand matrices."""
 
 # Built-Ins
 import logging
 import operator
 import warnings
-from typing import Any, Callable, Collection, Optional
+from collections.abc import Callable, Collection
+from typing import Any
 
 # Third Party
 import numpy as np
@@ -38,9 +38,9 @@ def _guess_pandas_dtype(things):
 
 def get_wide_mask(
     df: pd.DataFrame,
-    select: Optional[Collection[Any]] = None,
-    col_select: Optional[Collection[Any]] = None,
-    index_select: Optional[Collection[Any]] = None,
+    select: Collection[Any] | None = None,
+    col_select: Collection[Any] | None = None,
+    index_select: Collection[Any] | None = None,
     join_fn: Callable = operator.and_,
 ) -> np.ndarray:
     """Generate an index/column mask for a wide Pandas matrix.
