@@ -72,7 +72,9 @@ def fixture_example_index() -> pd.MultiIndex:
 
 
 @pytest.fixture(name="all_conversion_data", scope="function")
-def fixture_all_conversion_data(example_index: pd.MultiIndex):
+def fixture_all_conversion_data(
+    example_index: pd.MultiIndex,
+) -> dict[int, ConversionData]:
     """Generate multiple pandas and numpy input and output conversions."""
     # Init
     value_col = "value"
@@ -103,7 +105,7 @@ def fixture_all_conversion_data(example_index: pd.MultiIndex):
 
         conversion_data[i] = ConversionData(
             pd_matrix=local_df,
-            np_matrix=local_df[value_col].values.reshape(final_shape),
+            np_matrix=local_df[value_col].to_numpy().reshape(final_shape),
             dimension_cols=local_dim_order,
             pd_value_col=value_col,
         )
@@ -158,31 +160,36 @@ def fixture_conversion_data_massive() -> SparseConversionData:
 
     # Create the sparse conversion
     sparse_mat = sparse.COO(
-        coords=np.array([df[col].values for col in dim_cols]),
-        data=np.array(df[value_col].values),
+        coords=np.array([df[col].to_numpy() for col in dim_cols]),
+        data=df[value_col].to_numpy(),
         shape=(axis_0_1_2_size, axis_0_1_2_size, axis_0_1_2_size, axis_3_size),
     )
 
     return SparseConversionData(
         sparse_matrix=sparse_mat,
         pd_matrix=df,
-        dimension_cols={x: df[x].values for x in dim_cols},
+        dimension_cols={x: df[x].to_numpy() for x in dim_cols},
         pd_value_col=value_col,
     )
 
 
 # # # TESTS # # #
 @pytest.mark.usefixtures(
-    "conversion_data_1d", "conversion_data_2d", "conversion_data_3d", "conversion_data_massive"
+    "conversion_data_1d",
+    "conversion_data_2d",
+    "conversion_data_3d",
+    "conversion_data_massive",
 )
 class TestDataframeToNDimensionalArray:
-    """Tests for caf.toolkit.pandas_utils.numpy_conversions.dataframe_to_n_dimensional_array."""
+    """Tests for :func:`pandas_utils.numpy_conversions.dataframe_to_n_dimensional_array."""
 
     @pytest.mark.parametrize(
         "conversion_data_str",
         ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
     )
-    def test_too_many_value_cols(self, conversion_data_str: ConversionData, request) -> None:
+    def test_too_many_value_cols(
+        self, conversion_data_str: ConversionData, request: pytest.FixtureRequest
+    ) -> None:
         """Test error raising when extra value cols given."""
         conversion_data = request.getfixturevalue(conversion_data_str)
         bad_df = conversion_data.pd_matrix.copy()
@@ -197,7 +204,9 @@ class TestDataframeToNDimensionalArray:
         "conversion_data_str",
         ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
     )
-    def test_correct_conversion(self, conversion_data_str: ConversionData, request) -> None:
+    def test_correct_conversion(
+        self, conversion_data_str: ConversionData, request: pytest.FixtureRequest
+    ) -> None:
         """Test 1-3 dimension correct conversions."""
         conversion_data = request.getfixturevalue(conversion_data_str)
         got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
@@ -210,7 +219,9 @@ class TestDataframeToNDimensionalArray:
         "conversion_data_str",
         ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
     )
-    def test_list_cols(self, conversion_data_str: ConversionData, request) -> None:
+    def test_list_cols(
+        self, conversion_data_str: ConversionData, request: pytest.FixtureRequest
+    ) -> None:
         """Test dimension_cols given as a list."""
         conversion_data = request.getfixturevalue(conversion_data_str)
         got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
@@ -239,7 +250,10 @@ class TestDataframeToNDimensionalArray:
                     sparse_ok=sparse_ok,
                 )
 
-    @pytest.mark.skipif(pytest.IN_GITHUB_ACTIONS, reason="Fails on GitHub actions")
+    @pytest.mark.skipif(
+        pytest.IN_GITHUB_ACTIONS,  # pylint: disable=no-member
+        reason="Fails on GitHub actions",
+    )
     def test_auto_sparse_conversion(
         self, conversion_data_massive: SparseConversionData
     ) -> None:
@@ -282,13 +296,15 @@ class TestDataframeToNDimensionalArray:
 
 @pytest.mark.usefixtures("conversion_data_1d", "conversion_data_2d", "conversion_data_3d")
 class TestNDimensionalArrayToDataframe:
-    """Tests for caf.toolkit.pandas_utils.numpy_conversions.n_dimensional_array_to_dataframe."""
+    """Tests for :func:`pandas_utils.numpy_conversions.n_dimensional_array_to_dataframe`."""
 
     @pytest.mark.parametrize(
         "conversion_data_str",
         ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
     )
-    def test_correct_conversion(self, conversion_data_str: ConversionData, request) -> None:
+    def test_correct_conversion(
+        self, conversion_data_str: ConversionData, request: pytest.FixtureRequest
+    ) -> None:
         """Test 1-3 dimension correct conversions."""
         conversion_data = request.getfixturevalue(conversion_data_str)
         got_return = pd_utils.n_dimensional_array_to_dataframe(
@@ -302,7 +318,9 @@ class TestNDimensionalArrayToDataframe:
         "conversion_data_str",
         ["conversion_data_1d", "conversion_data_2d", "conversion_data_3d"],
     )
-    def test_drop_zeros(self, conversion_data_str: ConversionData, request) -> None:
+    def test_drop_zeros(
+        self, conversion_data_str: ConversionData, request: pytest.FixtureRequest
+    ) -> None:
         """Test 1-3 dimension correct conversions."""
         conversion_data = request.getfixturevalue(conversion_data_str)
         got_return = pd_utils.n_dimensional_array_to_dataframe(

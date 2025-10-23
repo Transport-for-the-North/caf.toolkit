@@ -63,8 +63,7 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         """
         columns = [self.from_column, self.to_column, self.factor_column]
 
-        # pylint: disable=unidiomatic-typecheck
-        if any(type(i) != type(columns[0]) for i in columns):
+        if any(type(i) is not type(columns[0]) for i in columns):
             raise TypeError(
                 "from_column, to_column and factor_column should all be either"
                 " a name or position, there cannot be a mix of names and"
@@ -132,8 +131,7 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         """
         columns = [*self.zone_column, self.value_column]
 
-        # pylint: disable=unidiomatic-typecheck
-        if any(type(i) != type(columns[0]) for i in columns):
+        if any(type(i) is not type(columns[0]) for i in columns):
             raise TypeError(
                 "zone_columns and value_column should all be either"
                 " a name or position, there cannot be a mix of names and"
@@ -163,7 +161,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
     return params
 
 
-def _create_arg_parser():
+def _create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         __package__,
         description=ctk.__doc__,
@@ -214,24 +212,29 @@ def main() -> None:
 
     log_file = parameters.output_file.parent / "caf_toolkit.log"
     details = log_helpers.ToolDetails(
-        __package__, ctk.__version__, homepage=ctk.__homepage__, source_url=ctk.__source_url__
+        __package__,
+        ctk.__version__,
+        homepage=ctk.__homepage__,
+        source_url=ctk.__source_url__,
     )
 
-    with log_helpers.LogHelper(__package__, details, log_file=log_file):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "once",
-                message=r".*column positions are given instead of names.*",
-                category=UserWarning,
-            )
+    with (
+        log_helpers.LogHelper(__package__, details, log_file=log_file),
+        warnings.catch_warnings(),
+    ):
+        warnings.filterwarnings(
+            "once",
+            message=r".*column positions are given instead of names.*",
+            category=UserWarning,
+        )
 
-            try:
-                parameters.run()
-            except Exception as exc:
-                if _TRACEBACK:
-                    raise
-                # Switch to raising SystemExit as this doesn't include traceback
-                raise SystemExit(str(exc)) from exc
+        try:
+            parameters.run()
+        except Exception as exc:
+            if _TRACEBACK:
+                raise
+            # Switch to raising SystemExit as this doesn't include traceback
+            raise SystemExit(str(exc)) from exc
 
 
 if __name__ == "__main__":

@@ -168,13 +168,13 @@ def _log_messages(
         logger.log(i, msg)
         messages.append(msg)
 
-    return list(zip(levels, messages))
+    return list(zip(levels, messages, strict=True))
 
 
 def _load_log(log_file: pathlib.Path) -> str:
     """Assert log file exists and load the text."""
     assert log_file.is_file(), "log file not created"
-    with open(log_file, "rt", encoding="utf-8") as file:
+    with log_file.open("rt", encoding="utf-8") as file:
         return file.read()
 
 
@@ -200,7 +200,7 @@ class TestGitDescribe:
         """Test function correctly returns the string result if command is successful."""
         describe = "v1.0-1-abc123"
 
-        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:  # noqa:ANN002,ANN003
             return subprocess.CompletedProcess("", 0, stdout=describe.encode())
 
         monkeypatch.setattr(subprocess, "run", dummy_run)
@@ -210,7 +210,7 @@ class TestGitDescribe:
     def test_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test None is returned whenever the subprocess returns a non-zero code."""
 
-        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:  # noqa:ANN002,ANN003
             return subprocess.CompletedProcess("", 1)
 
         monkeypatch.setattr(subprocess, "run", dummy_run)
@@ -222,17 +222,28 @@ class TestToolDetails:
 
     @pytest.mark.parametrize(
         "version",
-        ["0.0.4", "1.2.3", "10.20.30", "1.1.2-prerelease+meta", "1.1.2+meta", "1.0.0-alpha"],
+        [
+            "0.0.4",
+            "1.2.3",
+            "10.20.30",
+            "1.1.2-prerelease+meta",
+            "1.1.2+meta",
+            "1.0.0-alpha",
+        ],
     )
     @pytest.mark.parametrize(
         "url",
-        ["https://www.github.com/", "http://www.github.com/", "http://github.com/", None],
+        [
+            "https://www.github.com/",
+            "http://www.github.com/",
+            "http://github.com/",
+            None,
+        ],
     )
     def test_valid(self, version: str, url: str | None) -> None:
         """Test valid values of version and homepage / source URLs."""
         # Not testing different values for name because there's no validation on it
-        # Ignoring mypy type stating str is incorrect type
-        ToolDetails("test_name", version, url, url)  # type: ignore
+        ToolDetails("test_name", version, url, url)
 
     @pytest.mark.parametrize("url", [None, "http://github.com"])
     def test_str(self, url: str | None) -> None:
@@ -263,20 +274,20 @@ class TestToolDetails:
                 f"full_version : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct  # type: ignore
+        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
         """Test correctly raise ValidationError for invalid versions."""
         url = "https://github.com"
         with pytest.raises(pydantic.ValidationError):
-            ToolDetails("test_name", version, url, url)  # type: ignore
+            ToolDetails("test_name", version, url, url)
 
     @pytest.mark.parametrize("url", ["github.com", "github", "www.github.com"])
     def test_invalid_urls(self, url: str) -> None:
         """Test correctly raise ValidationError for invalid homepage / source URLs."""
         with pytest.raises(pydantic.ValidationError):
-            ToolDetails("test_name", "1.2.3", url, url)  # type: ignore
+            ToolDetails("test_name", "1.2.3", url, url)
 
 
 class TestSystemInformation:
@@ -376,7 +387,11 @@ class TestLogHelper:
         assert not log_file.is_file(), "log file already exists"
 
         LogHelper(
-            "test", log_init.details, console=False, log_file=log_file, warning_capture=False
+            "test",
+            log_init.details,
+            console=False,
+            log_file=log_file,
+            warning_capture=False,
         )
 
         text = _load_log(log_file)
@@ -431,7 +446,11 @@ class TestLogHelper:
         log_file = tmp_path / "test.log"
 
         with LogHelper(
-            root, log_init.details, console=False, log_file=log_file, warning_capture=False
+            root,
+            log_init.details,
+            console=False,
+            log_file=log_file,
+            warning_capture=False,
         ):
             messages = _log_messages(log, "testing level {level} - test basic file")
 
@@ -478,7 +497,10 @@ class TestLogHelper:
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     def test_setup_warnings_file_handler(
-        self, tmp_path: pathlib.Path, log_init: LogInitDetails, warnings_logger: logging.Logger
+        self,
+        tmp_path: pathlib.Path,
+        log_init: LogInitDetails,
+        warnings_logger: logging.Logger,
     ) -> None:
         """Test file handler is added to warnings logger and log file is created."""
         log_file = tmp_path / "test.log"
@@ -516,7 +538,8 @@ class TestLogHelper:
         """Test LogHelper warns when no handlers are defined."""
         with (
             pytest.warns(
-                LoggingWarning, match="LogHelper initialised without any logging handlers"
+                LoggingWarning,
+                match="LogHelper initialised without any logging handlers",
             ),
             LogHelper(
                 "test", log_init.details, console=False, warning_capture=False
@@ -526,7 +549,10 @@ class TestLogHelper:
 
     @pytest.mark.parametrize("warning_capture", [False, True])
     def test_add_handler(
-        self, log_init: LogInitDetails, warning_capture: bool, warnings_logger: logging.Logger
+        self,
+        log_init: LogInitDetails,
+        warning_capture: bool,
+        warnings_logger: logging.Logger,
     ) -> None:
         """Test creating LogHelper without loggers and adding StreamHandler after."""
         # pylint: disable=protected-access
@@ -685,7 +711,7 @@ class TestCaptureWarnings:
 
         assert log_file.is_file(), "log file not created"
 
-        with open(log_file, "rt", encoding="utf-8") as file:
+        with log_file.open("rt", encoding="utf-8") as file:
             text = file.read()
 
         _check_warnings(text)

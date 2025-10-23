@@ -72,7 +72,7 @@ class TestParseArgDetails:
         with pytest.warns(arguments.TypeAnnotationWarning):
             type_, optional, nargs = arguments.parse_arg_details(annotation)
 
-        assert type_ == str, "incorrect default type"
+        assert type_ is str, "incorrect default type"
         assert optional is False, "incorrect default optional"
         assert nargs is None, "incorrect default nargs"
 
@@ -138,13 +138,13 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-if sys.version_info.minor <= 9:
+if sys.version_info.minor <= 9:  # noqa: PLR2004
     # Creating dummy class because the test is skipped
     class _ArgumentsConfigTest: ...  # pylint: disable=too-few-public-methods
 
 else:
-    # Ignore already defined
-    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
+
+    class _ArgumentsConfigTest(config_base.BaseConfig):
         """Class for testing `ModelArguments`."""
 
         text: str

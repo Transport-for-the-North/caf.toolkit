@@ -75,7 +75,7 @@ class TestRootMeanSquaredError:
         """Calculate the expected RMSE score."""
         # Calculate results
         squared_diffs = list()
-        for t, a in zip(targets, achieved):
+        for t, a in zip(targets, achieved, strict=True):
             diffs = (t - a) ** 2
             squared_diffs += diffs.flatten().tolist()
         return float(np.mean(squared_diffs) ** 0.5)
@@ -126,9 +126,7 @@ class TestRootMeanSquaredError:
         rmse_example: TestRootMeanSquaredError.RmseExample,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test that error isn't raised when sparse isn't
-        imported when running with np arrays.
-        """
+        """Check error isn't raised when sparse isn't imported when running with np arrays."""
         monkeypatch.setitem(sys.modules, "sparse", None)
         importlib.reload(sys.modules["caf.toolkit.math_utils"])
         targets: np.ndarray = np.hstack([rmse_example.targets, rmse_example.targets])[:, :6]
@@ -144,7 +142,7 @@ class TestRootMeanSquaredError:
         "rmse_example_str",
         ["rmse_example", "rmse_example_1d"],
     )
-    def test_numpy_arrays(self, rmse_example_str: str, request) -> None:
+    def test_numpy_arrays(self, rmse_example_str: str, request: pytest.FixtureRequest) -> None:
         """Test that the calculation works for numpy arrays."""
         rmse_example = request.getfixturevalue(rmse_example_str)
         result = math_utils.root_mean_squared_error(
@@ -157,7 +155,9 @@ class TestRootMeanSquaredError:
         "rmse_example_str",
         ["rmse_example", "rmse_example_1d"],
     )
-    def test_sparse_arrays(self, rmse_example_str: str, request) -> None:
+    def test_sparse_arrays(
+        self, rmse_example_str: str, request: pytest.FixtureRequest
+    ) -> None:
         """Test that the calculation works for sparse arrays."""
         rmse_example = request.getfixturevalue(rmse_example_str)
         targets = [sparse.COO(x) for x in rmse_example.targets]
@@ -236,21 +236,22 @@ class TestCurveConvergence:
 
     @pytest.fixture(name="perfect_match_conv", scope="class")
     def fixture_perfect_match_conv(self) -> ConvergenceExample:
-        """Data where there is a perfect match."""
+        """Define data where there is a perfect match."""
         target = np.arange(10)
         return self.ConvergenceExample(target=target, achieved=target, result=1)
 
     @pytest.fixture(name="zero_match_conv", scope="class")
     def fixture_zero_match_conv(self) -> ConvergenceExample:
-        """Data where there is no match."""
+        """Define data where there is no match."""
         target = np.arange(10)
         return self.ConvergenceExample(target=target, achieved=np.zeros_like(target), result=0)
 
     @pytest.fixture(name="random_conv", scope="class")
     def fixture_random_conv(self) -> ConvergenceExample:
-        """Data where there is a random match."""
+        """Define data where there is a random match."""
         target = np.arange(10)
-        noise = [1 if random.random() > 0.5 else -1 for _ in range(target.shape[0])]
+        midpoint = 0.5
+        noise = [1 if random.random() > midpoint else -1 for _ in range(target.shape[0])]
         achieved = target + noise
         return self.ConvergenceExample(
             target=target,
@@ -262,7 +263,9 @@ class TestCurveConvergence:
         "conv_example_str",
         ["perfect_match_conv", "zero_match_conv", "random_conv"],
     )
-    def test_correct_results(self, conv_example_str: str, request) -> None:
+    def test_correct_results(
+        self, conv_example_str: str, request: pytest.FixtureRequest
+    ) -> None:
         """Test that the calculation works as expected."""
         conv_example = request.getfixturevalue(conv_example_str)
         result = math_utils.curve_convergence(
@@ -318,12 +321,12 @@ class TestCheckNumeric:
             np.double(1.1),
         ],
     )
-    def test_correct(self, value) -> None:
+    def test_correct(self, value: float | int) -> None:
         """Check that no error is raised when correct values passed in."""
         math_utils.check_numeric({"name": value})
 
     @pytest.mark.parametrize("value", ["str", list(), set(), dict()])
-    def test_error(self, value) -> None:
+    def test_error(self, value: Collection) -> None:
         """Check that no error is raised when correct values passed in."""
         msg = "test_name should be a scalar number"
         with pytest.raises(ValueError, match=msg):

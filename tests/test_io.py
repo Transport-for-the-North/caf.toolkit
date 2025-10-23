@@ -117,12 +117,18 @@ def fix_normalise_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameRes
         dtypes={"string_words": str, "integer-number": int, "float_num_(km)": float},
         path=path,
         incorrect_columns=["missing_ZO3yM", "missing_9GISV"],
-        incorrect_dtypes={"string_words": int, "integer-number": str, "float_num_(km)": int},
+        incorrect_dtypes={
+            "string_words": int,
+            "integer-number": str,
+            "float_num_(km)": int,
+        },
     )
 
 
 @pytest.fixture(name="normalise_duplicates", scope="module")
-def fix_normalise_duplicates(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
+def fix_normalise_duplicates(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> DataFrameResults:
     """Create test DataFrame for normalise columns tests with duplicates."""
     data = pd.DataFrame(
         {
@@ -291,10 +297,13 @@ class TestReadCSV:
 
     @pytest.mark.parametrize("parameter, value", [("names", ["a"]), ("header", None)])
     def test_normalise_invalid(
-        self, normalise_data: DataFrameResults, parameter: str, value: list[str] | Literal[0]
+        self,
+        normalise_data: DataFrameResults,
+        parameter: str,
+        value: list[str] | Literal[0],
     ) -> None:
         """Test normalising column raises excepted errors with disallowed parameters."""
-        with pytest.raises(ValueError, match="cannot normalise columns when .*"):
+        with pytest.raises(ValueError, match=r"cannot normalise columns when .*"):
             io.read_csv(
                 normalise_data.path,
                 usecols=normalise_data.columns,
@@ -310,7 +319,7 @@ class TestReadCSV:
         """Test normalising columns raises an error when duplicates are found."""
         with pytest.raises(
             ValueError,
-            match="multiple columns have the same name after normalisation:.*",
+            match=r"multiple columns have the same name after normalisation:.*",
         ):
             io.read_csv(
                 normalise_duplicates.path,
@@ -327,11 +336,13 @@ class TestReadCSVMatrix:
     @pytest.mark.parametrize("guess_format", [False, True])
     @pytest.mark.parametrize("data_name", ["long_matrix", "square_matrix"])
     def test_read_matrix(
-        self, request, data_name: str, define_index: bool, guess_format: bool
+        self,
+        request: pytest.FixtureRequest,
+        data_name: str,
+        define_index: bool,
+        guess_format: bool,
     ) -> None:
-        """Test reading matrix for square and long formats,
-        with and without defined index columns.
-        """
+        """Test reading matrix for square and long formats, with and without index columns."""
         data: MatrixResults = request.getfixturevalue(data_name)
 
         if define_index:

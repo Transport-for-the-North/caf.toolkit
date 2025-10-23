@@ -1,3 +1,4 @@
+"""Tests for the pandas utils random module."""
 # Built-Ins
 import dataclasses
 
@@ -132,6 +133,8 @@ def fixture_id_starting_val() -> DataGeneratorRun:
 
 
 class TestRandomBuild:
+    """Test :class:`DataGeneratorRun`."""
+
     @pytest.mark.parametrize(
         "data_generator_run",
         [

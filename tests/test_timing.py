@@ -82,7 +82,7 @@ class TestTimeTaken:
         "change_str",
         ["seconds_change", "minutes_change", "hours_change"],
     )
-    def test_correct(self, change_str: str, request) -> None:
+    def test_correct(self, change_str: str, request: pytest.FixtureRequest) -> None:
         """Test the correct result is gotten."""
         change = request.getfixturevalue(change_str)
         result = timing.time_taken(change.start_time, change.end_time)
@@ -92,7 +92,7 @@ class TestTimeTaken:
         "change_str",
         ["seconds_change", "minutes_change", "hours_change"],
     )
-    def test_negative_change(self, change_str: str, request) -> None:
+    def test_negative_change(self, change_str: str, request: pytest.FixtureRequest) -> None:
         """Test an error is raised when time taken is negative."""
         change = request.getfixturevalue(change_str)
         msg = "Elapsed time is negative"

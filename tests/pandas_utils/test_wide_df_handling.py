@@ -73,14 +73,14 @@ def random_matrix(shape: tuple[int,]) -> pd.DataFrame:
 
 
 @pytest.fixture(name="random_square_matrix", scope="function")
-def fixture_random_square_matrix(request) -> WideMatrixData:
+def fixture_random_square_matrix(request: pytest.FixtureRequest) -> WideMatrixData:
     """Fixture to create random matrix of set dimensions."""
     shape = (request.param, request.param)
     return WideMatrixData(matrix=random_matrix(shape))
 
 
 @pytest.fixture(name="non_square_matrix", scope="module")
-def fixture_non_square_matrix(request) -> WideMatrixData:
+def fixture_non_square_matrix(request: pytest.FixtureRequest) -> WideMatrixData:
     """Fixture to create random matrix of set dimensions."""
     return WideMatrixData(matrix=random_matrix(request.param))
 

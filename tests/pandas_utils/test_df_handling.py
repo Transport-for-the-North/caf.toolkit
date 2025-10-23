@@ -27,7 +27,7 @@ class TestReindexCols:
     """Tests for caf.toolkit.pandas_utils.reindex_cols."""
 
     @pytest.fixture(name="basic_long_df", scope="class")
-    def fixture_basic_long_df(self):
+    def fixture_basic_long_df(self) -> pd.DataFrame:
         """Test long format dataframe."""
         columns = ["col1", "col2", "col3", "col4", "col5"]
         data = np.arange(50).reshape((-1, 5))
@@ -83,7 +83,7 @@ class TestReindexRowsAndCols:
     """Tests for caf.toolkit.pandas_utils.reindex_rows_and_cols."""
 
     @pytest.fixture(name="basic_wide_df", scope="class")
-    def fixture_basic_wide_df(self):
+    def fixture_basic_wide_df(self) -> pd.DataFrame:
         """Test wide format dataframe."""
         col_idx = [1, 2, 3, 4, 5]
         data = np.arange(25).reshape((5, 5))
@@ -97,7 +97,7 @@ class TestReindexRowsAndCols:
         basic_wide_df: pd.DataFrame,
         index: list[Any],
         columns: list[Any],
-        fill_value: Any,
+        fill_value: float | int,
     ) -> None:
         """Tests that it works exactly like `Dataframe.reindex()`.
 
@@ -131,7 +131,7 @@ class TestReindexRowsAndCols:
         """Test that casting is working correctly."""
         # Generate the expected output
         col_idx = ["1", "2"]
-        data = np.array([[0, 1], [5, 6]], dtype=basic_wide_df.values.dtype)
+        data = np.array([[0, 1], [5, 6]], dtype=basic_wide_df.to_numpy().dtype)
         expected_df = pd.DataFrame(data=data, columns=col_idx, index=col_idx)
 
         # Run and compare
@@ -153,7 +153,7 @@ class TestReindexAndGroupbySum:
     """
 
     @pytest.fixture(name="group_df", scope="class")
-    def fixture_group_df(self):
+    def fixture_group_df(self) -> pd.DataFrame:
         """Test Dataframe."""
         return pd.DataFrame(
             data=[[1, 2, 3], [1, None, 4], [2, 1, 3], [1, 2, 2]],
@@ -198,7 +198,7 @@ class TestFilterDf:
     """Tests for caf.toolkit.pandas_utils.filter_df()."""
 
     @pytest.fixture(name="filter_df", scope="class")
-    def fixture_filter_df(self):
+    def fixture_filter_df(self) -> pd.DataFrame:
         """Test Dataframe."""
         return pd.DataFrame(
             data=[[1, 2, 3], [1, None, 4], [2, 1, 3], [1, 2, 2]],
@@ -245,7 +245,7 @@ class TestStrJoinCols:
 
         # Build the expected ending df
         exp_data = [[str(x)] * 3 for x in col_vals]
-        exp_data = [separator.join(x) for x in exp_data]  # type: ignore
+        exp_data = [separator.join(x) for x in exp_data]
         exp_series = pd.Series(data=exp_data)
 
         # Run and compare
@@ -261,7 +261,7 @@ class TestChunkDf:
     """Tests for caf.toolkit.pandas_utils.chunk_df."""
 
     @pytest.fixture(name="basic_long_df", scope="class")
-    def fixture_basic_long_df(self):
+    def fixture_basic_long_df(self) -> pd.DataFrame:
         """Test long format dataframe."""
         columns = ["col1", "col2"]
         data = np.arange(6).reshape((-1, 2))
@@ -288,13 +288,13 @@ class TestChunkDf:
         # Create the expected output
         df = basic_long_df
         expected_output = [
-            pd.DataFrame(data=[df.loc[0].values], columns=df.columns),
-            pd.DataFrame(data=[df.loc[1].values], columns=df.columns),
-            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+            pd.DataFrame(data=[df.loc[0].to_numpy()], columns=df.columns),
+            pd.DataFrame(data=[df.loc[1].to_numpy()], columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].to_numpy()], columns=df.columns),
         ]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 1)):
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 1), strict=True):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     def test_chunk_size_two(self, basic_long_df: pd.DataFrame) -> None:
@@ -302,12 +302,12 @@ class TestChunkDf:
         # Create the expected output
         df = basic_long_df
         expected_output = [
-            pd.DataFrame(data=df.loc[[0, 1]].values, columns=df.columns),
-            pd.DataFrame(data=[df.loc[2].values], columns=df.columns),
+            pd.DataFrame(data=df.loc[[0, 1]].to_numpy(), columns=df.columns),
+            pd.DataFrame(data=[df.loc[2].to_numpy()], columns=df.columns),
         ]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 2)):
+        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 2), strict=True):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     @pytest.mark.parametrize("chunk_size", [3, 4])
@@ -318,7 +318,9 @@ class TestChunkDf:
         expected_output = [df.copy()]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, chunk_size)):
+        for expected, got in zip(
+            expected_output, pd_utils.chunk_df(df, chunk_size), strict=True
+        ):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?
@@ -537,7 +539,7 @@ class TestLongWideConversions:
         index_vals: list[Any]
 
     @pytest.fixture(name="df_data_complete", scope="class")
-    def fixture_df_data_complete(self):
+    def fixture_df_data_complete(self) -> DfData:
         """Long and Wide dataframes without any missing vals."""
         index_vals = [1, 2, 3]
 
@@ -587,16 +589,17 @@ class TestLongWideConversions:
         """Test that missing indexes are added back in correctly."""
         # Init
         infill_val = 0
+        index = 2
 
         # Remove some random data
         long_df = df_data_complete.long.copy()
-        mask = (long_df[self.index_col1] == 2) | (long_df[self.index_col2] == 2)
+        mask = (long_df[self.index_col1] == index) | (long_df[self.index_col2] == index)
         long_df = long_df[~mask].copy().set_index(["idx1", "idx2"]).squeeze()
 
         # Create the expected output
         expected_wide = df_data_complete.wide.copy()
-        expected_wide[2] = infill_val
-        expected_wide.loc[2, :] = infill_val
+        expected_wide[index] = infill_val
+        expected_wide.loc[index, :] = infill_val
 
         # Check
         wide_df = pd_utils.long_to_wide_infill(
@@ -619,14 +622,15 @@ class TestLongWideConversions:
         """Test that missing indexes are added back in correctly."""
         # Init
         infill_val = 0
+        index = 2
 
         # Remove random data
         wide_df = df_data_complete.wide.copy()
-        wide_df = wide_df.drop(columns=2, index=2)
+        wide_df = wide_df.drop(columns=index, index=index)
 
         # Create expected output
         exp_long = df_data_complete.long.copy()
-        mask = (exp_long[self.index_col1] == 2) | (exp_long[self.index_col2] == 2)
+        mask = (exp_long[self.index_col1] == index) | (exp_long[self.index_col2] == index)
         exp_long.loc[mask, self.value_col] = infill_val
 
         # Check
@@ -643,7 +647,7 @@ class TestLongWideConversions:
         }
 
         # Check
-        expected_array = pd_utils.long_to_wide_infill(**kwargs).values
+        expected_array = pd_utils.long_to_wide_infill(**kwargs).to_numpy()
         wide_array = pd_utils.long_df_to_wide_ndarray(**kwargs)
         np.testing.assert_array_equal(expected_array, wide_array)
 
