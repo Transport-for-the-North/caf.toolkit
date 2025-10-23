@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Library of multiprocessing functionality."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -442,14 +443,14 @@ def multiprocess(
     Would be called, using this function, like this:
     >>> # Note the use of a tuple to make sure a single argument is still
     >>> # iterable
-    >>> a_args = (range(10), )
-    >>> b_args = (range(100), )
-    >>> c_args = (range(20 ), )
+    >>> a_args = (range(10),)
+    >>> b_args = (range(100),)
+    >>> c_args = (range(20),)
     >>>
     >>> # Need to use an empty dict where arguments are not given
     >>> a_kwargs = dict()
     >>> b_kwargs = dict()
-    >>> c_kwargs = {'reverse': True}
+    >>> c_kwargs = {"reverse": True}
 
     >>> args_list = [a_args, b_args, c_args]
     >>> kwargs_list = [a_kwargs, b_kwargs, c_kwargs]

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -41,19 +42,19 @@ class BaseConfig(pydantic.BaseModel):
     >>> from pathlib import Path
     >>> from caf.toolkit import BaseConfig
     >>> class ExampleParameters(BaseConfig):
-    ...    import_folder: Path
-    ...    name: str
-    ...    some_option: bool = True
+    ...     import_folder: Path
+    ...     name: str
+    ...     some_option: bool = True
     >>> parameters = ExampleParameters(
-    ...    import_folder="Test Folder",
-    ...    name="Test",
-    ...    some_option=False,
+    ...     import_folder="Test Folder",
+    ...     name="Test",
+    ...     some_option=False,
     ... )
 
     Example of instance of class after initialisation, the path differs
     depending on operating system.
 
-    >>> parameters # doctest: +SKIP
+    >>> parameters  # doctest: +SKIP
     ExampleParameters(
         import_folder=WindowsPath('Test Folder'),
         name='Test',

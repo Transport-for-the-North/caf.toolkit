@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A collection of utilities to manage tqdm write outs to terminal."""
+
 # Built-Ins
 import contextlib
 import sys
@@ -40,11 +41,13 @@ def std_out_err_redirect_tqdm():
     >>> bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt}"
     >>>
     >>> # Redirect stdout to tqdm.write() (don't forget the `as save_stdout`)
-    >>> with std_out_err_redirect_tqdm() as orig_stdout: # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    >>> with (
+    ...     std_out_err_redirect_tqdm() as orig_stdout
+    ... ):  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ...     # tqdm needs the original stdout
     ...     # and dynamic_ncols=True to autodetect console width
     ...     for i in tqdm(range(3), file=orig_stdout, bar_format=bar_format):
-    ...         sleep(.5)
+    ...         sleep(0.5)
       0%|...| 0/3
      33%|#...| 1/3
      67%|#...| 2/3

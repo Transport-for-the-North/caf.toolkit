@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Constant types for use in CAF.Toolkit."""
+
 # Built-Ins
 from typing import Literal
 

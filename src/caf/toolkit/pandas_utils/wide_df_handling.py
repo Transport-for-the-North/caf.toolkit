@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Helper functions for handling wide pandas DataFrames, usually as demand matrices."""
+
 # Built-Ins
 import logging
 import operator
@@ -98,7 +99,7 @@ def get_wide_mask(
     2   8   9  10  11
     3  12  13  14  15
 
-    >>> get_wide_mask(df,select=[0, 1])
+    >>> get_wide_mask(df, select=[0, 1])
     array([[ True,  True, False, False],
            [ True,  True, False, False],
            [False, False, False, False],
@@ -106,7 +107,7 @@ def get_wide_mask(
 
     It's possible to select differently for the index and columns
 
-    >>> get_wide_mask(df,col_select=[0, 1],index_select=[1, 2, 3])
+    >>> get_wide_mask(df, col_select=[0, 1], index_select=[1, 2, 3])
     array([[False, False, False, False],
            [ True,  True, False, False],
            [ True,  True, False, False],
@@ -114,7 +115,7 @@ def get_wide_mask(
 
     The operator for joining the column and index selections can also be changed
 
-    >>> get_wide_mask(df,select=[0, 1],join_fn=operator.or_)
+    >>> get_wide_mask(df, select=[0, 1], join_fn=operator.or_)
     array([[ True,  True,  True,  True],
            [ True,  True,  True,  True],
            [ True,  True, False, False],
@@ -205,7 +206,7 @@ def get_wide_internal_only_mask(
     2  5  5  5  5
     3  5  5  5  5
 
-    >>> mask = get_wide_internal_only_mask(df,select=[0, 1])
+    >>> mask = get_wide_internal_only_mask(df, select=[0, 1])
     >>> mask
     array([[ True,  True, False, False],
            [ True,  True, False, False],
@@ -267,7 +268,7 @@ def get_wide_all_external_mask(
     2  5  5  5  5
     3  5  5  5  5
 
-    >>> mask = get_wide_all_external_mask(df,select=[2, 3])
+    >>> mask = get_wide_all_external_mask(df, select=[2, 3])
     >>> mask
     array([[False, False,  True,  True],
            [False, False,  True,  True],
@@ -331,7 +332,7 @@ def wide_matrix_internal_external_report(
     3  15  16  17  18  19
     4  20  21  22  23  24
 
-    >>> wide_matrix_internal_external_report(df,[0, 1, 2],[3, 4])
+    >>> wide_matrix_internal_external_report(df, [0, 1, 2], [3, 4])
               internal  external  total
     internal      54.0      51.0  105.0
     external     111.0      84.0  195.0

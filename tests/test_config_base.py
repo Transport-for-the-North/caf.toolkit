@@ -2,6 +2,7 @@
 """
 Tests for the config_base module in caf.toolkit
 """
+
 # Built-Ins
 import dataclasses
 import datetime

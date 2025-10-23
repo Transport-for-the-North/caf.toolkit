@@ -3,6 +3,7 @@
 
 Most will be used elsewhere in the codebase too
 """
+
 from __future__ import annotations
 
 # Built-Ins
@@ -166,7 +167,6 @@ def root_mean_squared_error(
             squared_diffs += diffs.flatten().tolist()
 
         else:
-
             try:
                 # Third Party
                 import sparse  # pylint: disable=import-outside-toplevel
@@ -300,7 +300,7 @@ def check_numeric(check_dict: dict[str, Any]) -> None:
     for name, val in check_dict.items():
         if not (np.issubdtype(type(val), np.floating) or np.issubdtype(type(val), np.integer)):
             raise ValueError(
-                f"{name} should be a scalar number (float or int) " f"not {type(val)}"
+                f"{name} should be a scalar number (float or int) not {type(val)}"
             )
 
 

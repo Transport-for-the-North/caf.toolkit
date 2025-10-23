@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for the caf.toolkit.math_utils module"""
+
 from __future__ import annotations
 
 # Built-Ins

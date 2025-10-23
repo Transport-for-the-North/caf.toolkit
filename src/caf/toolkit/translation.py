@@ -4,6 +4,7 @@
 In transport, these tools are very useful for translating data between different
 zoning systems.
 """
+
 from __future__ import annotations
 
 # Built-Ins
@@ -585,7 +586,6 @@ def pandas_long_matrix_zone_translation(
     matrix = matrix.copy()
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
     if isinstance(matrix, pd.DataFrame):
-
         all_cols = matrix.columns.tolist()
         # Drop any columns we're not keeping
         drop_cols = set(all_cols) - set(keep_cols)
@@ -1282,7 +1282,6 @@ class ZoneCorrespondencePath:
 
     @property
     def _generic_column_name_lookup(self) -> dict[str, str]:
-
         lookup: dict[str, str] = {
             self.from_col_name: "from",
             self.to_col_name: "to",

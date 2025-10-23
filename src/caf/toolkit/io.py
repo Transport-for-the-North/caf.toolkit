@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Common utility functions for file input and output."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -183,8 +184,7 @@ def _detailed_read_error(
                 df[col].astype(_type)
             except ValueError:
                 raise ValueError(
-                    f"Column '{col}' in {name} has values "
-                    f"which cannot be converted to {_type}"
+                    f"Column '{col}' in {name} has values which cannot be converted to {_type}"
                 ) from exc
 
 
@@ -493,7 +493,7 @@ def find_file_with_name(
     if len(unexpected) > 0:
         warnings.warn(
             f'Found {len(unexpected)} files named "{name}" with unexpected'
-            f' suffixes ({", ".join(unexpected)}), these are ignored.',
+            f" suffixes ({', '.join(unexpected)}), these are ignored.",
             RuntimeWarning,
         )
     if len(found) > 1:

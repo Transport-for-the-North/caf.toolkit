@@ -44,7 +44,6 @@ class MatrixReport:
         translation_to_col: str,
         translation_factors_col: str,
     ):
-
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None

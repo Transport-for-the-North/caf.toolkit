@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for the io module"""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -234,9 +235,9 @@ class TestReadCSV:
         with pytest.raises(io.MissingColumnsError, match=pattern) as excinfo:
             io.read_csv(data.path, name=name, usecols=data.incorrect_columns)
 
-            assert set(excinfo.value.columns) == set(
-                data.incorrect_columns
-            ), "incorrect columns in exception"
+            assert set(excinfo.value.columns) == set(data.incorrect_columns), (
+                "incorrect columns in exception"
+            )
 
     def test_incorrect_dtypes(self, data: DataFrameResults):
         """Test correct error is raised for incorrect dtypes."""
@@ -433,7 +434,7 @@ class TestFindFile:
 
         warn_msg = (
             f'Found {len(extras)} files named "test_file" with unexpected'
-            rf' suffixes \({", ".join(re.escape(i) for i in extras)}\),'
+            rf" suffixes \({', '.join(re.escape(i) for i in extras)}\),"
             r" these are ignored\."
         )
         with pytest.warns(RuntimeWarning, match=warn_msg):

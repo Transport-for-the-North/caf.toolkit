@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """A toolbox of useful transport cost related functionality."""
+
 from __future__ import annotations
 
 # Built-Ins
@@ -487,9 +488,7 @@ class CostDistribution:
             or not np.allclose(self.bin_edges, other.bin_edges)
         ):  # fmt: skip
             raise ValueError(
-                "Bin edges are not similar enough.\n"
-                f"{self.bin_edges=}\n"
-                f"{other.bin_edges=}"
+                f"Bin edges are not similar enough.\n{self.bin_edges=}\n{other.bin_edges=}"
             )
 
     def create_similar(self, trip_vals: np.ndarray) -> CostDistribution:
@@ -802,12 +801,12 @@ def create_log_bins(
 
     if not 0 < n_bin_pow < 1:
         raise ValueError(
-            f"`n_bin_pow` should be in the range (0, 1). Got a value of " f"{n_bin_pow}."
+            f"`n_bin_pow` should be in the range (0, 1). Got a value of {n_bin_pow}."
         )
 
     if log_factor <= 0:
         raise ValueError(
-            f"`log_factor` should be greater than 0. Got a value of " f"{log_factor}."
+            f"`log_factor` should be greater than 0. Got a value of {log_factor}."
         )
 
     # Calculate
