@@ -147,9 +147,7 @@ def wait_for_pool_results(  # noqa: C901
 
             # Check for an event
             if terminate_process_event.is_set():
-                raise mp.ProcessError(
-                    "While getting results terminate_process_event was set."
-                )
+                raise mp.ProcessError("While getting results terminate_process_event was set.")
 
             # Check if we've run out of time
             if (time.time() - start_time) > result_timeout:
@@ -271,9 +269,7 @@ def _process_pool_wrapper_kwargs_in_order(
     # pylint: disable=too-many-locals
     terminate_processes_event = mp.Event()
 
-    with mp.Pool(
-        processes=process_count, maxtasksperchild=pool_maxtasksperchild
-    ) as pool:
+    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
@@ -326,9 +322,7 @@ def _process_pool_wrapper_kwargs_out_order(
     """
     terminate_process_event = mp.Event()
 
-    with mp.Pool(
-        processes=process_count, maxtasksperchild=pool_maxtasksperchild
-    ) as pool:
+    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_process_event)
 
         try:
@@ -468,11 +462,7 @@ def multiprocess(  # noqa: C901
             "times to call fn. Please set either args or kwargs."
         )
 
-    if (
-        arg_list is not None
-        and kwarg_list is not None
-        and len(arg_list) != len(kwarg_list)
-    ):
+    if arg_list is not None and kwarg_list is not None and len(arg_list) != len(kwarg_list):
         raise ValueError(
             "Both args and kwargs were given but they are not the same "
             "length. Cannot infer the number of times to call fn.\n"
@@ -517,9 +507,7 @@ def multiprocess(  # noqa: C901
                 pbar_kwargs["total"] = len(kwarg_list)
             return [
                 fn(*a, **k)
-                for a, k in tqdm.tqdm(
-                    zip(arg_list, kwarg_list, strict=True), **pbar_kwargs
-                )
+                for a, k in tqdm.tqdm(zip(arg_list, kwarg_list, strict=True), **pbar_kwargs)
             ]
 
         return [fn(*a, **k) for a, k in zip(arg_list, kwarg_list, strict=True)]
