@@ -25,7 +25,7 @@ import platform
 import subprocess
 import sys
 import warnings
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Self
 
 # Third Party
 import psutil
@@ -35,6 +35,7 @@ from pydantic import dataclasses, types
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from types import TracebackType
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -44,7 +45,7 @@ DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
-if sys.version_info.minor <= 10:
+if sys.version_info.minor <= 10:  # noqa: PLR2004
     # pylint: disable=protected-access
     _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
@@ -74,7 +75,9 @@ class LoggingWarning(Warning):
 def git_describe() -> str | None:
     """Run git describe command and return string if successful."""
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
-    comp = subprocess.run(cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE)
+    comp = subprocess.run(  # noqa: S602
+        cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
+    )
 
     if comp.returncode != 0:
         return None
@@ -475,11 +478,16 @@ class LogHelper:
         if self._warning_logger is not None:
             self._cleanup_handlers(self._warning_logger)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Initialise class with 'with' statement."""
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Write any error to the logger and closes the file."""
         if exc_type is not None or exc is not None or exc_tb is not None:
             self.logger.critical(
@@ -559,7 +567,7 @@ class TemporaryLogFile:
         logger: logging.Logger,
         log_file: os.PathLike,
         base_log_file: os.PathLike | None = None,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> None:
         self.logger = logger
         self.log_file = log_file
@@ -575,7 +583,12 @@ class TemporaryLogFile:
         """Initialise TemporaryLogFile."""
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Close temporary log file."""
         # pylint: disable=invalid-name
         if exc_type is not None or exc is not None or exc_tb is not None:

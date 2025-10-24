@@ -228,7 +228,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
 class ModelArguments:
     """Base class for defining command-line arguments from `pydantic.BaseModel`."""
 
-    # TODO(MB) Describe how this would be used, with examples
+    # TODO(MB): Describe how this would be used, with examples # noqa: TD003
 
     def __init__(self, model: type) -> None:
         """Check `model` type.
@@ -239,7 +239,7 @@ class ModelArguments:
             Model used to define arguments, should be
             a subclass of `pydantic.BaseModel`.
         """
-        if not issubclass(model, pydantic.BaseModel):  # type: ignore
+        if not issubclass(model, pydantic.BaseModel):
             raise TypeError(f"`dataclass` should be a pydantic BaseModel not {type(model)}")
 
         self._model = model
@@ -287,7 +287,11 @@ class ModelArguments:
 
             if type_ is not bool:
                 parser.add_argument(
-                    *name_or_flags, type=type_, help=description, default=default, nargs=nargs
+                    *name_or_flags,
+                    type=type_,
+                    help=description,
+                    default=default,
+                    nargs=nargs,
                 )
                 continue
 
@@ -341,7 +345,7 @@ class ModelArguments:
         name: str,
         add_arguments: bool = True,
         add_config: bool = True,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> None:
         """Add sub-commands for CLI arguments and config (if possible).
 
@@ -377,7 +381,9 @@ class ModelArguments:
         if self._config and add_config:
             kwargs.pop("help", None)
             parser = subparsers.add_parser(
-                f"{name}-config", help=f"run {name} with parameters from config", **kwargs
+                f"{name}-config",
+                help=f"run {name} with parameters from config",
+                **kwargs,
             )
             self.add_config_arguments(parser)
 
@@ -388,7 +394,8 @@ class ModelArguments:
         and use them to instantiate the class, then return the class
         instance.
         """
-        assert issubclass(self._model, pydantic.BaseModel)
+        # Validated in init
+        assert issubclass(self._model, pydantic.BaseModel)  # noqa: S101
 
         data = {}
         for name in self._model.model_fields:
@@ -404,8 +411,9 @@ class ModelArguments:
         args : argparse.Namespace
             Parsed command-line arguments with a `config_path` attribute.
         """
-        assert issubclass(self._model, config_base.BaseConfig)
-        return self._model.load_yaml(args.config_path)  # type: ignore
+        if not issubclass(self._model, config_base.BaseConfig):
+            raise TypeError(f"cannot use config parse with {type(self._model)}")
+        return self._model.load_yaml(args.config_path)
 
 
 class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):

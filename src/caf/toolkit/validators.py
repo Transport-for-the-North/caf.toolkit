@@ -17,7 +17,7 @@ LOG = logging.getLogger(__name__)
 
 
 # # # FUNCTIONS # # #
-# TODO(BT): Can this take a Collection instead?
+# TODO(BT): Can this take a Collection instead?  # noqa: TD003
 def unique_list(unique_vals: list[Any], name: str = "unique_zones") -> None:
     """Validate that a list of unique values is unique.
 

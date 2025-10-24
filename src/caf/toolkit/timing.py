@@ -48,7 +48,7 @@ def get_datetime(
         A string of the current datetime in `time_format`
     """
     # Init
-    valid_precision = TimePrecision.__args__  # type: ignore
+    valid_precision = TimePrecision.__args__  # type: ignore[attr-defined]
     precision = precision.strip().lower()
 
     # Validate

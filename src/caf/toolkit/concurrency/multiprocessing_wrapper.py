@@ -37,7 +37,7 @@ _T = TypeVar("_T")
 def create_kill_pool_fn(
     pool: Pool,
     terminate_process_event: Event,
-):
+) -> Callable[..., None]:
     """
     Create a Callback function for each function in a Pool.
 
@@ -45,7 +45,7 @@ def create_kill_pool_fn(
     a Pool. This is mostly used to give a clean error output when an error occurs.
     """
 
-    def kill_pool(process_error=None, process_callback=True) -> None:
+    def kill_pool(process_error=None, process_callback=True) -> None:  # noqa: ANN001
         """Print error and kill pool completely.
 
         Needs to accept a `process_error` arg to be used as a callback in
@@ -65,7 +65,7 @@ def create_kill_pool_fn(
     return kill_pool
 
 
-def wait_for_pool_results(
+def wait_for_pool_results(  # noqa: C901
     results: list[ApplyResult[_T]],
     terminate_process_event: Event,
     result_timeout: int,
@@ -147,7 +147,9 @@ def wait_for_pool_results(
 
             # Check for an event
             if terminate_process_event.is_set():
-                raise mp.ProcessError("While getting results terminate_process_event was set.")
+                raise mp.ProcessError(
+                    "While getting results terminate_process_event was set."
+                )
 
             # Check if we've run out of time
             if (time.time() - start_time) > result_timeout:
@@ -197,8 +199,8 @@ def wait_for_pool_results(
 def _call_order_wrapper(
     index: int,
     func: Callable[..., _T],
-    *args,
-    **kwargs,
+    *args,  # noqa: ANN002
+    **kwargs,  # noqa: ANN003
 ) -> tuple[int, _T]:
     """Wrap a function return values with a calling index.
 
@@ -216,8 +218,8 @@ def _call_order_wrapper(
 def _check_args_kwargs(
     args: Collection[Iterable[Any]] | None = None,
     kwargs: Collection[Mapping[str, Any]] | None = None,
-    args_default: Any | None = None,
-    kwargs_default: Any | None = None,
+    args_default: Any | None = None,  # noqa: ANN401
+    kwargs_default: Any | None = None,  # noqa: ANN401
     length: int | None = None,
 ) -> tuple[Collection[Iterable[Any]], Collection[Mapping[str, Any]]]:
     """Format args and kwargs correctly if only one set.
@@ -243,10 +245,10 @@ def _check_args_kwargs(
             "Both args and kwargs are None and length has not "
             "been set. Don't know how to proceed!"
         )
-    # If no branch taken, both args and kwargs must have been set
 
-    assert args is not None
-    assert kwargs is not None
+    # If no branch taken, both args and kwargs must have been set
+    assert args is not None  # noqa: S101
+    assert kwargs is not None  # noqa: S101
 
     return args, kwargs
 
@@ -269,13 +271,15 @@ def _process_pool_wrapper_kwargs_in_order(
     # pylint: disable=too-many-locals
     terminate_processes_event = mp.Event()
 
-    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
+    with mp.Pool(
+        processes=process_count, maxtasksperchild=pool_maxtasksperchild
+    ) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_processes_event)
 
         try:
             # Add each function call to the pool with an index identifier
             apply_results: list[ApplyResult[tuple[int, _T]]] = list()
-            for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list)):
+            for i, (args, kwargs) in enumerate(zip(arg_list, kwarg_list, strict=True)):
                 apply_results.append(
                     pool.apply_async(
                         func=_call_order_wrapper,
@@ -301,7 +305,7 @@ def _process_pool_wrapper_kwargs_in_order(
     del pool
 
     # Order the results, and separate from enumerator
-    _, final_results = zip(*sorted(results, key=lambda x: x[0]))
+    _, final_results = zip(*sorted(results, key=lambda x: x[0]), strict=True)
     return list(final_results)
 
 
@@ -322,14 +326,16 @@ def _process_pool_wrapper_kwargs_out_order(
     """
     terminate_process_event = mp.Event()
 
-    with mp.Pool(processes=process_count, maxtasksperchild=pool_maxtasksperchild) as pool:
+    with mp.Pool(
+        processes=process_count, maxtasksperchild=pool_maxtasksperchild
+    ) as pool:
         kill_pool = create_kill_pool_fn(pool, terminate_process_event)
 
         try:
             apply_results: list[ApplyResult[_T]] = list()
 
             # Add each function call to the pool
-            for args, kwargs in zip(arg_list, kwarg_list):
+            for args, kwargs in zip(arg_list, kwarg_list, strict=True):
                 apply_results.append(
                     pool.apply_async(
                         fn,
@@ -357,7 +363,7 @@ def _process_pool_wrapper_kwargs_out_order(
     return results
 
 
-def multiprocess(
+def multiprocess(  # noqa: C901
     fn: Callable[..., _T],
     *,
     arg_list: Collection[Iterable[Any]] | None = None,
@@ -453,7 +459,7 @@ def multiprocess(
 
     # TODO(BT): Add example of how to convert a for-loop into one of these calls.
     """
-    # TODO(BT): Maybe add functionality to allow calling a function without
+    # TODO(BT): Maybe add functionality to allow calling a function without  # noqa: TD003
     #  any arguments n times
     # Validate the args and kwargs
     if arg_list is None and kwarg_list is None:
@@ -462,14 +468,17 @@ def multiprocess(
             "times to call fn. Please set either args or kwargs."
         )
 
-    if arg_list is not None and kwarg_list is not None:
-        if len(arg_list) != len(kwarg_list):
-            raise ValueError(
-                "Both args and kwargs were given but they are not the same "
-                "length. Cannot infer the number of times to call fn.\n"
-                f"args length: {len(arg_list)}\n"
-                f"kwargs length: {len(kwarg_list)}"
-            )
+    if (
+        arg_list is not None
+        and kwarg_list is not None
+        and len(arg_list) != len(kwarg_list)
+    ):
+        raise ValueError(
+            "Both args and kwargs were given but they are not the same "
+            "length. Cannot infer the number of times to call fn.\n"
+            f"args length: {len(arg_list)}\n"
+            f"kwargs length: {len(kwarg_list)}"
+        )
 
     # Format correctly where not given
     arg_list, kwarg_list = _check_args_kwargs(arg_list, kwarg_list)
@@ -507,10 +516,13 @@ def multiprocess(
             if "total" not in pbar_kwargs or pbar_kwargs["total"] == 0:
                 pbar_kwargs["total"] = len(kwarg_list)
             return [
-                fn(*a, **k) for a, k in tqdm.tqdm(zip(arg_list, kwarg_list), **pbar_kwargs)
+                fn(*a, **k)
+                for a, k in tqdm.tqdm(
+                    zip(arg_list, kwarg_list, strict=True), **pbar_kwargs
+                )
             ]
 
-        return [fn(*a, **k) for a, k in zip(arg_list, kwarg_list)]
+        return [fn(*a, **k) for a, k in zip(arg_list, kwarg_list, strict=True)]
 
     # If we get here, the process count must be > 0 and valid
     # Now either run in order or not

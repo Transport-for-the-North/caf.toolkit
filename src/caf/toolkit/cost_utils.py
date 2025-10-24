@@ -5,7 +5,7 @@ from __future__ import annotations
 # Built-Ins
 import copy
 import logging
-import os
+import pathlib
 import warnings
 from typing import TYPE_CHECKING
 
@@ -18,6 +18,7 @@ from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
 if TYPE_CHECKING:
+    import os
     from collections.abc import Sequence
 
 # # # CONSTANTS # # #
@@ -25,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 # # # CLASSES # # #
-class CostDistribution:
+class CostDistribution:  # noqa: PLW1641
     """Distribution of cost values between variable bounds.
 
     Alternate constructors are available in the See Also section
@@ -65,7 +66,7 @@ class CostDistribution:
     """
 
     # Ideas
-    # units: str = "km"
+    # units: str = "km"  # noqa: ERA001
 
     def __init__(
         self,
@@ -127,9 +128,10 @@ class CostDistribution:
                 stacklevel=2,
             )
 
-        # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
+        # we compare the max value to the min value of the next row
+        # to check for overlapping or disjoint bins
         gaps = self.max_vals[:-1] != self.min_vals[1:]
-        # TODO(KF) this will do for now, but this could be made more specific
+        # TODO(KF): this will do for now, but this could be made more specific  # noqa: TD003
         if gaps.any():
             warnings.warn(
                 "The bins do not nest (either overlapping or disjoint),"
@@ -141,7 +143,8 @@ class CostDistribution:
 
         if zero_width.any():
             warnings.warn(
-                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense",
+                f"{zero_width.sum()} bins in the distribution have"
+                " zero width, review if this makes sense",
                 stacklevel=2,
             )
 
@@ -183,13 +186,14 @@ class CostDistribution:
         """Get the number of bins in this cost distribution."""
         return len(self.bin_edges) - 1
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:  # noqa: ANN001
         """Check if two items are the same."""
         if not isinstance(other, CostDistribution):
             return False
-        # Optimisation: We want to compare the actual dataframes here rather than copies of them
+        # Optimisation: We want to compare the actual dataframes
+        # here rather than copies of them
         # pylint: disable-next=protected-access
-        return (self.__df == other.__df).values.all()
+        return bool((self.__df == other.__df).to_numpy().all())
 
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
@@ -243,8 +247,10 @@ class CostDistribution:
 
     @staticmethod
     def calculate_weighted_averages(
-        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: Sequence[float] | np.ndarray
-    ):
+        matrix: np.ndarray,
+        cost_matrix: np.ndarray,
+        bin_edges: Sequence[float] | np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate weighted averages of bins in a cost distribution.
 
@@ -280,8 +286,8 @@ class CostDistribution:
         # Calculate distance weighted demand
         df = pd.DataFrame(
             {
-                "cost": pd.DataFrame(cost_matrix).stack(),
-                "demand": pd.DataFrame(matrix).stack(),
+                "cost": pd.DataFrame(cost_matrix).stack(),  # noqa: PD013
+                "demand": pd.DataFrame(matrix).stack(),  # noqa: PD013
             }
         )
         df["weighted"] = df["cost"] * df["demand"]
@@ -374,8 +380,8 @@ class CostDistribution:
     def from_data_no_bins(
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
-        *args,
-        **kwargs,
+        *args,  # noqa: ANN002
+        **kwargs,  # noqa: ANN003
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -454,7 +460,8 @@ class CostDistribution:
             An instance containing the data at filepath.
         """
         # Validate the path
-        if not os.path.isfile(filepath):
+        filepath = pathlib.Path(filepath)
+        if not filepath.is_file():
             raise FileNotFoundError(f"'{filepath}' is not the location of a file.")
 
         # Determine which columns to read in
@@ -517,8 +524,9 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        # Optimisation: We should make a new class with the constructor, however this is quicker
-        # as it avoids the constructor validation that we know has already been done on this data
+        # Optimisation: We should make a new class with the constructor, however this is
+        # quicker as it avoids the constructor validation that we know has already been
+        # done on this data
         # pylint: disable-next=protected-access
         new_distribution.__df[new_distribution.__trips_col] = trip_vals
         return new_distribution
@@ -670,8 +678,8 @@ def normalised_cost_distribution(
 def dynamic_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    *args,
-    **kwargs,
+    *args,  # noqa: ANN002
+    **kwargs,  # noqa: ANN003
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the distribution of costs across a matrix, using dynamic bins.
 

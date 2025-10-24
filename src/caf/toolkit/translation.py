@@ -80,7 +80,7 @@ def _check_matrix_translation_shapes(
         )
 
 
-# TODO(BT): Move to numpy_utils??
+# TODO(BT): Move to numpy_utils??  # noqa: TD003
 #  Would mean making array_utils sparse specific
 def _convert_dtypes(
     arr: np.ndarray,
@@ -351,15 +351,22 @@ def numpy_matrix_zone_translation(
     to_id_vals = list(range(translation.shape[1]))
 
     # Convert numpy arrays into pandas arrays
-    dimension_cols = {translation_from_col: from_id_vals, translation_to_col: to_id_vals}
+    dimension_cols = {
+        translation_from_col: from_id_vals,
+        translation_to_col: to_id_vals,
+    }
     pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
-        mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+        mat=row_translation,
+        dimension_cols=dimension_cols,
+        value_col=translation_factors_col,
     ).reset_index()
     zero_mask = pd_row_translation[translation_factors_col] == 0
     pd_row_translation = pd_row_translation[~zero_mask]
 
     pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
-        mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+        mat=col_translation,
+        dimension_cols=dimension_cols,
+        value_col=translation_factors_col,
     ).reset_index()
     zero_mask = pd_col_translation[translation_factors_col] == 0
     pd_col_translation = pd_col_translation[~zero_mask]
@@ -434,7 +441,7 @@ def numpy_vector_zone_translation(
     if check_shapes:
         # Check that vector is 1D
         if len(vector.shape) > 1:
-            if len(vector.shape) == 2 and vector.shape[1] == 1:
+            if len(vector.shape) == 2 and vector.shape[1] == 1:  # noqa: PLR2004
                 vector = vector.flatten()
             else:
                 raise ValueError(
@@ -498,7 +505,7 @@ def numpy_vector_zone_translation(
     return out_vector
 
 
-def pandas_long_matrix_zone_translation(
+def pandas_long_matrix_zone_translation(  # noqa: PLR0913
     matrix: pd.DataFrame | pd.Series,
     index_col_1_name: str,
     index_col_2_name: str,
@@ -587,7 +594,7 @@ def pandas_long_matrix_zone_translation(
     """
     # pylint: disable=too-many-arguments, too-many-locals
     # Init
-    if bool(index_col_2_out_name) != bool(index_col_1_out_name):
+    if (index_col_2_out_name is None) ^ (index_col_1_out_name is None):
         raise ValueError("If one of index_col_out_name is set, both must be set.")
     matrix = matrix.copy()
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
@@ -602,7 +609,8 @@ def pandas_long_matrix_zone_translation(
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
-        assert isinstance(series_mat, pd.Series)
+        if not isinstance(series_mat, pd.Series):
+            raise TypeError("")
     else:
         series_mat = matrix
 
@@ -624,7 +632,7 @@ def pandas_long_matrix_zone_translation(
     out_mat = pd_utils.wide_to_long_infill(df=translated_wide_mat)
     if index_col_2_out_name is not None:
         # Check at the start of function makes sure if one is not None, both are
-        assert index_col_1_out_name is not None
+        assert index_col_1_out_name is not None  # noqa: S101
         out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
 
     return out_mat
@@ -701,11 +709,9 @@ def pandas_matrix_zone_translation(
         If matrix is not a square array, or if translation any inputs are not
         the correct format.
     """
-    # Init
     row_translation = translation
     if col_translation is None:
         col_translation = translation.copy()
-    assert col_translation is not None
 
     # Set the index dtypes to match and validate
     (
@@ -871,10 +877,9 @@ def pandas_vector_zone_translation(
 
     if translation_dtype is None:
         translation_dtype = np.promote_types(
-            translation[translation_factors_col].to_numpy().dtype, vector.to_numpy().dtype
+            translation[translation_factors_col].to_numpy().dtype,
+            vector.to_numpy().dtype,
         )
-
-    assert translation_dtype is not None
 
     new_values = _convert_dtypes(
         arr=vector.to_numpy(),
@@ -1013,7 +1018,10 @@ def _multi_vector_trans_index(
 
 
 def _load_translation(
-    path: pathlib.Path, from_column: int | str, to_column: int | str, factors_column: int | str
+    path: pathlib.Path,
+    from_column: int | str,
+    to_column: int | str,
+    factors_column: int | str,
 ) -> tuple[pd.DataFrame, tuple[str, str, str]]:
     """Load translation file and determine name of any column positions given.
 
@@ -1044,11 +1052,11 @@ def _load_translation(
     columns = ("from_column", "to_column", "factors_column")
     LOG.info(
         "Translation loaded with following columns:\n\t%s",
-        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns)),
+        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns, strict=True)),
     )
 
     #  MyPy is confused about the tuple
-    return data, tuple(str_columns)  # type: ignore
+    return data, tuple(str_columns)  # type: ignore[return-value]
 
 
 def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
@@ -1108,7 +1116,7 @@ def vector_translation_from_file(
         Name, or position, of column in translation containing the
         splitting factors.
     """
-    # TODO(MB) Add optional from / to unique index parameters, deal with too many locals
+    # TODO(MB): Add optional from / to unique index parameters  # noqa: TD003
     # pylint: disable=too-many-locals
     # otherwise infer from translation file
     _validate_column_name_parameters(
@@ -1202,7 +1210,7 @@ def matrix_translation_from_file(
     format_: Literal["square", "long"] = "long",
         Whether the matrix is in long or wide format.
     """
-    # TODO(MB) Handle square format CSVs, and deal with too-many-locals
+    # TODO(MB): Handle square format CSVs, and deal with too-many-locals  # noqa: TD003
     # pylint: disable=too-many-locals
     if format_ == "square":
         raise NotImplementedError("Square matrices are not yet supported.")
@@ -1216,11 +1224,12 @@ def matrix_translation_from_file(
     )
 
     matrix_zone_columns = tuple(matrix_zone_columns)
-    are_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
-    if len(matrix_zone_columns) != 2 or are_strings:
+    not_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
+    expected_columns = 2
+    if len(matrix_zone_columns) != expected_columns or not_strings:
         raise TypeError(
-            "matrix_zone_columns should be a tuple containing "
-            f"the names of 2 columns not {matrix_zone_columns}"
+            "matrix_zone_columns should be a tuple containing the names"
+            f" of {expected_columns} columns not {matrix_zone_columns}"
         )
 
     LOG.info("Loading matrix data from: '%s'", matrix_path)
@@ -1258,7 +1267,7 @@ def matrix_translation_from_file(
 
     if format_ == "long":
         # Stack is returning a Series, MyPy is wrong
-        translated = translated.stack().to_frame()  # type: ignore[operator]
+        translated = translated.stack().to_frame()  # type: ignore[operator]  # noqa: PD013
 
         # Get name of value column
         if isinstance(matrix_values_column, str):

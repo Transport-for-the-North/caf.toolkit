@@ -25,7 +25,7 @@ class DataGenerator(abc.ABC):
 
     @abc.abstractmethod
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class ChoiceGenerator(DataGenerator):
         self.all_values = all_values
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -76,7 +76,8 @@ class ChoiceGenerator(DataGenerator):
 
         """
         if self.all_values:
-            # check is made on init whether length < length(value) so we don't worry about this here
+            # check is made on init whether length < length(value)
+            # so we don't worry about this here
             if self.length == len(self.values):
                 return pd.Series(list(self.values), name=self.name)
 
@@ -107,14 +108,15 @@ class FloatGenerator(DataGenerator):
 
         if lower_range >= upper_range:
             raise ValueError(
-                f"upper_range ({upper_range}) should be greater than lower_range ({lower_range})"
+                f"upper_range ({upper_range}) should be"
+                f" greater than lower_range ({lower_range})"
             )
 
         self.lower_range = lower_range
         self.upper_range = upper_range
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -150,8 +152,8 @@ class UniqueIdGenerator(DataGenerator):
         if length <= 0 or not isinstance(length, int):
             raise ValueError("length must be positive, non zero, integer")
 
-    def generate(self, generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+    def generate(self, generator: np.random.Generator) -> pd.Series:
+        """Generate data using the specifications defined in the attributes.
 
         Parameters
         ----------
@@ -185,14 +187,15 @@ class IntGenerator(DataGenerator):
 
         if lower_range >= upper_range:
             raise ValueError(
-                f"upper_range ({upper_range}) should be greater than lower_range ({lower_range})"
+                f"upper_range ({upper_range}) should be "
+                f"greater than lower_range ({lower_range})"
             )
 
         self.lower_range = lower_range
         self.upper_range = upper_range
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications defined in the attributes.
 
         Parameters
         ----------

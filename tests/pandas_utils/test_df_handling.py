@@ -323,7 +323,7 @@ class TestChunkDf:
         ):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
-    # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?
+    # TODO(BT): Do we need a test for oddly shaped DataFrame edge cases?  # noqa: TD003
 
 
 class TestLongProductInfill:

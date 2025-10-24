@@ -41,14 +41,14 @@ def list_is_almost_equal(
         The values to check if similar
 
     rel_tol:
-        The relative tolerance – it is the maximum allowed difference
+        The relative tolerance - it is the maximum allowed difference
         between two values to be considered similar,
         relative to the largest absolute value .
         By default, this is set to 0.0001,
         meaning the values must be within 0.01% of each other.
 
     abs_tol:
-        The minimum absolute tolerance – useful for comparisons near
+        The minimum absolute tolerance - useful for comparisons near
         zero. Must be at least zero.
 
     Returns
@@ -86,14 +86,14 @@ def is_almost_equal(
         The second value to check if close to `val1`
 
     rel_tol:
-        The relative tolerance – it is the maximum allowed difference
+        The relative tolerance - it is the maximum allowed difference
         between `val1` and `val2`,
         relative to the larger absolute value of `val1` or
         `val2`. By default, this is set to 0.0001,
         meaning the values must be within 0.01% of each other.
 
     abs_tol:
-        The minimum absolute tolerance – useful for comparisons near
+        The minimum absolute tolerance - useful for comparisons near
         zero. Must be at least zero.
 
     Returns
@@ -151,7 +151,7 @@ def root_mean_squared_error(
         ) from error
 
     squared_diffs: list[float] = list()
-    for i, (target, ach) in enumerate(zip(targets, achieved)):
+    for i, (target, ach) in enumerate(zip(targets, achieved, strict=True)):
         try:
             diffs = (target - ach) ** 2
         except ValueError as error:
@@ -167,11 +167,11 @@ def root_mean_squared_error(
         else:
             try:
                 # Third Party
-                import sparse  # pylint: disable=import-outside-toplevel
+                import sparse  # pylint: disable=import-outside-toplevel # noqa: PLC0415
 
                 if isinstance(diffs, sparse.COO):
-                    # TODO(BT): Not ideal making this dense, but not sure on a smarter
-                    #  way to do this right now.
+                    # TODO(BT): Not ideal making this dense, but not sure  # noqa: TD003
+                    # on a smarter way to do this right now.
                     squared_diffs += diffs.todense().flatten().tolist()
                 else:
                     raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")

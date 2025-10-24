@@ -3,6 +3,7 @@
 # Built-Ins
 import contextlib
 import sys
+from collections.abc import Generator
 
 # Third Party
 from tqdm import contrib as tqdm_contrib
@@ -14,7 +15,7 @@ from tqdm import contrib as tqdm_contrib
 
 # # # FUNCTIONS # # #
 @contextlib.contextmanager
-def std_out_err_redirect_tqdm():
+def std_out_err_redirect_tqdm() -> Generator[tqdm_contrib.DummyTqdmFile, None, None]:
     """Redirect stdout and stderr to `tqdm.write`.
 
     Code copied from tqdm documentation:
@@ -53,16 +54,14 @@ def std_out_err_redirect_tqdm():
     100%|#...| 3/3
     100%|#...#| 3/3
     """
-    # Init
     orig_out_err = sys.stdout, sys.stderr
     try:
         sys.stdout, sys.stderr = map(tqdm_contrib.DummyTqdmFile, orig_out_err)
         yield orig_out_err[0]
 
-    # Relay exceptions
     except Exception:
+        sys.stdout, sys.stderr = orig_out_err
         raise
 
     # Always restore sys.stdout/err if necessary
-    finally:
-        sys.stdout, sys.stderr = orig_out_err
+    sys.stdout, sys.stderr = orig_out_err

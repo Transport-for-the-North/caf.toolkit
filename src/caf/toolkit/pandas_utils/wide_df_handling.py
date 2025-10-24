@@ -23,9 +23,9 @@ LOG = logging.getLogger(__name__)
 
 
 # # # FUNCTIONS # # #
-def _guess_pandas_dtype(things):
+def _guess_pandas_dtype(things):  # noqa: ANN001, ANN202
     """Get the type of pandas object, avoiding object type."""
-    # TODO(BT) Figure out a better way to do this. I don't like this way, but
+    # TODO(BT): Figure out a better way to do this. I don't like this way, but  # noqa: TD003
     #  it avoids all the trouble you get into with pandas telling you that a
     #  column of integers is "object" type, but "object" type is also used
     #  to describe strings...
@@ -135,16 +135,16 @@ def get_wide_mask(
         index_select = select
 
     # Validate matrix shape
-    if len(df.shape) != 2 or df.shape[0] != df.shape[1]:
+    if len(df.shape) != 2 or df.shape[0] != df.shape[1]:  # noqa: PLR2004
         raise ValueError(
             f"Only square matrices with 2 dimensions are supported. Got: {df.shape}"
         )
 
     # Try match dtypes in rows and cols
     if df.columns.dtype != type(col_select):
-        col_select = np.array(col_select, dtype=_guess_pandas_dtype(df.columns))  # type: ignore
+        col_select = np.array(col_select, dtype=_guess_pandas_dtype(df.columns))
     if df.index.dtype != type(index_select):
-        index_select = np.array(index_select, dtype=_guess_pandas_dtype(df.index))  # type: ignore
+        index_select = np.array(index_select, dtype=_guess_pandas_dtype(df.index))
 
     # Create square masks for the rows and cols
     col_mask = np.broadcast_to(df.columns.isin(col_select), df.shape)
@@ -365,10 +365,22 @@ def wide_matrix_internal_external_report(
 
     # Build the kwargs to iterate over
     report_kwargs = {
-        ("internal", "internal"): {"index_select": int_select, "col_select": int_select},
-        ("internal", "external"): {"index_select": int_select, "col_select": ext_select},
-        ("external", "internal"): {"index_select": ext_select, "col_select": int_select},
-        ("external", "external"): {"index_select": ext_select, "col_select": ext_select},
+        ("internal", "internal"): {
+            "index_select": int_select,
+            "col_select": int_select,
+        },
+        ("internal", "external"): {
+            "index_select": int_select,
+            "col_select": ext_select,
+        },
+        ("external", "internal"): {
+            "index_select": ext_select,
+            "col_select": int_select,
+        },
+        ("external", "external"): {
+            "index_select": ext_select,
+            "col_select": ext_select,
+        },
     }
 
     # Build the report from the kwargs
@@ -383,6 +395,6 @@ def wide_matrix_internal_external_report(
         report.loc[row_idx, col_idx] = total
 
     # Add a total row and column
-    report["total"] = report.values.sum(axis=1)
-    report.loc["total"] = report.values.sum(axis=0)
+    report["total"] = report.to_numpy().sum(axis=1)
+    report.loc["total"] = report.to_numpy().sum(axis=0)
     return report

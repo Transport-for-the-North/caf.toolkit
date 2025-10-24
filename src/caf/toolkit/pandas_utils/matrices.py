@@ -15,6 +15,8 @@ from caf.toolkit import cost_utils, translation
 if TYPE_CHECKING:
     import pathlib
 
+_EXCEL_SHEET_NAME_LIMIT = 31
+
 
 class MatrixReport:
     """Creates a high level summary of a matrix and its trip ends.
@@ -185,7 +187,6 @@ class MatrixReport:
                 cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
             ).df
             sector_distribution[sector_column] = sector
-            # sector_distribution.set_index([sector_column, "min", "max"], append=True)
             stacked_distribution.append(sector_distribution)
         self._distribution = pd.concat(stacked_distribution).set_index(
             [sector_column, "min", "max"]
@@ -218,10 +219,11 @@ class MatrixReport:
         else:
             sheet_prefix = ""
 
-        if len(sheet_prefix) >= 19:
+        # Name limit minus longest suffix (12)
+        if len(sheet_prefix) >= _EXCEL_SHEET_NAME_LIMIT - 12:
             raise ValueError(
-                "label cannot be over 30 characters as the sheets names will"
-                " be truncated and will not be unique"
+                f"label cannot be over {_EXCEL_SHEET_NAME_LIMIT} characters as"
+                " the sheets names will be truncated and will not be unique"
             )
 
         self.describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
@@ -233,7 +235,8 @@ class MatrixReport:
                 self.sector_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
             else:
                 warnings.warn(
-                    "Cannot output sectorised matrix unless you pass the translation vector on init",
+                    "Cannot output sectorised matrix unless you"
+                    " pass the translation vector on init",
                     stacklevel=2,
                 )
 
@@ -407,8 +410,10 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: float | None = None) -> p
     if almost_zero is None:
         almost_zero = 1 / matrix.size
 
-    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-    assert isinstance(info, pd.Series)  # To stop MyPy whinging
+    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])  # noqa: PD013
+    if not isinstance(info, pd.Series):
+        raise TypeError(f"info should be Series not: {type(info)}")
+
     info["columns"] = len(matrix.columns)
     info["rows"] = len(matrix.index)
     info["sum"] = matrix.sum().sum()
@@ -565,9 +570,10 @@ def compare_matrices_and_output(
         else:
             sheet_name = name
 
-        if len(sheet_name) > 31:
+        if len(sheet_name) > _EXCEL_SHEET_NAME_LIMIT:
             warnings.warn(
-                f"Sheet name {sheet_name} is over 31 characters and will be truncated",
+                f"Sheet name {sheet_name} is over {_EXCEL_SHEET_NAME_LIMIT}"
+                " characters and will be truncated",
                 stacklevel=2,
             )
         result.to_excel(excel_writer, sheet_name=sheet_name)

@@ -36,7 +36,7 @@ NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNT
 class MissingColumnsError(Exception):
     """Raised when columns are missing from input CSV."""
 
-    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:
+    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         self.columns = columns
         cols = " and".join(", ".join(f"'{s}'" for s in columns).rsplit(",", 1))
         msg = f"Columns missing from {name}: {cols}"
@@ -46,8 +46,8 @@ class MissingColumnsError(Exception):
 # # # FUNCTIONS # # #
 def safe_dataframe_to_csv(
     df: pd.DataFrame,
-    *args,
-    **kwargs,
+    *args,  # noqa: ANN002
+    **kwargs,  # noqa: ANN003
 ) -> None:
     """Prompt the user to close a file before saving.
 
@@ -79,7 +79,7 @@ def safe_dataframe_to_csv(
                 out_path = kwargs.get("path_or_buf")
                 if out_path is None:
                     out_path = args[0]
-                print(
+                print(  # noqa: T201
                     f"Cannot write to file at {out_path}.\n"
                     "Please ensure it is not open anywhere.\n"
                     "Waiting for permission to write...\n"
@@ -92,7 +92,7 @@ def read_csv(
     path: os.PathLike,
     name: str | None = None,
     normalise_column_names: bool = False,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> pd.DataFrame:
     """Read CSV files, wraps `pandas.read_csv` to perform additional checks.
 
@@ -134,7 +134,9 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
+        for nm, value in zip(
+            ("usecols", "dtype", "index_col"), parameters, strict=True
+        ):
             if value is not None:
                 kwargs[nm] = value
 
@@ -197,12 +199,12 @@ _Dtype = TypeVar("_Dtype", type, dict[Hashable, type])
 _IndexCol = TypeVar("_IndexCol", Sequence[Hashable], Hashable, Literal[False])
 
 
-def _normalise_read_csv(
+def _normalise_read_csv(  # noqa: C901
     path: pathlib.Path,
     usecols: _Usecols | None = None,
     dtype: _Dtype | None = None,
     index_col: _IndexCol | None = None,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> tuple[dict[str, str], _Usecols | None, _Dtype | None, _IndexCol | None]:
     """Produce normalised column names and lookup from original.
 
@@ -244,7 +246,7 @@ def _normalise_read_csv(
 
     original = df.columns.to_list()
     if any(i is not None for i in df.index.names):
-        original.extend(df.index.names)  # type: ignore
+        original.extend(df.index.names)  # type: ignore[arg-type]
 
     lookup: dict[str, str] = {}
     duplicates = collections.defaultdict(list)
@@ -277,7 +279,7 @@ def _normalise_read_csv(
 
     if isinstance(index_col, Hashable):
         _validate_normal_columns([index_col], "index_col")
-        index_col = flipped.get(str(index_col), index_col)  # type: ignore
+        index_col = flipped.get(str(index_col), index_col)
     elif isinstance(index_col, Sequence):
         _validate_normal_columns(index_col, "index_col")
         index_col = [flipped.get(str(i), i) for i in index_col]
@@ -286,7 +288,7 @@ def _normalise_read_csv(
 
 
 def _validate_normal_columns(columns: Iterable[Hashable], name: str) -> None:
-    def normal_check(value) -> bool:
+    def normal_check(value) -> bool:  # noqa: ANN001
         return isinstance(value, str) and (value == _normalise_name(value))
 
     invalid = list(itertools.filterfalse(normal_check, columns))
@@ -304,7 +306,7 @@ def _normalise_name(col: str) -> str:
 
 
 def read_csv_matrix(
-    path: os.PathLike, format_: Literal["square", "long"] | None = None, **kwargs
+    path: os.PathLike, format_: Literal["square", "long"] | None = None, **kwargs  # noqa: ANN003
 ) -> pd.DataFrame:
     """Read matrix CSV in the square or long format.
 
@@ -339,10 +341,11 @@ def read_csv_matrix(
         # Determine format by reading top few lines of file
         matrix = read_csv(path, nrows=3)
 
-        if len(matrix.columns) == 3:
+        long_fmt_columns = 3
+        if len(matrix.columns) == long_fmt_columns:
             format_ = "long"
 
-        elif len(matrix.columns) > 3:
+        elif len(matrix.columns) > long_fmt_columns:
             format_ = "square"
 
         else:
@@ -359,14 +362,16 @@ def read_csv_matrix(
         matrix = read_csv(path, index_col=kwargs.pop("index_col", [0, 1]), **kwargs)
 
         # Matrix has MultiIndex so this returns a DataFrame
-        matrix = matrix.unstack()  # type: ignore
+        matrix = matrix.unstack()  # type: ignore[assignment]  # noqa: PD010
         matrix.columns = matrix.columns.droplevel(0)
 
     else:
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.columns = utility.to_numeric(
+        matrix.columns, errors="ignore", downcast="integer"
+    )
     matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
@@ -510,7 +515,9 @@ def find_file_with_name(
         )
 
     if len(found) == 0:
-        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+        raise FileNotFoundError(
+            f'cannot find any files named "{name}" inside "{folder}"'
+        )
 
     # Order found based on expected_suffixes
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))

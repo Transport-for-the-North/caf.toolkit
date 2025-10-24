@@ -89,7 +89,7 @@ def fixture_non_square_matrix(request: pytest.FixtureRequest) -> WideMatrixData:
 class TestGetWideMask:
     """Tests for get_wide_mask()."""
 
-    # TODO(BT): Add tests for datatypes. Different + fuzzy matching. Hoping some
+    # TODO(BT): Add tests for datatypes. Different + fuzzy matching. Hoping some  # noqa: TD003
     #  good test cases come out of real usage
 
     @pytest.mark.parametrize("random_square_matrix", (5, 11, 13), indirect=True)
