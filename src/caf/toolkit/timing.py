@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Common utility functions for handling date and times."""
+
 # Built-Ins
 import datetime
 import math
@@ -48,7 +48,7 @@ def get_datetime(
         A string of the current datetime in `time_format`
     """
     # Init
-    valid_precision = TimePrecision.__args__  # type: ignore
+    valid_precision = TimePrecision.__args__  # type: ignore[attr-defined]
     precision = precision.strip().lower()
 
     # Validate

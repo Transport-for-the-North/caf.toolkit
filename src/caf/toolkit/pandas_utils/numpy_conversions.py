@@ -1,22 +1,21 @@
-# -*- coding: utf-8 -*-
 """Conversion methods between numpy and pandas formats."""
+
 from __future__ import annotations
 
-# Built-Ins
 import functools
 import logging
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Collection, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
-# Third Party
 import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     import sparse
 
-# Local Imports
 from caf.toolkit.core import SparseLiteral, WarningActionKind
 from caf.toolkit.pandas_utils import df_handling
 
@@ -28,7 +27,7 @@ LOG = logging.getLogger(__name__)
 
 # # # FUNCTIONS # # #
 # ## Private Functions ## #
-def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
+def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]) -> dict:
     """Create a map of column values to numpy dimensions."""
     value_maps = dict()
     for col, vals in dimension_cols.items():
@@ -37,7 +36,7 @@ def _pd_to_np_value_maps(dimension_cols: dict[Any, list[Any]]):
                 continue
         except TypeError:
             pass
-        value_maps[col] = dict(zip(vals, range(len(vals))))
+        value_maps[col] = dict(zip(vals, range(len(vals)), strict=True))
     return value_maps
 
 
@@ -94,7 +93,7 @@ def is_sparse_feasible(
         )
         with warnings.catch_warnings():
             warnings.filterwarnings(warning_action)
-            warnings.warn(msg, category=ResourceWarning)
+            warnings.warn(msg, stacklevel=2, category=ResourceWarning)
         return False
     return True
 
@@ -102,16 +101,16 @@ def is_sparse_feasible(
 def dataframe_to_n_dimensional_sparse_array(
     df: pd.DataFrame,
     dimension_cols: dict[Any, list[Any]],
-    value_col: Any,
+    value_col: Any,  # noqa: ANN401
     *,
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = None,
     warning_action: WarningActionKind = "default",
     fill_value: np.number | int | float = 0,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]:
     """Convert a pandas.DataFrame to a sparse.COO matrix."""
     try:
         # Third Party
-        import sparse  # pylint: disable=import-outside-toplevel
+        import sparse  # pylint: disable=import-outside-toplevel # noqa: PLC0415
     except ImportError as err:
         raise ImportError(
             "The 'sparse' package is required to convert a DataFrame to a sparse "
@@ -124,7 +123,7 @@ def dataframe_to_n_dimensional_sparse_array(
     # Tidy and validate given DF
     mask = df[value_col] == fill_value
     df = df[~mask].copy()
-    df = df.reindex(columns=list(dimension_cols.keys()) + [value_col])
+    df = df.reindex(columns=[*list(dimension_cols.keys()), value_col])
 
     # Reduce inputs to just the needed columns
     dim_col_names = df.columns.tolist()
@@ -155,7 +154,7 @@ def dataframe_to_n_dimensional_sparse_array(
         )
 
     array = sparse.COO(
-        coords=np.array([df[col].values for col in dimension_cols.keys()]),
+        coords=np.array([df[col].to_numpy() for col in dimension_cols]),
         data=np.array(df[value_col].values),
         shape=final_shape,
     )
@@ -167,8 +166,8 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["allow", "feasible"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
-    fill_val: Any = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
+    fill_val: int | float = ...,
 ) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
@@ -177,8 +176,8 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["disallow"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
-    fill_val: Any = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
+    fill_val: int | float = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
@@ -187,8 +186,8 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: Literal["force"],
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
-    fill_val: Any = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
+    fill_val: int | float = ...,
 ) -> tuple[sparse.COO, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
@@ -197,17 +196,17 @@ def dataframe_to_n_dimensional_array(
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: SparseLiteral = ...,
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = ...,
-    fill_val: Any = ...,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = ...,
+    fill_val: int | float = ...,
 ) -> tuple[np.ndarray, dict[Any, dict[Any, int]]]: ...  # pragma: no cover
 
 
-def dataframe_to_n_dimensional_array(
+def dataframe_to_n_dimensional_array(  # noqa: C901
     df: pd.DataFrame,
     dimension_cols: list[Any] | dict[Any, list[Any]],
     sparse_ok: SparseLiteral = "disallow",
-    sparse_value_maps: Optional[dict[Any, dict[Any, int]]] = None,
-    fill_val: Any = np.nan,
+    sparse_value_maps: dict[Any, dict[Any, int]] | None = None,
+    fill_val: int | float = np.nan,
 ) -> tuple[np.ndarray | sparse.COO, dict[Any, dict[Any, int]]]:
     """Convert a pandas.DataFrame into an N-Dimensional numpy array.
 
@@ -267,11 +266,9 @@ def dataframe_to_n_dimensional_array(
     final_shape = [len(x) for x in dimension_cols.values()]
 
     # Validate sparse_OK value
-    valid_vals = SparseLiteral.__args__  # type: ignore
+    valid_vals = SparseLiteral.__args__  # type: ignore[attr-defined]
     if sparse_ok not in valid_vals:
-        raise ValueError(
-            f"Invalid value given for 'sparse_ok' expected one of: " f"{valid_vals}"
-        )
+        raise ValueError(f"Invalid value given for 'sparse_ok' expected one of: {valid_vals}")
 
     # Validate that only one value column exists
     value_cols = set(df.columns) - set(dimension_cols.keys())
@@ -315,10 +312,9 @@ def dataframe_to_n_dimensional_array(
     try:
         full_idx = df_handling.get_full_index(dimension_cols)
         np_df = df.set_index(list(dimension_cols.keys())).reindex(full_idx).fillna(fill_val)
-        array = np_df.values.reshape(final_shape)
+        array = np_df.to_numpy().reshape(final_shape)
         if sparse_value_maps is None:
             sparse_value_maps = _pd_to_np_value_maps(dimension_cols)
-        return array, sparse_value_maps
 
     except MemoryError as err:
         if sparse_ok == "disallow":
@@ -326,6 +322,8 @@ def dataframe_to_n_dimensional_array(
                 "Memory error while attempting to create a dense numpy matrix. "
                 "This could be translated into a sparse matrix if 'sparse_ok=allow'"
             ) from err
+    else:
+        return array, sparse_value_maps
 
     # We ran out of memory making a dense matrix, and it's OK to make a sparse one
     return dataframe_to_n_dimensional_sparse_array(

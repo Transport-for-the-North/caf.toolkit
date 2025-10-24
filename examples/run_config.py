@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Using :class:`~caf.toolkit.BaseConfig`
 ======================================
@@ -22,7 +21,7 @@ to create child classes of BaseConfig to load parameters.
 
 # Built-Ins
 import pathlib
-from typing import Any, Self
+from typing import Self
 
 # Third Party
 import pydantic
@@ -105,7 +104,8 @@ class Bounds:
 
 
 # %%
-# :class:`InputFile` is an example of a dataclass which contains another dataclass as an attribute.
+# :class:`InputFile` is an example of a dataclass which contains
+# another dataclass as an attribute.
 
 
 @dataclasses.dataclass
@@ -118,10 +118,13 @@ class InputFile:
 
 
 # %%
-# :class:`NestingConfig` is an example of a configuration file with a list of nested dataclasses.
+# :class:`NestingConfig` is an example of a configuration file with
+# a list of nested dataclasses.
 
 
 class NestingConfig(ctk.BaseConfig):
+    """Config file with nested dataclasses."""
+
     output_folder: pydantic.DirectoryPath
     model_run: str
     inputs: list[InputFile]
@@ -201,7 +204,7 @@ class CustomFieldValidated:
     # This validation method is ran before pydantic does any validation
     @pydantic.field_validator("flexible_list", mode="before")
     @classmethod
-    def csv_list(cls, value: Any) -> list:
+    def csv_list(cls, value: str | list) -> list:
         """Split text into list based on commas.."""
         if isinstance(value, str):
             return value.split(",")
@@ -222,7 +225,7 @@ class ModelValidated:
 
     @pydantic.model_validator(mode="after")
     def check_favourite(self) -> Self:
-        """Checks if favourite value is in the list of possible values."""
+        """Check if favourite value is in the list of possible values."""
         if self.favourite_value not in self.possible_values:
             raise ValueError(
                 f"favourite value ({self.favourite_value})"

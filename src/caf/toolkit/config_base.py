@@ -1,18 +1,21 @@
-# -*- coding: utf-8 -*-
 """Base config class for storing and reading parameters for any NorMITs demand script."""
+
 from __future__ import annotations
 
 # Built-Ins
 import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
-from pathlib import Path
-from typing import Any, Optional, overload
+from typing import TYPE_CHECKING, overload
 
 # Third Party
 import pydantic
 import pydantic_core
 import strictyaml
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 
@@ -41,19 +44,19 @@ class BaseConfig(pydantic.BaseModel):
     >>> from pathlib import Path
     >>> from caf.toolkit import BaseConfig
     >>> class ExampleParameters(BaseConfig):
-    ...    import_folder: Path
-    ...    name: str
-    ...    some_option: bool = True
+    ...     import_folder: Path
+    ...     name: str
+    ...     some_option: bool = True
     >>> parameters = ExampleParameters(
-    ...    import_folder="Test Folder",
-    ...    name="Test",
-    ...    some_option=False,
+    ...     import_folder="Test Folder",
+    ...     name="Test",
+    ...     some_option=False,
     ... )
 
     Example of instance of class after initialisation, the path differs
     depending on operating system.
 
-    >>> parameters # doctest: +SKIP
+    >>> parameters  # doctest: +SKIP
     ExampleParameters(
         import_folder=WindowsPath('Test Folder'),
         name='Test',
@@ -80,7 +83,7 @@ class BaseConfig(pydantic.BaseModel):
     """
 
     @classmethod
-    def from_yaml(cls, text: str):
+    def from_yaml(cls, text: str) -> Self:
         """Parse class attributes from YAML `text`.
 
         Parameters
@@ -99,7 +102,7 @@ class BaseConfig(pydantic.BaseModel):
         return cls.model_validate(data)
 
     @classmethod
-    def load_yaml(cls, path: Path):
+    def load_yaml(cls, path: Path) -> Self:
         """Read YAML file and load the data using `from_yaml`.
 
         Parameters
@@ -113,8 +116,7 @@ class BaseConfig(pydantic.BaseModel):
             Instance of class with attributes filled in from
             the YAML data.
         """
-
-        with open(path, "rt", encoding="utf-8") as file:
+        with path.open("rt", encoding="utf-8") as file:
             text = file.read()
         return cls.from_yaml(text)
 
@@ -138,7 +140,7 @@ class BaseConfig(pydantic.BaseModel):
         self,
         path: Path,
         datetime_comment: bool = True,
-        other_comment: Optional[str] = None,
+        other_comment: str | None = None,
         format_comment: bool = False,
     ) -> None:
         """Write data from self to a YAML file.
@@ -169,7 +171,7 @@ class BaseConfig(pydantic.BaseModel):
 
     @classmethod
     def write_example(
-        cls, path_: Path, /, comment_: Optional[str] = None, **examples: str
+        cls, path_: Path, /, comment_: str | None = None, **examples: str
     ) -> None:
         """Write examples to a config file.
 
@@ -215,7 +217,7 @@ class BaseConfig(pydantic.BaseModel):
 
 
 # # # FUNCTIONS # # #
-def _is_collection(obj: Any) -> bool:
+def _is_collection(obj: Any) -> bool:  # noqa: ANN401
     """
     Check if an object is any type of non-dict collection.
 
@@ -248,9 +250,9 @@ def _remove_none_collection(data: list | set | tuple) -> list | set | tuple | No
 
         # Clean and keep any other items
         if isinstance(item, dict):
-            item = _remove_none_dict(item)
+            item = _remove_none_dict(item)  # noqa: PLW2901
         elif _is_collection(item):
-            item = _remove_none_collection(item)
+            item = _remove_none_collection(item)  # noqa: PLW2901
         filtered.append(item)
 
     # return same type as input
@@ -267,10 +269,10 @@ def _remove_none_dict(data: dict) -> dict | None:
             continue
 
         if isinstance(value, dict):
-            value = _remove_none_dict(value)
+            value = _remove_none_dict(value)  # noqa: PLW2901
 
         elif _is_collection(value):
-            value = _remove_none_collection(value)
+            value = _remove_none_collection(value)  # noqa: PLW2901
 
         if value is None:
             continue
@@ -285,8 +287,8 @@ def write_config(
     path: Path,
     *,
     datetime_comment: bool = True,
-    name: Optional[str] = None,
-    other_comment: Optional[str] = None,
+    name: str | None = None,
+    other_comment: str | None = None,
     format_comment: bool = False,
 ) -> None:
     """Write data from self to a YAML file.
@@ -328,7 +330,7 @@ def write_config(
 
     if len(comment_lines) > 0:
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
-        yaml = "\n".join(comment_lines + [yaml])
+        yaml = "\n".join([*comment_lines, yaml])
 
-    with open(path, "wt", encoding="utf-8") as file:
+    with path.open("wt", encoding="utf-8") as file:
         file.write(yaml)

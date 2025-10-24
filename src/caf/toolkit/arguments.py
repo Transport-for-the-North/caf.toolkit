@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functionality for handling command-line arguments."""
 
 ##### IMPORTS #####
@@ -12,7 +11,7 @@ import os
 import pathlib
 import re
 import warnings
-from typing import Iterable
+from typing import TYPE_CHECKING
 
 # Third Party
 import pydantic
@@ -20,6 +19,9 @@ import pydantic_core
 
 # Local Imports
 from caf.toolkit import config_base
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 ##### CONSTANTS #####
 
@@ -93,9 +95,11 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     types = set()
     optional = False
     for type_ in type_str.split("|"):
-        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.I)
+        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.IGNORECASE)
         if match is None:
-            warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning)
+            warnings.warn(
+                f"unexpect type format: '{type_}'", TypeAnnotationWarning, stacklevel=2
+            )
             return str, optional
 
         value = match.group(2).strip().lower()
@@ -109,7 +113,7 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
         if name in types:
             return type_, optional
 
-    warnings.warn(f"unexpected types: {types}", TypeAnnotationWarning)
+    warnings.warn(f"unexpected types: {types}", TypeAnnotationWarning, stacklevel=2)
 
     return str, optional
 
@@ -179,7 +183,9 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
     if match is None:
         warnings.warn(
-            f"unexpected type annotation format: '{annotation}'", TypeAnnotationWarning
+            f"unexpected type annotation format: '{annotation}'",
+            TypeAnnotationWarning,
+            stacklevel=2,
         )
         return str, False, None
 
@@ -209,7 +215,11 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
         nargs = "*"
 
     else:
-        warnings.warn(f"unexpected type annotation prefix: '{prefix}'", TypeAnnotationWarning)
+        warnings.warn(
+            f"unexpected type annotation prefix: '{prefix}'",
+            TypeAnnotationWarning,
+            stacklevel=2,
+        )
         type_, optional = _parse_types(type_annotation)
 
     return type_, optional, nargs
@@ -218,7 +228,7 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
 class ModelArguments:
     """Base class for defining command-line arguments from `pydantic.BaseModel`."""
 
-    # TODO(MB) Describe how this would be used, with examples
+    # TODO(MB): Describe how this would be used, with examples # noqa: TD003
 
     def __init__(self, model: type) -> None:
         """Check `model` type.
@@ -229,7 +239,7 @@ class ModelArguments:
             Model used to define arguments, should be
             a subclass of `pydantic.BaseModel`.
         """
-        if not issubclass(model, pydantic.BaseModel):  # type: ignore
+        if not issubclass(model, pydantic.BaseModel):
             raise TypeError(f"`dataclass` should be a pydantic BaseModel not {type(model)}")
 
         self._model = model
@@ -277,7 +287,11 @@ class ModelArguments:
 
             if type_ is not bool:
                 parser.add_argument(
-                    *name_or_flags, type=type_, help=description, default=default, nargs=nargs
+                    *name_or_flags,
+                    type=type_,
+                    help=description,
+                    default=default,
+                    nargs=nargs,
                 )
                 continue
 
@@ -331,8 +345,8 @@ class ModelArguments:
         name: str,
         add_arguments: bool = True,
         add_config: bool = True,
-        **kwargs,
-    ):
+        **kwargs,  # noqa: ANN003
+    ) -> None:
         """Add sub-commands for CLI arguments and config (if possible).
 
         Note: config sub-command won't be added if model provided to class
@@ -367,7 +381,9 @@ class ModelArguments:
         if self._config and add_config:
             kwargs.pop("help", None)
             parser = subparsers.add_parser(
-                f"{name}-config", help=f"run {name} with parameters from config", **kwargs
+                f"{name}-config",
+                help=f"run {name} with parameters from config",
+                **kwargs,
             )
             self.add_config_arguments(parser)
 
@@ -378,7 +394,8 @@ class ModelArguments:
         and use them to instantiate the class, then return the class
         instance.
         """
-        assert issubclass(self._model, pydantic.BaseModel)
+        # Validated in init
+        assert issubclass(self._model, pydantic.BaseModel)  # noqa: S101
 
         data = {}
         for name in self._model.model_fields:
@@ -394,8 +411,9 @@ class ModelArguments:
         args : argparse.Namespace
             Parsed command-line arguments with a `config_path` attribute.
         """
-        assert issubclass(self._model, config_base.BaseConfig)
-        return self._model.load_yaml(args.config_path)  # type: ignore
+        if not issubclass(self._model, config_base.BaseConfig):
+            raise TypeError(f"cannot use config parse with {type(self._model)}")
+        return self._model.load_yaml(args.config_path)  # type: ignore[attr-defined]
 
 
 class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):

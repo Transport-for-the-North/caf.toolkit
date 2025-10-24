@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """Helper functions for handling pandas DataFrames."""
 
 from __future__ import annotations
 
 # Built-Ins
 import functools
-from collections.abc import Hashable
-from typing import Any, Generator, overload
+from typing import TYPE_CHECKING, overload
 
 # Third Party
 import numpy as np
@@ -14,6 +12,10 @@ import pandas as pd
 
 # Local Imports
 from caf.toolkit import toolbox
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Hashable
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 
@@ -51,7 +53,7 @@ class ChunkDf:
         self,
         df: pd.DataFrame,
         chunk_size: int,
-    ):
+    ) -> None:
         if not isinstance(chunk_size, int):
             raise TypeError(f"chunk_size must be an integer. Given: {chunk_size}")
 
@@ -64,7 +66,7 @@ class ChunkDf:
         self.chunk_size = chunk_size
         self.range_iterator = iter(range(0, len(self.df), self.chunk_size))
 
-    def __iter__(self):
+    def __iter__(self) -> Self:
         """Get an iterator over `self.df` chunks of size `self.chunk_size`."""
         return self
 
@@ -81,7 +83,7 @@ def reindex_cols(
     columns: list[str],
     throw_error: bool = True,
     dataframe_name: str = "the given dataframe",
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> pd.DataFrame:
     """
     Reindexes a pandas DataFrame. Will throw error if columns aren't in `df`.
@@ -137,8 +139,8 @@ def reindex_rows_and_cols(
     df: pd.DataFrame,
     index: list[Any],
     columns: list[Any],
-    fill_value: Any = np.nan,
-    **kwargs,
+    fill_value: Any = np.nan,  # noqa: ANN401
+    **kwargs,  # noqa: ANN003
 ) -> pd.DataFrame:
     """
     Reindex a pandas DataFrame, making sure index/col types don't clash.
@@ -191,7 +193,7 @@ def reindex_and_groupby_sum(
     index_cols: list[str],
     value_cols: list[str],
     throw_error: bool = True,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> pd.DataFrame:
     """
     Reindexes and groups a pandas DataFrame.
@@ -276,9 +278,7 @@ def filter_df_mask(
             df_filter[key] = [value]
 
     needed_cols = list(df_filter.keys())
-    mask = df[needed_cols].isin(df_filter).all(axis="columns")
-
-    return mask
+    return df[needed_cols].isin(df_filter).all(axis="columns")
 
 
 def filter_df(
@@ -313,13 +313,12 @@ def filter_df(
     mask = filter_df_mask(df=df, df_filter=df_filter)
     return_df = df[mask].copy()
 
-    if throw_error:
-        if return_df.empty:
-            raise ValueError(
-                "An empty dataframe was returned after applying the filter. "
-                "Are you sure the correct data was passed in?\n"
-                f"Given filter: {df_filter}"
-            )
+    if throw_error and return_df.empty:
+        raise ValueError(
+            "An empty dataframe was returned after applying the filter. "
+            "Are you sure the correct data was passed in?\n"
+            f"Given filter: {df_filter}"
+        )
 
     return return_df
 
@@ -353,7 +352,7 @@ def str_join_cols(
     """
 
     # Define the accumulator function
-    def reducer(accumulator, item):
+    def reducer(accumulator, item):  # noqa: ANN001 ANN202
         return accumulator + separator + item
 
     # Join the cols together
@@ -409,21 +408,21 @@ def chunk_df(
 @overload
 def long_product_infill(
     data: pd.DataFrame,
-    infill: Any = 0,
+    infill: Any = 0,  # noqa: ANN401
     check_totals: bool = False,
     index_dict: dict[Hashable, list] | None = None,
 ) -> pd.DataFrame: ...
 @overload
 def long_product_infill(
     data: pd.Series,
-    infill: Any = 0,
+    infill: Any = 0,  # noqa: ANN401
     check_totals: bool = False,
     index_dict: dict[Hashable, list] | None = None,
 ) -> pd.Series: ...
 
 
 # pylint: disable=too-many-branches
-def long_product_infill(
+def long_product_infill(  # noqa: C901, PLR0912
     data: pd.DataFrame | pd.Series,
     infill: Any = 0,
     check_totals: bool = False,
@@ -470,14 +469,14 @@ def long_product_infill(
     if index_dict is None:
         index_dict = {}
         for ind in data.index.names:
-            vals = data.index.get_level_values(ind).unique()  # type: ignore
+            vals = data.index.get_level_values(ind).unique()  # type: ignore[arg-type]
             index_dict[ind] = vals.tolist()
 
     else:
-        mismatch = [i for i in data.index.names if i not in index_dict.keys()]
+        mismatch = [i for i in data.index.names if i not in index_dict]
         if len(mismatch) > 0:
             raise ValueError(
-                f"{mismatch} levels were found in the input data, " f"but not in index_dict."
+                f"{mismatch} levels were found in the input data, but not in index_dict."
             )
 
     if len(data.index.names) == 1:
@@ -519,14 +518,13 @@ def long_product_infill(
         elif len(data.columns) == 1:
             # If data is a dataframe then select would be a list
             # of column names so filled would be a dataframe
-            assert isinstance(filled, pd.DataFrame)
+            assert isinstance(filled, pd.DataFrame)  # noqa: S101
             diff = data.iloc[:, 0].sum() - filled.iloc[:, 0].sum()
 
         else:
             diff = data.sum().sum() - filled.sum().sum()
 
         if diff != 0:
-
             raise ValueError(
                 "The total has changed in infilling. If "
                 "you have set infill to anything other than zero "
@@ -540,7 +538,7 @@ def long_product_infill(
 def long_to_wide_infill(
     matrix: pd.Series,
     *,
-    infill: Any = 0,
+    infill: Any = 0,  # noqa: ANN401
     unstack_level: str | int = -1,
     check_totals: bool = False,
     correct_cols: list | None = None,
@@ -585,7 +583,7 @@ def long_to_wide_infill(
         If none of the `values_col` is not numeric and `check_totals` is True
     """
     if not isinstance(matrix.index, pd.MultiIndex):
-        raise ValueError(
+        raise TypeError(
             "This function expects a multiindexed Series as an "
             "input. Generally this will be two index levels, one "
             "for origin/production and another for destination/attraction."
@@ -603,7 +601,7 @@ def long_to_wide_infill(
             " index, both are required for infilling"
         )
 
-    unstacked = matrix.unstack(level=unstack_level, fill_value=infill)
+    unstacked = matrix.unstack(level=unstack_level, fill_value=infill)  # noqa: PD010
     if check_totals is True:
         diff = unstacked.sum().sum() - matrix.sum()
         if diff != 0:
@@ -621,7 +619,7 @@ def wide_to_long_infill(
     out_name: str | None = None,
     correct_cols: list | None = None,
     correct_ind: list | None = None,
-    infill: Any = None,
+    infill: Any = None,  # noqa: ANN401
 ) -> pd.Series:
     """Convert a matrix from wide to long format, infilling missing values.
 
@@ -656,14 +654,16 @@ def wide_to_long_infill(
     TypeError:
         If none of the `value_col_name` is not numeric and `check_totals` is True
     """
-
     if isinstance(df.index, pd.MultiIndex):
-        raise ValueError(
+        raise TypeError(
             "This expects a single index in the input matrix, being "
             "zones and matching the columns."
         )
 
-    stacked = df.stack(future_stack=True)
+    stacked = df.stack(future_stack=True)  # noqa: PD013
+    # Stack returns Series because df index is not MultiIndex
+    assert isinstance(stacked, pd.Series)  # noqa: S101
+
     stacked.name = "val"
     if out_name is not None:
         stacked.name = out_name
@@ -674,11 +674,10 @@ def wide_to_long_infill(
         }
         stacked = long_product_infill(stacked, infill=infill, index_dict=ind_dict)
 
-    assert isinstance(stacked, pd.Series)
     return stacked
 
 
-def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
+def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:  # noqa: ANN002, ANN003
     """Convert a DataFrame from long to wide format, infilling missing values.
 
     Similar to the `long_to_wide_infill()` function, but returns a numpy array
@@ -739,6 +738,6 @@ def get_full_index(dimension_cols: dict[str, list[Any]]) -> pd.Index:
         )
 
     return pd.Index(
-        data=list(dimension_cols.values())[0],
-        name=list(dimension_cols.keys())[0],
+        data=next(iter(dimension_cols.values())),
+        name=next(iter(dimension_cols.keys())),
     )

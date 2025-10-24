@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
 """A toolbox of useful transport cost related functionality."""
+
 from __future__ import annotations
 
 # Built-Ins
 import copy
 import logging
-import os
+import pathlib
 import warnings
-from typing import Optional, Sequence
+from typing import TYPE_CHECKING
 
 # Third Party
 import numpy as np
@@ -17,12 +17,16 @@ import pandas as pd
 from caf.toolkit import math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Sequence
+
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
 
 
 # # # CLASSES # # #
-class CostDistribution:
+class CostDistribution:  # noqa: PLW1641
     """Distribution of cost values between variable bounds.
 
     Alternate constructors are available in the See Also section
@@ -62,7 +66,7 @@ class CostDistribution:
     """
 
     # Ideas
-    # units: str = "km"
+    # units: str = "km"  # noqa: ERA001
 
     def __init__(
         self,
@@ -72,8 +76,8 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: Optional[str] = None,
-    ):
+        weighted_avg_col: str | None = None,
+    ) -> None:
         # Keep as private. These shouldn't be needed outside of this class
         self.__df = df
         self.__min_col = min_col
@@ -120,23 +124,28 @@ class CostDistribution:
         if self.min_vals.min() != 0:
             warnings.warn(
                 "Minimum bound in min is not 0, consider recreating the"
-                " distribution so no short distance trips are missed"
+                " distribution so no short distance trips are missed",
+                stacklevel=2,
             )
 
-        # we compare the max value to the min value of the next row to check for overlapping or disjoint bins
+        # we compare the max value to the min value of the next row
+        # to check for overlapping or disjoint bins
         gaps = self.max_vals[:-1] != self.min_vals[1:]
-        # TODO(KF) this will do for now, but this could be made more specific
+        # TODO(KF): this will do for now, but this could be made more specific  # noqa: TD003
         if gaps.any():
             warnings.warn(
                 "The bins do not nest (either overlapping or disjoint),"
-                " there is a risk you will miss trips during your analysis"
+                " there is a risk you will miss trips during your analysis",
+                stacklevel=2,
             )
 
         zero_width = gaps = self.min_vals == self.max_vals
 
         if zero_width.any():
             warnings.warn(
-                f"{zero_width.sum()} bins in the distribution have zero width, review if this makes sense"
+                f"{zero_width.sum()} bins in the distribution have"
+                " zero width, review if this makes sense",
+                stacklevel=2,
             )
 
         return self
@@ -173,17 +182,18 @@ class CostDistribution:
         self.__df = pd_utils.reindex_cols(self.__df, list(req_cols.values()))
         return self
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get the number of bins in this cost distribution."""
         return len(self.bin_edges) - 1
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:  # noqa: ANN001
         """Check if two items are the same."""
         if not isinstance(other, CostDistribution):
             return False
-        # Optimisation: We want to compare the actual dataframes here rather than copies of them
+        # Optimisation: We want to compare the actual dataframes
+        # here rather than copies of them
         # pylint: disable-next=protected-access
-        return (self.__df == other.__df).values.all()
+        return bool((self.__df == other.__df).to_numpy().all())
 
     def copy(self) -> CostDistribution:
         """Create a copy of this instance."""
@@ -237,8 +247,10 @@ class CostDistribution:
 
     @staticmethod
     def calculate_weighted_averages(
-        matrix: np.ndarray, cost_matrix: np.ndarray, bin_edges: Sequence[float] | np.ndarray
-    ):
+        matrix: np.ndarray,
+        cost_matrix: np.ndarray,
+        bin_edges: Sequence[float] | np.ndarray,
+    ) -> np.ndarray:
         """
         Calculate weighted averages of bins in a cost distribution.
 
@@ -274,8 +286,8 @@ class CostDistribution:
         # Calculate distance weighted demand
         df = pd.DataFrame(
             {
-                "cost": pd.DataFrame(cost_matrix).stack(),
-                "demand": pd.DataFrame(matrix).stack(),
+                "cost": pd.DataFrame(cost_matrix).stack(),  # noqa: PD013
+                "demand": pd.DataFrame(matrix).stack(),  # noqa: PD013
             }
         )
         df["weighted"] = df["cost"] * df["demand"]
@@ -295,9 +307,9 @@ class CostDistribution:
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
         *,
-        min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-        max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-        bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+        min_bounds: Sequence[float] | np.ndarray | None = None,
+        max_bounds: Sequence[float] | np.ndarray | None = None,
+        bin_edges: Sequence[float] | np.ndarray | None = None,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -368,8 +380,8 @@ class CostDistribution:
     def from_data_no_bins(
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
-        *args,
-        **kwargs,
+        *args,  # noqa: ANN002
+        **kwargs,  # noqa: ANN003
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -412,7 +424,7 @@ class CostDistribution:
         max_col: str = "max",
         avg_col: str = "avg",
         trips_col: str = "trips",
-        weighted_avg_col: Optional[str] = None,
+        weighted_avg_col: str | None = None,
     ) -> CostDistribution:
         """Build an instance from a file on disk.
 
@@ -448,7 +460,8 @@ class CostDistribution:
             An instance containing the data at filepath.
         """
         # Validate the path
-        if not os.path.isfile(filepath):
+        filepath = pathlib.Path(filepath)
+        if not filepath.is_file():
             raise FileNotFoundError(f"'{filepath}' is not the location of a file.")
 
         # Determine which columns to read in
@@ -487,9 +500,7 @@ class CostDistribution:
             or not np.allclose(self.bin_edges, other.bin_edges)
         ):  # fmt: skip
             raise ValueError(
-                "Bin edges are not similar enough.\n"
-                f"{self.bin_edges=}\n"
-                f"{other.bin_edges=}"
+                f"Bin edges are not similar enough.\n{self.bin_edges=}\n{other.bin_edges=}"
             )
 
     def create_similar(self, trip_vals: np.ndarray) -> CostDistribution:
@@ -513,8 +524,9 @@ class CostDistribution:
                 f"{trip_vals.shape}."
             )
         new_distribution = self.copy()
-        # Optimisation: We should make a new class with the constructor, however this is quicker
-        # as it avoids the constructor validation that we know has already been done on this data
+        # Optimisation: We should make a new class with the constructor, however this is
+        # quicker as it avoids the constructor validation that we know has already been
+        # done on this data
         # pylint: disable-next=protected-access
         new_distribution.__df[new_distribution.__trips_col] = trip_vals
         return new_distribution
@@ -584,9 +596,9 @@ class CostDistribution:
 
 # # # FUNCTIONS # # #
 def _validate_bin_edges(
-    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+    min_bounds: Sequence[float] | np.ndarray | None = None,
+    max_bounds: Sequence[float] | np.ndarray | None = None,
+    bin_edges: Sequence[float] | np.ndarray | None = None,
 ) -> np.ndarray | Sequence[float]:
     # Use bounds to calculate bin edges
     if bin_edges is None:
@@ -595,16 +607,16 @@ def _validate_bin_edges(
                 "Either `bin_edges` needs to be set, or both `min_bounds` and "
                 "`max_bounds` needs to be set."
             )
-        bin_edges = [min_bounds[0]] + list(max_bounds)
+        bin_edges = [min_bounds[0], *list(max_bounds)]
     return bin_edges
 
 
 def normalised_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: Optional[list[float] | np.ndarray] = None,
-    max_bounds: Optional[list[float] | np.ndarray] = None,
-    bin_edges: Optional[list[float] | np.ndarray] = None,
+    min_bounds: list[float] | np.ndarray | None = None,
+    max_bounds: list[float] | np.ndarray | None = None,
+    bin_edges: list[float] | np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate the normalised distribution of costs across a matrix.
@@ -666,8 +678,8 @@ def normalised_cost_distribution(
 def dynamic_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    *args,
-    **kwargs,
+    *args,  # noqa: ANN002
+    **kwargs,  # noqa: ANN003
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the distribution of costs across a matrix, using dynamic bins.
 
@@ -705,9 +717,9 @@ def dynamic_cost_distribution(
 def cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    min_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    max_bounds: Optional[Sequence[float] | np.ndarray] = None,
-    bin_edges: Optional[Sequence[float] | np.ndarray] = None,
+    min_bounds: Sequence[float] | np.ndarray | None = None,
+    max_bounds: Sequence[float] | np.ndarray | None = None,
+    bin_edges: Sequence[float] | np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Calculate the distribution of costs across a matrix.
@@ -802,12 +814,12 @@ def create_log_bins(
 
     if not 0 < n_bin_pow < 1:
         raise ValueError(
-            f"`n_bin_pow` should be in the range (0, 1). Got a value of " f"{n_bin_pow}."
+            f"`n_bin_pow` should be in the range (0, 1). Got a value of {n_bin_pow}."
         )
 
     if log_factor <= 0:
         raise ValueError(
-            f"`log_factor` should be greater than 0. Got a value of " f"{log_factor}."
+            f"`log_factor` should be greater than 0. Got a value of {log_factor}."
         )
 
     # Calculate

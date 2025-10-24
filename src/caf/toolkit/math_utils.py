@@ -1,21 +1,20 @@
-# -*- coding: utf-8 -*-
 """A toolbox of useful math related functionality.
 
 Most will be used elsewhere in the codebase too
 """
+
 from __future__ import annotations
 
-# Built-Ins
 import math
 import warnings
-from typing import TYPE_CHECKING, Any, Collection, Union
+from typing import TYPE_CHECKING, Any
 
-# Third Party
 import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    # Third Party
+    from collections.abc import Collection
+
     import sparse
 
 # # # CONSTANTS # # #
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
 
 # # # FUNCTIONS # # #
 def list_is_almost_equal(
-    vals: list[Union[int, float]],
+    vals: list[int | float],
     rel_tol: float = 0.0001,
     abs_tol: float = 0.0,
 ) -> bool:
@@ -42,14 +41,14 @@ def list_is_almost_equal(
         The values to check if similar
 
     rel_tol:
-        The relative tolerance – it is the maximum allowed difference
+        The relative tolerance - it is the maximum allowed difference
         between two values to be considered similar,
         relative to the largest absolute value .
         By default, this is set to 0.0001,
         meaning the values must be within 0.01% of each other.
 
     abs_tol:
-        The minimum absolute tolerance – useful for comparisons near
+        The minimum absolute tolerance - useful for comparisons near
         zero. Must be at least zero.
 
     Returns
@@ -66,8 +65,8 @@ def list_is_almost_equal(
 
 
 def is_almost_equal(
-    val1: Union[int, float],
-    val2: Union[int, float],
+    val1: int | float,
+    val2: int | float,
     rel_tol: float = 0.0001,
     abs_tol: float = 0.0,
 ) -> bool:
@@ -87,14 +86,14 @@ def is_almost_equal(
         The second value to check if close to `val1`
 
     rel_tol:
-        The relative tolerance – it is the maximum allowed difference
+        The relative tolerance - it is the maximum allowed difference
         between `val1` and `val2`,
         relative to the larger absolute value of `val1` or
         `val2`. By default, this is set to 0.0001,
         meaning the values must be within 0.01% of each other.
 
     abs_tol:
-        The minimum absolute tolerance – useful for comparisons near
+        The minimum absolute tolerance - useful for comparisons near
         zero. Must be at least zero.
 
     Returns
@@ -110,8 +109,8 @@ def is_almost_equal(
 
 
 def root_mean_squared_error(
-    targets: Collection[Union[np.ndarray, sparse.COO]],
-    achieved: Collection[Union[np.ndarray, sparse.COO]],
+    targets: Collection[np.ndarray | sparse.COO],
+    achieved: Collection[np.ndarray | sparse.COO],
 ) -> float:
     """Calculate the root-mean-squared error between targets and achieved.
 
@@ -152,7 +151,7 @@ def root_mean_squared_error(
         ) from error
 
     squared_diffs: list[float] = list()
-    for i, (target, ach) in enumerate(zip(targets, achieved)):
+    for i, (target, ach) in enumerate(zip(targets, achieved, strict=True)):
         try:
             diffs = (target - ach) ** 2
         except ValueError as error:
@@ -166,14 +165,13 @@ def root_mean_squared_error(
             squared_diffs += diffs.flatten().tolist()
 
         else:
-
             try:
                 # Third Party
-                import sparse  # pylint: disable=import-outside-toplevel
+                import sparse  # pylint: disable=import-outside-toplevel # noqa: PLC0415
 
                 if isinstance(diffs, sparse.COO):
-                    # TODO(BT): Not ideal making this dense, but not sure on a smarter
-                    #  way to do this right now.
+                    # TODO(BT): Not ideal making this dense, but not sure  # noqa: TD003
+                    # on a smarter way to do this right now.
                     squared_diffs += diffs.todense().flatten().tolist()
                 else:
                     raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
@@ -226,7 +224,8 @@ def curve_convergence(
     if np.isnan(target).sum() > 0:
         warnings.warn(
             "Found NaN in the target while calculating curve_convergence. "
-            "A NaN value in target will mean 0 is always returned."
+            "A NaN value in target will mean 0 is always returned.",
+            stacklevel=2,
         )
         return 0
 
@@ -300,7 +299,7 @@ def check_numeric(check_dict: dict[str, Any]) -> None:
     for name, val in check_dict.items():
         if not (np.issubdtype(type(val), np.floating) or np.issubdtype(type(val), np.integer)):
             raise ValueError(
-                f"{name} should be a scalar number (float or int) " f"not {type(val)}"
+                f"{name} should be a scalar number (float or int) not {type(val)}"
             )
 
 

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""Configuration file for pytest"""
+"""Configuration file for pytest."""
+
 # Built-Ins
 import os
 
@@ -7,5 +7,9 @@ import os
 import pytest
 
 
-def pytest_configure():
+def pytest_configure() -> None:
+    """Perform initial pytest configuration.
+
+    Set IN_GITHUB_ACTIONS constant.
+    """
     pytest.IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"

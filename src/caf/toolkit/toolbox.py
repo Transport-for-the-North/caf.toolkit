@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """A toolbox of generic useful functionality.
 
 Most of these tools will be used elsewhere in the codebase too
 """
+
 # Built-Ins
 import functools
-from typing import Any, Callable, Iterable, TypeVar
+from collections.abc import Callable, Collection, Hashable, Iterable
+from typing import Any, TypeVar
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -50,14 +51,14 @@ def list_safe_remove(
     for item in remove:
         try:
             lst.remove(item)
-        except ValueError as exception:
+        except ValueError:
             if throw_error:
-                raise exception
+                raise
 
     return lst
 
 
-def is_none_like(obj: Any) -> bool:
+def is_none_like(obj: None | str | list) -> bool:
     """Check if an object is None-like.
 
     An object is considered None-like if one of the following is True:
@@ -78,9 +79,8 @@ def is_none_like(obj: Any) -> bool:
     if obj is None:
         return True
 
-    if isinstance(obj, str):
-        if obj.lower().strip() == "none":
-            return True
+    if isinstance(obj, str) and obj.lower().strip() == "none":
+        return True
 
     if isinstance(obj, list):
         return all(is_none_like(x) for x in obj)
@@ -168,48 +168,49 @@ def compare_sets(set_a: set[_T], set_b: set[_T]) -> tuple[bool, set[_T], set[_T]
     return equal, a_not_in_b, b_not_in_a
 
 
-# TODO(BT): Can this take a Collection instead?
-def is_unique_list(unique_vals: list[Any]) -> bool:
+def is_unique_list(unique_vals: Collection) -> bool:
     """Check whether a list contains unique values only.
 
     Parameters
     ----------
-    unique_vals:
+    unique_vals
         The list of unique values to validate.
 
     Returns
     -------
-    is_unique:
-        True if the list does not contain any duplicates. Otherwise False.
-
+    bool
+        True if the list does not contain any duplicates, otherwise False.
     """
     return len(unique_vals) == len(set(unique_vals))
 
 
+_Key = TypeVar("_Key", bound=Hashable)
+
+
 def combine_dict_list(
-    dict_list: list[dict[Any, Any]],
-    operation: Callable,
-) -> dict[Any, Any]:
+    dict_list: list[dict[_Key, int]],
+    operation: Callable[[int, int], int],
+) -> dict[_Key, int]:
     """Combine a list of dictionaries.
 
     Parameters
     ----------
-    dict_list:
+    dict_list
         A list of dictionaries to sum together.
 
-    operation:
+    operation
         the operation to use to combine values at keys.
         The operator library defines functions to do this.
         Function should take two values, and return one.
 
     Returns
     -------
-    summed_dict:
+    dict
         A single dictionary of all the dicts in dict_list summed together.
     """
 
     # Define the accumulator function to call in functools.reduce
-    def reducer(accumulator, item):
+    def reducer(accumulator: dict[_Key, int], item: dict[_Key, int]) -> dict[_Key, int]:
         for key, value in item.items():
             accumulator[key] = operation(accumulator.get(key, 0), value)
         return accumulator

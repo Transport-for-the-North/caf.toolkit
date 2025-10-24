@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the toolkit `__main__` module."""
 
 ##### IMPORTS #####
@@ -6,14 +5,17 @@
 from __future__ import annotations
 
 # Built-Ins
-import pathlib
 import sys
+from typing import TYPE_CHECKING, Literal
 
 # Third Party
 import pytest
 
 # Local Imports
 from caf.toolkit.__main__ import MatrixTranslationArgs, TranslationArgs, parse_args
+
+if TYPE_CHECKING:
+    import pathlib
 
 ##### CONSTANTS #####
 
@@ -22,7 +24,9 @@ from caf.toolkit.__main__ import MatrixTranslationArgs, TranslationArgs, parse_a
 
 
 @pytest.fixture(name="dummy_files", scope="module")
-def fix_dummy_files(tmp_path_factory: pytest.TempPathFactory) -> dict[str, pathlib.Path]:
+def fix_dummy_files(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> dict[str, pathlib.Path]:
     """Write empty dummy files for the Translation / MatrixTranslation validation."""
     tmp_path = tmp_path_factory.mktemp("dummy_files")
     paths = {}
@@ -40,7 +44,8 @@ def fix_translate_config(
 ) -> tuple[TranslationArgs, pathlib.Path]:
     """Create translation config."""
     args = TranslationArgs(
-        data_file=dummy_files["data_file"], translation_file=dummy_files["translation_file"]
+        data_file=dummy_files["data_file"],
+        translation_file=dummy_files["translation_file"],
     )
 
     path = tmp_path / "translate_config.yml"
@@ -54,7 +59,8 @@ def fix_matrix_translate_config(
 ) -> tuple[MatrixTranslationArgs, pathlib.Path]:
     """Create matrix translation config."""
     args = MatrixTranslationArgs(
-        data_file=dummy_files["data_file"], translation_file=dummy_files["translation_file"]
+        data_file=dummy_files["data_file"],
+        translation_file=dummy_files["translation_file"],
     )
 
     path = tmp_path / "matrix_translate_config.yml"
@@ -66,7 +72,11 @@ class TestParseArgs:
     """Test `parse_args` function to make sure it returns the correct arguments."""
 
     @pytest.mark.parametrize("type_", ["translate", "matrix-translate"])
-    def test_min_parameters(self, dummy_files: dict[str, pathlib.Path], type_) -> None:
+    def test_min_parameters(
+        self,
+        dummy_files: dict[str, pathlib.Path],
+        type_: Literal["translate", "matrix-translate"],
+    ) -> None:
         """Testing running with bare minimum arguments."""
         sys.argv = [
             "caf.toolkit",
@@ -99,7 +109,12 @@ class TestParseArgs:
             ("matrix_translate_config", "matrix-translate-config"),
         ],
     )
-    def test_load_config(self, request: pytest.FixtureRequest, fixture, name):
+    def test_load_config(
+        self,
+        request: pytest.FixtureRequest,
+        fixture: Literal["translate_config", "matrix_translate_config"],
+        name: str,
+    ) -> None:
         """Test running with path to config."""
         expected, path = request.getfixturevalue(fixture)
 
@@ -109,7 +124,7 @@ class TestParseArgs:
 
         assert args == expected, "incorrect config arguments"
 
-    def test_complete_translate_parameters(self, dummy_files: dict[str, pathlib.Path]):
+    def test_complete_translate_parameters(self, dummy_files: dict[str, pathlib.Path]) -> None:
         """Test translate sub-command with full set of arguments."""
         expected = TranslationArgs(
             data_file=dummy_files["data_file"],
@@ -143,7 +158,9 @@ class TestParseArgs:
 
         assert args == expected, "incorrect translate parameters"
 
-    def test_complete_matrix_translate_parameters(self, dummy_files: dict[str, pathlib.Path]):
+    def test_complete_matrix_translate_parameters(
+        self, dummy_files: dict[str, pathlib.Path]
+    ) -> None:
         """Test matrix_translate sub-command with full set of arguments."""
         expected = MatrixTranslationArgs(
             data_file=dummy_files["data_file"],

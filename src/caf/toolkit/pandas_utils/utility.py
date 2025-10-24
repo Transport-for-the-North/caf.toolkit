@@ -1,14 +1,17 @@
-# -*- coding: utf-8 -*-
 """Basic utility functions for pandas objects."""
+
 from __future__ import annotations
 
 # Built-Ins
 import typing
-from typing import Literal, Sequence, overload
+from typing import Literal, overload
 
 # Third Party
 import numpy as np
 import pandas as pd
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # # # CONSTANTS # # #
 
@@ -38,7 +41,7 @@ def cast_to_common_type(
     cast_items:
         All of the items passed in, cast to a common datatype
     """
-    # TODO(BT): Figure out how to do these type hints properly
+    # TODO(BT): Figure out how to do these type hints properly  # noqa: TD003
     # Simple case
     base_dtype = items_to_cast[0].dtype
     if all(x.dtype == base_dtype for x in items_to_cast):
@@ -63,7 +66,7 @@ def to_numeric(
     arg: np.ndarray,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> np.ndarray: ...
 
 
@@ -72,7 +75,7 @@ def to_numeric(
     arg: pd.Index,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> pd.Index: ...
 
 
@@ -81,7 +84,7 @@ def to_numeric(
     arg: pd.Series,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,
+    **kwargs,  # noqa: ANN003
 ) -> pd.Series: ...
 
 
