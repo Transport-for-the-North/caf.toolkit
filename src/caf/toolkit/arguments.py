@@ -413,7 +413,7 @@ class ModelArguments:
         """
         if not issubclass(self._model, config_base.BaseConfig):
             raise TypeError(f"cannot use config parse with {type(self._model)}")
-        return self._model.load_yaml(args.config_path)
+        return self._model.load_yaml(args.config_path)  # type: ignore[attr-defined]
 
 
 class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):

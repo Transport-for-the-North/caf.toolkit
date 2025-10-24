@@ -25,7 +25,7 @@ import platform
 import subprocess
 import sys
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 # Third Party
 import psutil
@@ -36,7 +36,7 @@ from pydantic import dataclasses, types
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from types import TracebackType
-    from typing import Annotated, Any, Self
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
