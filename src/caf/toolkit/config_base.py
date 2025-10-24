@@ -6,7 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
-from typing import TYPE_CHECKING, Any, Self, overload
+from typing import TYPE_CHECKING, overload
 
 # Third Party
 import pydantic
@@ -15,6 +15,7 @@ import strictyaml
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 

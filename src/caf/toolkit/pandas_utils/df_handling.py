@@ -4,7 +4,7 @@ from __future__ import annotations
 
 # Built-Ins
 import functools
-from typing import TYPE_CHECKING, Any, Self, overload
+from typing import TYPE_CHECKING, overload
 
 # Third Party
 import numpy as np
@@ -15,6 +15,7 @@ from caf.toolkit import toolbox
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Hashable
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 

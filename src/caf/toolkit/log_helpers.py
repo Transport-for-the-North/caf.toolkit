@@ -25,7 +25,7 @@ import platform
 import subprocess
 import sys
 import warnings
-from typing import TYPE_CHECKING, Annotated, Any, Self
+from typing import TYPE_CHECKING
 
 # Third Party
 import psutil
@@ -36,6 +36,7 @@ from pydantic import dataclasses, types
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from types import TracebackType
+    from typing import Annotated, Any, Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -50,8 +51,7 @@ if sys.version_info.minor <= 10:  # noqa: PLR2004
     _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
     # getLevelNamesMapping added to logging in v3.11
-    # pylint: disable=no-member
-    _LEVEL_LOOKUP = logging.getLevelNamesMapping()
+    _LEVEL_LOOKUP = logging.getLevelNamesMapping()  # pylint: disable=no-member
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
