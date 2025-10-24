@@ -4,19 +4,24 @@
 import dataclasses
 import datetime
 import pathlib
+import sys
 from pathlib import Path
-from typing import Self
+from typing import TypeVar
 
 # Third Party
 import pytest
-
-# pylint: disable=import-error
 from pydantic import ValidationError
 
+# pylint: disable=import-error
 # Local Imports
 from caf.toolkit import BaseConfig
 
 # pylint: enable=import-error
+
+if sys.version_info.minor == 10:  # noqa: PLR2004
+    Self = TypeVar("Self")
+else:
+    from typing import Self
 
 # # # Fixture # # #
 
