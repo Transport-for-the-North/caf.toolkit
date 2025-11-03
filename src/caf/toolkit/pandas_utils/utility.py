@@ -66,7 +66,7 @@ def to_numeric(
     arg: np.ndarray,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> np.ndarray: ...
 
 
@@ -75,7 +75,7 @@ def to_numeric(
     arg: pd.Index,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.Index: ...
 
 
@@ -84,7 +84,7 @@ def to_numeric(
     arg: pd.Series,
     errors: Literal["ignore", "raise", "coerce"] = "raise",
     downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.Series: ...
 
 

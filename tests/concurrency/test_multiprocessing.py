@@ -145,12 +145,12 @@ class TestMultiprocessErrors:
     """Tests caf.toolkit.concurrency.multiprocess error production."""
 
     @staticmethod
-    def error_throw_function(*_, **__) -> NoReturn:  # noqa: ANN002, ANN003
+    def error_throw_function(*_, **__) -> NoReturn:
         """Throw an error."""
         raise OSError
 
     @staticmethod
-    def wait_function(*_, **__) -> None:  # noqa: ANN002, ANN003
+    def wait_function(*_, **__) -> None:
         """Wait for timeout error."""
         time.sleep(100)
 
