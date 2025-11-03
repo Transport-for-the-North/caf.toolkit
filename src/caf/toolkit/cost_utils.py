@@ -380,8 +380,8 @@ class CostDistribution:  # noqa: PLW1641
     def from_data_no_bins(
         matrix: np.ndarray,
         cost_matrix: np.ndarray,
-        *args,  # noqa: ANN002
-        **kwargs,  # noqa: ANN003
+        *args,
+        **kwargs,
     ) -> CostDistribution:
         """Convert values and a cost matrix into a CostDistribution.
 
@@ -678,8 +678,8 @@ def normalised_cost_distribution(
 def dynamic_cost_distribution(
     matrix: np.ndarray,
     cost_matrix: np.ndarray,
-    *args,  # noqa: ANN002
-    **kwargs,  # noqa: ANN003
+    *args,
+    **kwargs,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate the distribution of costs across a matrix, using dynamic bins.
 

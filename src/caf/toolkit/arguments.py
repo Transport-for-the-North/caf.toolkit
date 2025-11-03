@@ -345,7 +345,7 @@ class ModelArguments:
         name: str,
         add_arguments: bool = True,
         add_config: bool = True,
-        **kwargs,  # noqa: ANN003
+        **kwargs,
     ) -> None:
         """Add sub-commands for CLI arguments and config (if possible).
 

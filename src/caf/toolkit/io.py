@@ -36,7 +36,7 @@ NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNT
 class MissingColumnsError(Exception):
     """Raised when columns are missing from input CSV."""
 
-    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def __init__(self, name: str, columns: list[str], *args, **kwargs) -> None:
         self.columns = columns
         cols = " and".join(", ".join(f"'{s}'" for s in columns).rsplit(",", 1))
         msg = f"Columns missing from {name}: {cols}"
@@ -46,8 +46,8 @@ class MissingColumnsError(Exception):
 # # # FUNCTIONS # # #
 def safe_dataframe_to_csv(
     df: pd.DataFrame,
-    *args,  # noqa: ANN002
-    **kwargs,  # noqa: ANN003
+    *args,
+    **kwargs,
 ) -> None:
     """Prompt the user to close a file before saving.
 
@@ -92,7 +92,7 @@ def read_csv(
     path: os.PathLike,
     name: str | None = None,
     normalise_column_names: bool = False,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.DataFrame:
     """Read CSV files, wraps `pandas.read_csv` to perform additional checks.
 
@@ -202,7 +202,7 @@ def _normalise_read_csv(  # noqa: C901
     usecols: _Usecols | None = None,
     dtype: _Dtype | None = None,
     index_col: _IndexCol | None = None,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> tuple[dict[str, str], _Usecols | None, _Dtype | None, _IndexCol | None]:
     """Produce normalised column names and lookup from original.
 
@@ -306,7 +306,7 @@ def _normalise_name(col: str) -> str:
 def read_csv_matrix(
     path: os.PathLike,
     format_: Literal["square", "long"] | None = None,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.DataFrame:
     """Read matrix CSV in the square or long format.
 

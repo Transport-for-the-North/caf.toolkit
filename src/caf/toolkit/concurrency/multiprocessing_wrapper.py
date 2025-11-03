@@ -197,8 +197,8 @@ def wait_for_pool_results(  # noqa: C901
 def _call_order_wrapper(
     index: int,
     func: Callable[..., _T],
-    *args,  # noqa: ANN002
-    **kwargs,  # noqa: ANN003
+    *args,
+    **kwargs,
 ) -> tuple[int, _T]:
     """Wrap a function return values with a calling index.
 

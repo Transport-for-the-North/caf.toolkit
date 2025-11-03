@@ -567,7 +567,7 @@ class TemporaryLogFile:
         logger: logging.Logger,
         log_file: os.PathLike,
         base_log_file: os.PathLike | None = None,
-        **kwargs,  # noqa: ANN003
+        **kwargs,
     ) -> None:
         self.logger = logger
         self.log_file = log_file
