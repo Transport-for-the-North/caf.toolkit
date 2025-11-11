@@ -10,11 +10,13 @@ from __future__ import annotations
 import logging
 import pathlib
 import warnings
+from collections.abc import Hashable
 from typing import Any, Literal, Optional, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
 import pandas as pd
+from pydantic import FilePath, dataclasses
 
 # Local Imports
 from caf.toolkit import io, math_utils
@@ -592,11 +594,13 @@ def pandas_long_matrix_zone_translation(
                 f"Extra columns found in matrix, dropping the following: {drop_cols}"
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
-        matrix = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
-        assert isinstance(matrix, pd.Series)
+        series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
+        assert isinstance(series_mat, pd.Series)
+    else:
+        series_mat = matrix
 
     # Convert to wide to translate
-    wide_mat = pd_utils.long_to_wide_infill(matrix=matrix)
+    wide_mat = pd_utils.long_to_wide_infill(matrix=series_mat)
 
     translated_wide_mat = pandas_matrix_zone_translation(
         matrix=wide_mat,
@@ -897,7 +901,7 @@ def pandas_vector_zone_translation(
     if not isinstance(factors, pd.Series):
         raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
-        vector.mul(factors, axis="index").groupby(level=[translation_to_col] + ind_names).sum()
+        vector.mul(factors, axis=0).groupby(level=[translation_to_col] + ind_names).sum()
     )
 
     if check_totals:
@@ -949,7 +953,7 @@ def _multi_vector_trans_index(
     translation: pd.DataFrame,
     translation_from_col: str,
     translation_from: np.ndarray,
-) -> tuple[list[str], pd.DataFrame | pd.Series, pd.DataFrame]:
+) -> tuple[list[Hashable], pd.DataFrame | pd.Series, pd.DataFrame]:
     """Create correct index for `pandas_multi_vector_zone_translation`."""
     if isinstance(vector.index, pd.MultiIndex):
         ind_names = list(vector.index.names)
@@ -1263,3 +1267,79 @@ def matrix_translation_from_file(
 
     translated.to_csv(output_path)
     LOG.info("Written translated matrix CSV to '%s'", output_path)
+
+
+@dataclasses.dataclass
+class ZoneCorrespondencePath:
+    """Defines the path and columns to use for a translation."""
+
+    path: FilePath
+    """Path to the translation file."""
+    from_col_name: str
+    """Column name for the from zoning IDs."""
+    to_col_name: str
+    """Column name for the to zoning IDs."""
+    factors_col_name: str | None = None
+    """Column name for the translation factors."""
+
+    @property
+    def _generic_column_name_lookup(self) -> dict[str, str]:
+
+        lookup: dict[str, str] = {
+            self.from_col_name: "from",
+            self.to_col_name: "to",
+        }
+
+        if self.factors_col_name is not None:
+            lookup[self.factors_col_name] = "factors"
+
+        return lookup
+
+    @property
+    def _use_cols(self) -> list[str]:
+        cols = [self.from_col_name, self.to_col_name]
+        if self.factors_col_name is not None:
+            cols.append(self.factors_col_name)
+
+        return cols
+
+    def read(
+        self, *, factors_mandatory: bool = True, generic_column_names: bool = False
+    ) -> pd.DataFrame:
+        """Read the translation file.
+
+        Paramters
+        ---------
+        factors_mandatory
+            If True (default), an error will be raised if the factors
+            column is not present.
+        generic_column_names
+            If True (default), the columns will be renamed
+            to "from", "to" and "factors".
+        """
+        if factors_mandatory and self.factors_col_name is None:
+            raise ValueError("Factors column name is mandatory.")
+
+        translation = pd.read_csv(
+            self.path,
+            usecols=self._use_cols,
+        )
+
+        if factors_mandatory:
+            if not pd.api.types.is_numeric_dtype(translation[self.factors_col_name]):
+                raise ValueError(f"{self.factors_col_name} must contain numeric values only.")
+            if (translation[self.factors_col_name] > 1).any():
+                warnings.warn(
+                    "%s contains values greater than one,"
+                    " this does not make sense for a zone translation factor"
+                )
+            if (translation[self.factors_col_name] < 0).any():
+                warnings.warn(
+                    "%s contains values less than one,"
+                    " this does not make sense for a zone translation factor"
+                )
+
+        if generic_column_names:
+            translation = translation.rename(columns=self._generic_column_name_lookup)
+
+        return translation

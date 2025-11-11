@@ -93,7 +93,7 @@ def _parse_types(type_str: str) -> tuple[type, bool]:
     types = set()
     optional = False
     for type_ in type_str.split("|"):
-        match = re.match(r"(?:(\w+)\.)?(\w+)", type_.strip(), re.I)
+        match = re.match(r"(?:(\w+)\.)*(\w+)", type_.strip(), re.I)
         if match is None:
             warnings.warn(f"unexpect type format: '{type_}'", TypeAnnotationWarning)
             return str, optional
@@ -281,6 +281,10 @@ class ModelArguments:
                 )
                 continue
 
+            # Boolean flags can't be defined as positional only
+            if field.is_required():
+                raise ValueError(f"{name} - boolean flags must have a default value")
+
             # Use the store true / false action for boolean flags
             # Use false as default if not given
             if default is None or not default:
@@ -321,7 +325,14 @@ class ModelArguments:
 
         return parser
 
-    def add_subcommands(self, subparsers: argparse._SubParsersAction, name: str, **kwargs):
+    def add_subcommands(
+        self,
+        subparsers: argparse._SubParsersAction,
+        name: str,
+        add_arguments: bool = True,
+        add_config: bool = True,
+        **kwargs,
+    ):
         """Add sub-commands for CLI arguments and config (if possible).
 
         Note: config sub-command won't be added if model provided to class
@@ -335,13 +346,25 @@ class ModelArguments:
         name : str
             Name of the sub-command to add, if config sub-command is
             added it will be called '{name}-config'.
+        add_arguments : bool
+            If True (default) adds sub-command called '{name}' with arguments.
+        add_config : bool
+            If True (default), and model given is a :class:`BaseConfig`,
+            adds sub-command called '{name}-config' with a single
+            config path argument.
         kwargs
             Keyword arguments to pass to `subparsers.add_parser`.
         """
-        parser = subparsers.add_parser(name, **kwargs)
-        self.add_arguments(parser)
+        if not add_arguments and not add_config:
+            raise ValueError(
+                "cannot add subcommands if add_arguments and add_config are both False."
+            )
 
-        if self._config:
+        if add_arguments:
+            parser = subparsers.add_parser(name, **kwargs)
+            self.add_arguments(parser)
+
+        if self._config and add_config:
             kwargs.pop("help", None)
             parser = subparsers.add_parser(
                 f"{name}-config", help=f"run {name} with parameters from config", **kwargs
