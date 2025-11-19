@@ -180,7 +180,9 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """
     annotation = _replace_union(annotation)
 
-    match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
+    match = re.match(
+        r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip()
+    )
     if match is None:
         warnings.warn(
             f"unexpected type annotation format: '{annotation}'",
@@ -240,7 +242,9 @@ class ModelArguments:
             a subclass of `pydantic.BaseModel`.
         """
         if not issubclass(model, pydantic.BaseModel):
-            raise TypeError(f"`dataclass` should be a pydantic BaseModel not {type(model)}")
+            raise TypeError(
+                f"`dataclass` should be a pydantic BaseModel not {type(model)}"
+            )
 
         self._model = model
         self._config = issubclass(model, config_base.BaseConfig)
@@ -268,6 +272,9 @@ class ModelArguments:
             the `argparse.Namespace` and output the given dataclass.
         """
         for name, field in self._model.model_fields.items():
+            if field.alias is not None:
+                name = field.alias  # noqa: PLW2901
+
             type_, _, nargs = parse_arg_details(str(field.annotation))
 
             if field.is_required():
@@ -310,7 +317,9 @@ class ModelArguments:
         parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
 
-    def add_config_arguments(self, parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def add_config_arguments(
+        self, parser: argparse.ArgumentParser
+    ) -> argparse.ArgumentParser:
         """Add config argument to command-line `parser` and adds `dataclass_parse_func`.
 
         Adds argument for reading parameters from a config and will automatically
