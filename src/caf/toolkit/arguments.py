@@ -249,7 +249,8 @@ class ModelArguments:
         """Add arguments to command-line `parser` and adds `dataclass_parse_func`.
 
         This method will add arguments to the `parser` with the same
-        names as the class attributes. It will fill in the following:
+        names as the class attributes (or field.alias if used). It
+        will fill in the following:
         - default values, if defined in the attribute field function
         - help text, if defined in the field metadata dictionary with
           the "help" key
