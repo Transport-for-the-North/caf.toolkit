@@ -83,7 +83,7 @@ def reindex_cols(
     columns: list[str],
     throw_error: bool = True,
     dataframe_name: str = "the given dataframe",
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Reindexes a pandas DataFrame. Will throw error if columns aren't in `df`.
@@ -140,7 +140,7 @@ def reindex_rows_and_cols(
     index: list[Any],
     columns: list[Any],
     fill_value: Any = np.nan,  # noqa: ANN401
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Reindex a pandas DataFrame, making sure index/col types don't clash.
@@ -193,7 +193,7 @@ def reindex_and_groupby_sum(
     index_cols: list[str],
     value_cols: list[str],
     throw_error: bool = True,
-    **kwargs,  # noqa: ANN003
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Reindexes and groups a pandas DataFrame.
@@ -677,7 +677,7 @@ def wide_to_long_infill(
     return stacked
 
 
-def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:  # noqa: ANN002, ANN003
+def long_df_to_wide_ndarray(*args, **kwargs) -> np.ndarray:
     """Convert a DataFrame from long to wide format, infilling missing values.
 
     Similar to the `long_to_wide_infill()` function, but returns a numpy array
