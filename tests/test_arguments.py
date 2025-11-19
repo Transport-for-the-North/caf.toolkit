@@ -11,6 +11,7 @@ import pathlib
 import sys
 
 # Third Party
+import pydantic
 import pytest
 
 # Local Imports
@@ -152,6 +153,7 @@ else:
         path: pathlib.Path
         general_list: list[str | int]
         boolean: bool = True
+        alias: str = pydantic.Field("default", alias="alias_name")
 
 
 class _InvalidBoolConfigTest(config_base.BaseConfig):
