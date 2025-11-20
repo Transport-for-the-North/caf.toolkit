@@ -724,3 +724,152 @@ def read_matrix(
         matrix = matrix.reindex(matrix.index, axis=1)
 
     return matrix
+
+def starts_with(s: str, x: str) -> bool:
+    """
+    Boolean test to see if string s starts with string x or not.
+
+    Parameters
+    ----------
+    s:
+        The string to test
+
+    x:
+        The string to search for
+
+    Returns
+    -------
+    Bool:
+        True if s starts with x, else False.
+    """
+    search_string = '^' + x
+    return re.search(search_string, s) is not None
+
+def find_filename(
+    path: os.PathLike,
+    alt_types: list[str] | None = None,
+    return_full_path: bool = True,
+) -> pathlib.Path:
+    """
+    Checks if the file at path exists under a different file extension.
+
+    If path ends in a file extension, will try find that file first. If
+    that doesn't exist, it will look for a compressed, or '.csv' version.
+
+    Parameters
+    ----------
+    path:
+        The path to the file to try and find
+
+    alt_types:
+        A list of alternate filetypes to consider. By default, will be:
+        ['.pbz2', '.csv']
+
+    return_full_path:
+        If False, will only return the name of the file, and not the full path
+
+    Returns
+    -------
+    path:
+        The path to a matching, or closely matching (differing only on
+        filetype extension) file.
+
+    Raises
+    ------
+    FileNotFoundError:
+        If the file cannot be found under any of the given alt_types file
+        extensions.
+    """
+    # Init
+    path = pathlib.Path(path)
+
+    # Wrapper around return to deal with full path or not
+    def return_fn(ret_path):
+        if return_full_path:
+            return ret_path
+        return ret_path.name
+
+    if alt_types is None:
+        alt_types = [".pbz2", ".csv"] + list(PD_COMPRESSION)
+
+    # Make sure they all start with a dot
+    temp_alt_types = list()
+    for ftype in alt_types:
+        if not starts_with(ftype, "."):
+            ftype = "." + ftype
+        temp_alt_types.append(ftype)
+    alt_types = temp_alt_types.copy()
+
+    # Try to find the path as is
+    if path.suffix != "":
+        if os.path.exists(path):
+            return return_fn(path)
+
+    # Try to find similar paths
+    attempted_paths = list()
+    base_path = remove_suffixes(path)
+    for ftype in alt_types:
+        i_path = base_path.with_suffix(ftype)
+        attempted_paths.append(i_path)
+        if os.path.exists(i_path):
+            return return_fn(i_path)
+
+    # If here, no paths were found!
+    raise FileNotFoundError(
+        "Cannot find any similar files. Tried all of the following paths: %s"
+        % str(attempted_paths)
+    )
+
+def file_exists(file_path: os.PathLike) -> bool:
+    """
+    Checks if a file exists at the given path.
+
+    Parameters
+    ----------
+    file_path:
+        path to the file to check.
+
+    Returns
+    -------
+    file_exists:
+        True if a file exists, else False
+    """
+    if not os.path.exists(file_path):
+        return False
+
+    if not os.path.isfile(file_path):
+        raise IOError(
+            "The given path exists, but does not point to a file. "
+            "Given path: %s" % str(file_path)
+        )
+
+    return True
+
+def check_file_exists(
+    file_path: os.PathLike,
+    find_similar: bool = False,
+) -> None:
+    """
+    Checks if a file exists at the given path. Throws an error if not.
+
+    Parameters
+    ----------
+    file_path:
+        path to the file to check.
+
+    find_similar:
+        Whether to look for files with the same name, but a different file
+        type extension. If True, this will call find_filename() using the
+        default alternate file types: ['.pbz2', '.csv']
+
+    Returns
+    -------
+    None
+    """
+    if find_similar:
+        find_filename(file_path)
+        return
+
+    if not file_exists(file_path):
+        raise IOError("Cannot find a path to: %s" % str(file_path))
+
