@@ -1,0 +1,2 @@
+flask>=3.1.2
+wtforms[email]>=3.2.1

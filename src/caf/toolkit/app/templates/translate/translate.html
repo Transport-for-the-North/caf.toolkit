@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}Translate{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<p>Welcome to CAF.toolkit zone translation.</p>
+{% from "_formhelpers.html" import render_field %}
+<form method="post" enctype="multipart/form-data">
+    <dl>
+        {{ render_field(form.csv) }}
+    </dl>
+    <input type="submit" value="Run">
+</form>
+{% endblock %}

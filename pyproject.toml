@@ -34,6 +34,7 @@ dependencies = { "file" = "requirements.txt" }
 dev = { "file" = "requirements_dev.txt" }
 docs = { "file" = "docs/requirements.txt" }
 sparse = { "file" = "requirements_sparse.txt" }
+app = { "file" = "requirements_app.txt" }
 
 # Dynamic versioning for editable installs
 [tool.setuptools.cmdclass]

@@ -1,0 +1,29 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - CAF.toolkit</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav>
+    <h1>CAF.toolkit</h1>
+    <ul>
+        <li><a href="{{ url_for('index') }}">Home</a></li>
+        {% if g.user %}
+        <li><a href="{{ url_for('translate.translate') }}">Translate</a></li>
+        {% if g.user['admin'] %}
+        <li><a href="">Admin Dashboard</a></li>
+        {% endif %}
+        <li><span>{{ g.user['username'] }}</span></li>
+        <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+        {% else %}
+        <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+        <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+        {% endif %}
+    </ul>
+</nav>
+<section class="content">
+    <header>
+        {% block header %}{% endblock %}
+    </header>
+    {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+</section>
