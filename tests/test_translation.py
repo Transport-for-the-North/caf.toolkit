@@ -62,7 +62,7 @@ class NumpyMatrixResults:
     def input_kwargs(
         self,
         check_shapes: bool = True,
-        **kwargs,  # noqa: ANN003
+        **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
         return {
@@ -313,7 +313,7 @@ class PandasMatrixResults:
     def input_kwargs(
         self,
         check_totals: bool = True,
-        **kwargs,  # noqa: ANN003
+        **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
         kwargs = (
@@ -376,7 +376,7 @@ class PandasLongMatrixResults:
     def input_kwargs(
         self,
         check_totals: bool = True,
-        **kwargs,  # noqa: ANN003
+        **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
         kwargs = (

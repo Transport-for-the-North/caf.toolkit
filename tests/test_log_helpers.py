@@ -200,7 +200,7 @@ class TestGitDescribe:
         """Test function correctly returns the string result if command is successful."""
         describe = "v1.0-1-abc123"
 
-        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:  # noqa:ANN002,ANN003
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
             return subprocess.CompletedProcess("", 0, stdout=describe.encode())
 
         monkeypatch.setattr(subprocess, "run", dummy_run)
@@ -210,7 +210,7 @@ class TestGitDescribe:
     def test_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test None is returned whenever the subprocess returns a non-zero code."""
 
-        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:  # noqa:ANN002,ANN003
+        def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
             return subprocess.CompletedProcess("", 1)
 
         monkeypatch.setattr(subprocess, "run", dummy_run)
