@@ -725,6 +725,7 @@ def read_matrix(
 
     return matrix
 
+
 def starts_with(s: str, x: str) -> bool:
     """
     Boolean test to see if string s starts with string x or not.
@@ -742,8 +743,9 @@ def starts_with(s: str, x: str) -> bool:
     Bool:
         True if s starts with x, else False.
     """
-    search_string = '^' + x
+    search_string = "^" + x
     return re.search(search_string, s) is not None
+
 
 def find_filename(
     path: os.PathLike,
@@ -820,6 +822,7 @@ def find_filename(
         % str(attempted_paths)
     )
 
+
 def file_exists(file_path: os.PathLike) -> bool:
     """
     Checks if a file exists at the given path.
@@ -844,6 +847,7 @@ def file_exists(file_path: os.PathLike) -> bool:
         )
 
     return True
+
 
 def check_file_exists(
     file_path: os.PathLike,
@@ -872,4 +876,3 @@ def check_file_exists(
 
     if not file_exists(file_path):
         raise IOError("Cannot find a path to: %s" % str(file_path))
-
