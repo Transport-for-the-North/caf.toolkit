@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the `arguments` module."""
 
 ##### IMPORTS #####
@@ -12,6 +11,7 @@ import pathlib
 import sys
 
 # Third Party
+import pydantic
 import pytest
 
 # Local Imports
@@ -54,7 +54,7 @@ class TestParseArgDetails:
     """Tests for `parse_arg_details` function."""
 
     @pytest.mark.parametrize("test_data", CORRECT_ANNOTATIONS)
-    def test_correct(self, test_data: tuple[str, tuple[type, bool, int | str | None]]):
+    def test_correct(self, test_data: tuple[str, tuple[type, bool, int | str | None]]) -> None:
         """Test annotations the function can handle."""
         annotation, expected = test_data
         type_, optional, nargs = arguments.parse_arg_details(annotation)
@@ -73,7 +73,7 @@ class TestParseArgDetails:
         with pytest.warns(arguments.TypeAnnotationWarning):
             type_, optional, nargs = arguments.parse_arg_details(annotation)
 
-        assert type_ == str, "incorrect default type"
+        assert type_ is str, "incorrect default type"
         assert optional is False, "incorrect default optional"
         assert nargs is None, "incorrect default nargs"
 
@@ -106,7 +106,7 @@ class TestGetenvBool:
 
     _variable_name = "TEST_TOOLKIT_ENV_VARIABLE"
 
-    def test_default(self):
+    def test_default(self) -> None:
         """Test that the default parameter is correctly returned."""
         os.environ[self._variable_name] = ""
 
@@ -114,19 +114,19 @@ class TestGetenvBool:
         assert not arguments.getenv_bool(self._variable_name, False)
 
     @pytest.mark.parametrize("value", ["TRUE", "Yes", "y", "1", "true  "])
-    def test_true(self, value: str):
+    def test_true(self, value: str) -> None:
         """Test the possible values for True."""
         os.environ[self._variable_name] = value
         assert arguments.getenv_bool(self._variable_name, False)
 
     @pytest.mark.parametrize("value", ["false", "no", "n", "0", "FALSE", "n "])
-    def test_false(self, value: str):
+    def test_false(self, value: str) -> None:
         """Test the possible values for False."""
         os.environ[self._variable_name] = value
         assert not arguments.getenv_bool(self._variable_name, True)
 
     @pytest.mark.parametrize("value", ["10", "01", "wrong", "t", "f"])
-    def test_invalid(self, value: str):
+    def test_invalid(self, value: str) -> None:
         """Test an invalid value raises the correct error."""
         pattern = (
             r"unexpected value (.*) for '.*' env "
@@ -139,13 +139,13 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-if sys.version_info.minor <= 9:
+if sys.version_info.minor <= 9:  # noqa: PLR2004
     # Creating dummy class because the test is skipped
     class _ArgumentsConfigTest: ...  # pylint: disable=too-few-public-methods
 
 else:
-    # Ignore already defined
-    class _ArgumentsConfigTest(config_base.BaseConfig):  # type: ignore
+
+    class _ArgumentsConfigTest(config_base.BaseConfig):
         """Class for testing `ModelArguments`."""
 
         text: str
@@ -153,6 +153,7 @@ else:
         path: pathlib.Path
         general_list: list[str | int]
         boolean: bool = True
+        alias: str = pydantic.Field("default", alias="alias_name")
 
 
 class _InvalidBoolConfigTest(config_base.BaseConfig):
@@ -166,11 +167,11 @@ class TestModelArguments:
     """Tests for the `ModelArguments` class."""
 
     @pytest.mark.skipif(
-        sys.version_info.minor <= 9,
+        sys.version_info.minor <= 9,  # noqa: PLR2004
         reason="uses | in type annotations which was added in 3.10",
     )
     @pytest.mark.filterwarnings("error")
-    def test_add_subcommands(self, parser: argparse.ArgumentParser):
+    def test_add_subcommands(self, parser: argparse.ArgumentParser) -> None:
         """Test the `add_subcommands` method works without errors / warnings.
 
         **Doesn't check the correct sub-commands have been added.**

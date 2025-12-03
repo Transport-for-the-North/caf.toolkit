@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for creating and managing a logger.
 
@@ -14,6 +13,7 @@ TemporaryLogFile
     Context manager for adding a log file handler to a logger and
     removing it when done.
 """
+
 from __future__ import annotations
 
 # Built-Ins
@@ -25,13 +25,18 @@ import platform
 import subprocess
 import sys
 import warnings
-from typing import Annotated, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Annotated
 
 # Third Party
 import psutil
 import pydantic
 from psutil import _common
 from pydantic import dataclasses, types
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from types import TracebackType
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -41,13 +46,12 @@ DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
-if sys.version_info.minor <= 10:
+if sys.version_info.minor <= 10:  # noqa: PLR2004
     # pylint: disable=protected-access
     _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
     # getLevelNamesMapping added to logging in v3.11
-    # pylint: disable=no-member
-    _LEVEL_LOOKUP = logging.getLevelNamesMapping()
+    _LEVEL_LOOKUP = logging.getLevelNamesMapping()  # pylint: disable=no-member
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
@@ -71,7 +75,9 @@ class LoggingWarning(Warning):
 def git_describe() -> str | None:
     """Run git describe command and return string if successful."""
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
-    comp = subprocess.run(cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE)
+    comp = subprocess.run(  # noqa: S602
+        cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
+    )
 
     if comp.returncode != 0:
         return None
@@ -105,9 +111,9 @@ class ToolDetails:
     ]
     """Version of the tool, should be in semantic versioning
     format https://semver.org/."""
-    homepage: Optional[pydantic.HttpUrl] = None
+    homepage: pydantic.HttpUrl | None = None
     """URL of the homepage for the tool."""
-    source_url: Optional[pydantic.HttpUrl] = None
+    source_url: pydantic.HttpUrl | None = None
     """URL of the source code repository for the tool."""
     full_version: str | None = pydantic.Field(default_factory=git_describe)
     """Full version from git describe output, None if git command fails.
@@ -128,7 +134,8 @@ class ToolDetails:
         # pylint false positive for __dataclass_fields__ no-member
         # pylint: disable=no-member
         length = functools.reduce(
-            max, (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None)
+            max,
+            (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None),
         )
 
         for name in self.__dataclass_fields__:
@@ -177,9 +184,9 @@ class SystemInformation:
     """Name of the machine architecture e.g. "AMD64"."""
     processor: str
     """Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"."""
-    cpu_count: Optional[int]
+    cpu_count: int | None
     """Number of logical CPU cores on the machine."""
-    total_ram: Optional[int]
+    total_ram: int | None
     """Total virtual memory (bytes) on the machine."""
 
     @classmethod
@@ -278,7 +285,7 @@ class LogHelper:
     and tool information to it automatically.
 
     >>> # Temp directory for testing purposes
-    >>> tmp_path = getfixture('tmp_path')
+    >>> tmp_path = getfixture("tmp_path")
     >>> path = tmp_path / "test.log"
     >>> details = ToolDetails("test", "1.2.3")
     >>>
@@ -312,7 +319,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
-    ):
+    ) -> None:
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
 
@@ -329,7 +336,8 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
-                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'.",
+                    stacklevel=2,
                 )
 
         if log_file is not None:
@@ -343,6 +351,7 @@ class LogHelper:
                 "`logging.basicConfig` will be called with default parameters "
                 "at first log attempt if no handlers are added before that.",
                 LoggingWarning,
+                stacklevel=2,
             )
 
         if warning_capture:
@@ -469,14 +478,22 @@ class LogHelper:
         if self._warning_logger is not None:
             self._cleanup_handlers(self._warning_logger)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Initialise class with 'with' statement."""
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Write any error to the logger and closes the file."""
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         else:
             self.logger.info("Program completed without any critical errors")
 
@@ -524,7 +541,7 @@ class TemporaryLogFile:
 
     The code below is defining the log file path for testing purposes.
 
-    >>> log_file = getfixture('tmp_path') / "test.log"
+    >>> log_file = getfixture("tmp_path") / "test.log"
 
     Setting up a new temporary log file for a single module can be done
     using the following:
@@ -566,19 +583,28 @@ class TemporaryLogFile:
         """Initialise TemporaryLogFile."""
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Close temporary log file."""
         # pylint: disable=invalid-name
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
-
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)
 
 
 # # # FUNCTIONS # # #
 def write_information(
-    logger: logging.Logger, tool_details: ToolDetails | None = None, system_info: bool = True
+    logger: logging.Logger,
+    tool_details: ToolDetails | None = None,
+    system_info: bool = True,
 ) -> None:
     """Write tool and system information to `logger`.
 
@@ -633,8 +659,8 @@ def write_instantiate_message(
 def get_custom_logger(
     logger_name: str,
     code_version: str,
-    instantiate_msg: Optional[str] = None,
-    log_handlers: Optional[Iterable[logging.Handler]] = None,
+    instantiate_msg: str | None = None,
+    log_handlers: Iterable[logging.Handler] | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -689,8 +715,8 @@ def get_logger(
     logger_name: str,
     code_version: str,
     console_handler: bool = True,
-    instantiate_msg: Optional[str] = None,
-    log_file_path: Optional[os.PathLike] = None,
+    instantiate_msg: str | None = None,
+    log_file_path: os.PathLike | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -815,8 +841,8 @@ def get_file_handler(
 
 def capture_warnings(
     stream_handler: bool = True,
-    stream_handler_args: Optional[dict[str, Any]] = None,
-    file_handler_args: Optional[dict[str, Any]] = None,
+    stream_handler_args: dict[str, Any] | None = None,
+    file_handler_args: dict[str, Any] | None = None,
 ) -> None:
     """Capture warnings using logging.
 
