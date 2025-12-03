@@ -6,22 +6,20 @@ from __future__ import annotations
 import collections
 import itertools
 import logging
+import os
 import pathlib
 import re
 import string
 import time
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit.pandas_utils import utility
-
-if TYPE_CHECKING:
-    import os
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -135,7 +133,9 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
+        for nm, value in zip(
+            ("usecols", "dtype", "index_col"), parameters, strict=True
+        ):
             if value is not None:
                 kwargs[nm] = value
 
@@ -306,7 +306,7 @@ def _normalise_name(col: str) -> str:
 
 def read_df(
     path: os.PathLike,
-    index_col: int = None,
+    index_col: list[int] | int | None = None,
     find_similar: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
@@ -340,33 +340,13 @@ def read_df(
             raise FileNotFoundError(f"No such file or directory: '{path}'")
         path = find_filename(path)
 
-    # Determine how to read in df
-    if pathlib.Path(path).suffix == ".pbz2":
-        df = compress.read_in(path)
-
-        # Optionally try and set the index
-        if index_col is not None and not is_index_set(df):
-            df = df.set_index(list(df)[index_col])
-
-        # Unset the index col if it is set - this is how pd.read_csv() works
-        if index_col is None and df.index.name is not None:
-            df = df.reset_index()
-
-        # Make sure no column name is set - this is how pd.read_csv() works
-        df.columns.name = None
-        return df
-
     if pathlib.Path(path).suffix == ".csv":
         return pd.read_csv(path, index_col=index_col, **kwargs)
 
     if pathlib.Path(path).suffix in PD_COMPRESSION:
         return pd.read_csv(path, index_col=index_col, **kwargs)
 
-    raise ValueError(
-        f"Cannot determine the filetype of the given path. "
-        f"Expected either '.csv' or '{consts.COMPRESSION_SUFFIX}'\n"
-        f"Got path: {path}"
-    )
+    raise ValueError("Cannot determine the filetype of the given path.")
 
 
 def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
@@ -392,21 +372,14 @@ def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
     # Init
     path = pathlib.Path(path)
 
-    # Determine how to read in df
-    if pathlib.Path(path).suffix == ".pbz2":
-        compress.write_out(df, path)
-
-    elif pathlib.Path(path).suffix == ".csv":
+    if pathlib.Path(path).suffix == ".csv":
         df.to_csv(path, **kwargs)
 
     elif pathlib.Path(path).suffix in PD_COMPRESSION:
         df.to_csv(path, **kwargs)
 
     else:
-        raise ValueError(
-            f"Cannot determine the filetype of the given path. Expected "
-            f"either '.csv' or '{consts.COMPRESSION_SUFFIX}'"
-        )
+        raise ValueError("Cannot determine the filetype of the given path.")
 
 
 def read_csv_matrix(
@@ -475,7 +448,9 @@ def read_csv_matrix(
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.columns = utility.to_numeric(
+        matrix.columns, errors="ignore", downcast="integer"
+    )
     matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
@@ -619,7 +594,9 @@ def find_file_with_name(
         )
 
     if len(found) == 0:
-        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+        raise FileNotFoundError(
+            f'cannot find any files named "{name}" inside "{folder}"'
+        )
 
     # Order found based on expected_suffixes
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
@@ -659,7 +636,7 @@ def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
 
 def read_matrix(
     path: os.PathLike,
-    format_: Optional[str] = None,
+    format_: str | None = None,
     find_similar: bool = False,
 ) -> pd.DataFrame:
     """Read matrix CSV in the square or long format.
@@ -691,21 +668,26 @@ def read_matrix(
         If the `format` cannot be determined by reading the file
         or an invalid `format` is given.
     """
-    header = 0
+    header: int | None = 0
     if format_ is None:
         # Determine format by reading top few lines of file
-        matrix = read_df(path, nrows=3, find_similar=find_similar)
+        matrix_peek = read_df(path, nrows=3, find_similar=find_similar)
 
-        if len(matrix.columns) == 3:
+        if len(matrix_peek.columns) == 3:
             format_ = "long"
 
             # Check if columns have a header
-            if matrix.columns[0].strip().lower() in ("o", "origin", "p", "productions"):
+            if matrix_peek.columns[0].strip().lower() in (
+                "o",
+                "origin",
+                "p",
+                "productions",
+            ):
                 header = 0
             else:
                 header = None
 
-        elif len(matrix.columns) > 3:
+        elif len(matrix_peek.columns) > 3:
             format_ = "square"
             header = 0
         else:
@@ -715,9 +697,13 @@ def read_matrix(
     if format_ == "square":
         matrix = read_df(path, index_col=0, find_similar=find_similar, header=header)
     elif format_ == "long":
-        matrix = read_df(path, index_col=[0, 1], find_similar=True, header=header)
+        long_matrix = read_df(
+            path, index_col=[0, 1], find_similar=True, header=header
+        ).squeeze()
+        if not isinstance(long_matrix, pd.Series):
+            raise TypeError("There should be no way this isn't a series.")
 
-        matrix = matrix.unstack()
+        matrix = long_matrix.unstack()
         matrix.columns = matrix.columns.droplevel(0)
     else:
         raise ValueError(f"unknown format {format_}")

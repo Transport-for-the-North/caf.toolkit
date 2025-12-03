@@ -275,7 +275,9 @@ class CostDistribution:  # noqa: PLW1641
             An array to be passed into a dataframe as a column.
         """
         # Init and checks
-        bin_edges = bin_edges.tolist() if isinstance(bin_edges, np.ndarray) else bin_edges
+        bin_edges = (
+            bin_edges.tolist() if isinstance(bin_edges, np.ndarray) else bin_edges
+        )
         if matrix.shape != cost_matrix.shape:
             raise ValueError(
                 f"`matrix` and `cost_matrix` need to be the same shape. Got:\n"
@@ -294,12 +296,20 @@ class CostDistribution:  # noqa: PLW1641
 
         # Calculate the weighted average by bin
         df["bin"] = pd.cut(df["cost"], bins=bin_edges)
-        grouped = df.groupby("bin", observed=False)[["weighted", "demand"]].sum().reset_index()
+        grouped = (
+            df.groupby("bin", observed=False)[["weighted", "demand"]]
+            .sum()
+            .reset_index()
+        )
         grouped["averages"] = grouped["weighted"] / grouped["demand"]
 
         # Infill any missing values with bin midpoint
         grouped["bin_centres"] = grouped["bin"].apply(lambda x: x.mid)
-        return grouped["averages"].fillna(grouped["bin_centres"].astype("float")).to_numpy()
+        return (
+            grouped["averages"]
+            .fillna(grouped["bin_centres"].astype("float"))
+            .to_numpy()
+        )
 
     @classmethod
     def from_data(
