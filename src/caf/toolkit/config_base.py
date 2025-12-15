@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import textwrap
 from dataclasses import asdict, is_dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, overload
 
 # Third Party
@@ -14,7 +15,6 @@ import pydantic_core
 import strictyaml
 
 if TYPE_CHECKING:
-    from pathlib import Path
     from typing import Any, Self
 
 # # # CONSTANTS # # #
@@ -116,6 +116,7 @@ class BaseConfig(pydantic.BaseModel):
             Instance of class with attributes filled in from
             the YAML data.
         """
+        path = Path(path)
         with path.open("rt", encoding="utf-8") as file:
             text = file.read()
         return cls.from_yaml(text)
@@ -332,5 +333,6 @@ def write_config(
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]
         yaml = "\n".join([*comment_lines, yaml])
 
+    path = Path(path)
     with path.open("wt", encoding="utf-8") as file:
         file.write(yaml)
