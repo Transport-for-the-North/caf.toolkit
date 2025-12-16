@@ -224,6 +224,12 @@ class TestYaml:
         basic.save_yaml(file_path)
         assert ConfigTestClass.load_yaml(file_path) == basic
 
+    def test_save_load_str(self, basic: ConfigTestClass, path: Path) -> None:
+        """Test saving to a YAML and reading works when path is string."""
+        file_path = str(path / "save_test.yml")
+        basic.save_yaml(file_path)
+        assert ConfigTestClass.load_yaml(file_path) == basic
+
 
 class TestExample:
     """Test writing the example file is correct."""
