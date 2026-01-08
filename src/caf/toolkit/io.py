@@ -6,22 +6,20 @@ from __future__ import annotations
 import collections
 import itertools
 import logging
+import os
 import pathlib
 import re
 import string
 import time
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit.pandas_utils import utility
-
-if TYPE_CHECKING:
-    import os
 
 # # # CONSTANTS # # #
 LOG = logging.getLogger(__name__)
@@ -30,6 +28,7 @@ NORMALISED_PUNTUATION = r"!#$%£&\-.<=>+^_~\(\)"
 NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNTUATION
 """Characted allowed in normalised column names."""
 
+PD_COMPRESSION = {".zip", ".gzip", ".bz2", ".zstd", ".csv.bz2"}
 # # # CLASSES # # #
 
 
@@ -134,7 +133,9 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
+        for nm, value in zip(
+            ("usecols", "dtype", "index_col"), parameters, strict=True
+        ):
             if value is not None:
                 kwargs[nm] = value
 
@@ -303,6 +304,84 @@ def _normalise_name(col: str) -> str:
     return re.sub(rf"[^{NORMALISED_CHARACTERS}]", "", normalised)
 
 
+def read_df(
+    path: os.PathLike,
+    index_col: list[int] | int | None = None,
+    find_similar: bool = False,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Reads in the dataframe at path. Decompresses the df if needed.
+
+    Parameters
+    ----------
+    path:
+        The full path to the dataframe to read in
+
+    index_col:
+        Will set this column as the index if reading from a compressed
+        file, and the index is not already set.
+        If reading from a csv, this is passed straight to pd.read_csv()
+
+    find_similar:
+        If True and the given file at path cannot be found, files with the
+        same name but different extensions will be looked for and read in
+        instead. Will check for: '.csv', '.pbz2'
+
+    Returns
+    -------
+    df:
+        The read in df at path.
+    """
+
+    # Try and find similar files if we are allowed
+    if not os.path.exists(path):
+        if not find_similar:
+            raise FileNotFoundError(f"No such file or directory: '{path}'")
+        path = find_filename(path)
+
+    if pathlib.Path(path).suffix == ".csv":
+        return pd.read_csv(path, index_col=index_col, **kwargs)
+
+    if pathlib.Path(path).suffix in PD_COMPRESSION:
+        return pd.read_csv(path, index_col=index_col, **kwargs)
+
+    raise ValueError("Cannot determine the filetype of the given path.")
+
+
+def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
+    """
+    Writes the dataframe at path. Decompresses the df if needed.
+
+    Parameters
+    ----------
+    df:
+        The dataframe to write to disk
+
+    path:
+        The full path to the dataframe to read in
+
+    **kwargs:
+        Any arguments to pass to the underlying write function.
+
+    Returns
+    -------
+    df:
+        The read in df at path.
+    """
+    # Init
+    path = pathlib.Path(path)
+
+    if pathlib.Path(path).suffix == ".csv":
+        df.to_csv(path, **kwargs)
+
+    elif pathlib.Path(path).suffix in PD_COMPRESSION:
+        df.to_csv(path, **kwargs)
+
+    else:
+        raise ValueError("Cannot determine the filetype of the given path.")
+
+
 def read_csv_matrix(
     path: os.PathLike,
     format_: Literal["square", "long"] | None = None,
@@ -369,7 +448,9 @@ def read_csv_matrix(
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.columns = utility.to_numeric(
+        matrix.columns, errors="ignore", downcast="integer"
+    )
     matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
@@ -513,9 +594,280 @@ def find_file_with_name(
         )
 
     if len(found) == 0:
-        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+        raise FileNotFoundError(
+            f'cannot find any files named "{name}" inside "{folder}"'
+        )
 
     # Order found based on expected_suffixes
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
 
     return found[0]
+
+
+def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
+    """Removes all suffixes from path
+
+    Parameters
+    ----------
+    path:
+        The path to remove the suffixes from
+
+    Returns
+    -------
+    path:
+        path with all suffixes removed
+    """
+    # Init
+    parent = path.parent
+    prev = pathlib.Path(path.name)
+
+    # Remove a suffix then check if all are removed
+    while True:
+        new = pathlib.Path(prev.stem)
+
+        # No more suffixes to remove
+        if new.suffix == "":
+            break
+
+        prev = new
+
+    return parent / new
+
+
+def read_matrix(
+    path: os.PathLike,
+    format_: str | None = None,
+    find_similar: bool = False,
+) -> pd.DataFrame:
+    """Read matrix CSV in the square or long format.
+
+    Sorts the index and column names and makes sure they're
+    the same, doesn't infill any NaNs created when reindexing.
+
+    Parameters
+    ----------
+    path : os.PathLike
+        Path to CSV file
+    format_ : str, optional
+        Expected format of the matrix 'square' or 'long', if
+        not given attempts to figure out the format by reading
+        the top few lines of the file.
+    find_similar : bool, default False
+        If True and the given file at path cannot be found, files with the
+        same name but different extensions will be looked for and read in
+        instead. Will check for: '.csv', '.pbz2'
+
+    Returns
+    -------
+    pd.DataFrame
+        Matrix file in square format with sorted columns and indices
+
+    Raises
+    ------
+    ValueError
+        If the `format` cannot be determined by reading the file
+        or an invalid `format` is given.
+    """
+    header: int | None = 0
+    if format_ is None:
+        # Determine format by reading top few lines of file
+        matrix_peek = read_df(path, nrows=3, find_similar=find_similar)
+
+        if len(matrix_peek.columns) == 3:
+            format_ = "long"
+
+            # Check if columns have a header
+            if matrix_peek.columns[0].strip().lower() in (
+                "o",
+                "origin",
+                "p",
+                "productions",
+            ):
+                header = 0
+            else:
+                header = None
+
+        elif len(matrix_peek.columns) > 3:
+            format_ = "square"
+            header = 0
+        else:
+            raise ValueError(f"cannot determine format of matrix {path}")
+
+    format_ = format_.strip().lower()
+    if format_ == "square":
+        matrix = read_df(path, index_col=0, find_similar=find_similar, header=header)
+    elif format_ == "long":
+        long_matrix = read_df(
+            path, index_col=[0, 1], find_similar=True, header=header
+        ).squeeze()
+        if not isinstance(long_matrix, pd.Series):
+            raise TypeError("There should be no way this isn't a series.")
+
+        matrix = long_matrix.unstack()
+        matrix.columns = matrix.columns.droplevel(0)
+    else:
+        raise ValueError(f"unknown format {format_}")
+
+    # Attempt to convert to integers
+    matrix.columns = pd.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")
+
+    matrix = matrix.sort_index(axis=0).sort_index(axis=1)
+    if (matrix.index != matrix.columns).any():
+        # Reindex index to match columns then columns to match index
+        matrix = matrix.reindex(matrix.columns, axis=0)
+        matrix = matrix.reindex(matrix.index, axis=1)
+
+    return matrix
+
+
+def starts_with(s: str, x: str) -> bool:
+    """
+    Boolean test to see if string s starts with string x or not.
+
+    Parameters
+    ----------
+    s:
+        The string to test
+
+    x:
+        The string to search for
+
+    Returns
+    -------
+    Bool:
+        True if s starts with x, else False.
+    """
+    search_string = "^" + x
+    return re.search(search_string, s) is not None
+
+
+def find_filename(
+    path: os.PathLike,
+    alt_types: list[str] | None = None,
+    return_full_path: bool = True,
+) -> pathlib.Path:
+    """
+    Checks if the file at path exists under a different file extension.
+
+    If path ends in a file extension, will try find that file first. If
+    that doesn't exist, it will look for a compressed, or '.csv' version.
+
+    Parameters
+    ----------
+    path:
+        The path to the file to try and find
+
+    alt_types:
+        A list of alternate filetypes to consider. By default, will be:
+        ['.pbz2', '.csv']
+
+    return_full_path:
+        If False, will only return the name of the file, and not the full path
+
+    Returns
+    -------
+    path:
+        The path to a matching, or closely matching (differing only on
+        filetype extension) file.
+
+    Raises
+    ------
+    FileNotFoundError:
+        If the file cannot be found under any of the given alt_types file
+        extensions.
+    """
+    # Init
+    path = pathlib.Path(path)
+
+    # Wrapper around return to deal with full path or not
+    def return_fn(ret_path):
+        if return_full_path:
+            return ret_path
+        return ret_path.name
+
+    if alt_types is None:
+        alt_types = [".pbz2", ".csv"] + list(PD_COMPRESSION)
+
+    # Make sure they all start with a dot
+    temp_alt_types = list()
+    for ftype in alt_types:
+        if not starts_with(ftype, "."):
+            ftype = "." + ftype
+        temp_alt_types.append(ftype)
+    alt_types = temp_alt_types.copy()
+
+    # Try to find the path as is
+    if path.suffix != "":
+        if os.path.exists(path):
+            return return_fn(path)
+
+    # Try to find similar paths
+    attempted_paths = list()
+    base_path = remove_suffixes(path)
+    for ftype in alt_types:
+        i_path = base_path.with_suffix(ftype)
+        attempted_paths.append(i_path)
+        if os.path.exists(i_path):
+            return return_fn(i_path)
+
+    # If here, no paths were found!
+    raise FileNotFoundError(
+        "Cannot find any similar files. Tried all of the following paths: %s"
+        % str(attempted_paths)
+    )
+
+
+def file_exists(file_path: os.PathLike) -> bool:
+    """
+    Checks if a file exists at the given path.
+
+    Parameters
+    ----------
+    file_path:
+        path to the file to check.
+
+    Returns
+    -------
+    file_exists:
+        True if a file exists, else False
+    """
+    if not os.path.exists(file_path):
+        return False
+
+    if not os.path.isfile(file_path):
+        raise IOError(
+            "The given path exists, but does not point to a file. "
+            "Given path: %s" % str(file_path)
+        )
+
+    return True
+
+
+def check_file_exists(
+    file_path: os.PathLike,
+    find_similar: bool = False,
+) -> None:
+    """
+    Checks if a file exists at the given path. Throws an error if not.
+
+    Parameters
+    ----------
+    file_path:
+        path to the file to check.
+
+    find_similar:
+        Whether to look for files with the same name, but a different file
+        type extension. If True, this will call find_filename() using the
+        default alternate file types: ['.pbz2', '.csv']
+
+    Returns
+    -------
+    None
+    """
+    if find_similar:
+        find_filename(file_path)
+        return
+
+    if not file_exists(file_path):
+        raise IOError("Cannot find a path to: %s" % str(file_path))
