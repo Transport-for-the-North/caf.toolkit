@@ -134,9 +134,10 @@ def _convert_dtypes(
 
 def _pandas_vector_validation(
     vector: pd.Series | pd.DataFrame,
-    translation: ZoneCorrespondence,
+    translation: ZoneCorrespondence | pd.DataFrame,
     from_unique_index: list[Any],
     to_unique_index: list[Any],
+    translation_from_col: str = "from",
     name: str = "vector",
 ) -> None:
     # pylint: disable=too-many-positional-arguments
@@ -164,6 +165,7 @@ def _pandas_vector_validation(
     -------
     None
     """
+    translation = _correspondence_from_df(translation, translation_from_col)
     validators.unique_list(from_unique_index, name="from_unique_index")
     validators.unique_list(to_unique_index, name="to_unique_index")
 
@@ -189,8 +191,9 @@ def _pandas_vector_validation(
 
 def _pandas_matrix_validation(
     matrix: pd.DataFrame,
-    row_translation: ZoneCorrespondence,
-    col_translation: ZoneCorrespondence,
+    row_translation: ZoneCorrespondence | pd.DataFrame,
+    col_translation: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
     name: str = "matrix",
 ) -> None:
     """Validate the given parameters for a matrix zone translation.
@@ -222,6 +225,8 @@ def _pandas_matrix_validation(
     """
     # Throw a warning if any index values are in the matrix, but not in the
     # row_translation. These values will just be dropped.
+    row_translation = _correspondence_from_df(row_translation, translation_from_col)
+    col_translation = _correspondence_from_df(col_translation, translation_from_col)
     translation_from = row_translation.from_column.unique()
     missing_rows = set(matrix.index.to_list()) - set(translation_from)
     if len(missing_rows) > 0:
@@ -500,8 +505,11 @@ def pandas_long_matrix_zone_translation(
     index_col_1_name: str,
     index_col_2_name: str,
     values_col: str,
-    zone_correspondence: ZoneCorrespondence,
-    col_translation: Optional[ZoneCorrespondence] = None,
+    zone_correspondence: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
+    translation_to_col: str = "to",
+    translation_factors_col: str = "factors",
+    col_translation: Optional[ZoneCorrespondence | pd.DataFrame] = None,
     translation_dtype: Optional[np.dtype] = None,
     index_col_1_out_name: Optional[str] = None,
     index_col_2_out_name: Optional[str] = None,
@@ -564,6 +572,13 @@ def pandas_long_matrix_zone_translation(
     """
     # pylint: disable=too-many-arguments, too-many-locals
     # Init
+    zone_correspondence = _correspondence_from_df(
+        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+    )
+    if col_translation is not None:
+        col_translation = _correspondence_from_df(
+            col_translation, translation_from_col, translation_to_col, translation_factors_col
+        )
     if bool(index_col_2_out_name) != bool(index_col_1_out_name):
         raise ValueError("If one of index_col_out_name is set, both must be set.")
     matrix = matrix.copy()
@@ -606,8 +621,11 @@ def pandas_long_matrix_zone_translation(
 
 def pandas_matrix_zone_translation(
     matrix: pd.DataFrame,
-    zone_correspondence: ZoneCorrespondence,
-    col_translation: ZoneCorrespondence | None = None,
+    zone_correspondence: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
+    translation_to_col: str = "to",
+    translation_factors_col: str = "factors",
+    col_translation: ZoneCorrespondence | pd.DataFrame | None = None,
     translation_dtype: Optional[np.dtype] = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
@@ -655,6 +673,9 @@ def pandas_matrix_zone_translation(
         the correct format.
     """
     # Init
+    zone_correspondence = _correspondence_from_df(
+        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+    )
     row_translation = zone_correspondence
     if col_translation is None:
         col_translation = zone_correspondence.copy()
@@ -722,7 +743,10 @@ def pandas_matrix_zone_translation(
 @overload
 def pandas_vector_zone_translation(
     vector: pd.DataFrame,
-    zone_correspondence: ZoneCorrespondence,
+    zone_correspondence: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
+    translation_to_col: str = "to",
+    translation_factors_col: str = "factors",
     check_totals: bool = True,
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.DataFrame:
@@ -734,7 +758,10 @@ def pandas_vector_zone_translation(
 @overload
 def pandas_vector_zone_translation(
     vector: pd.Series,
-    zone_correspondence: ZoneCorrespondence,
+    zone_correspondence: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
+    translation_to_col: str = "to",
+    translation_factors_col: str = "factors",
     check_totals: bool = True,
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series:
@@ -745,7 +772,10 @@ def pandas_vector_zone_translation(
 
 def pandas_vector_zone_translation(
     vector: pd.Series | pd.DataFrame,
-    zone_correspondence: ZoneCorrespondence,
+    zone_correspondence: ZoneCorrespondence | pd.DataFrame,
+    translation_from_col: str = "from",
+    translation_to_col: str = "to",
+    translation_factors_col: str = "factors",
     check_totals: bool = True,
     translation_dtype: Optional[np.dtype] = None,
 ) -> pd.Series | pd.DataFrame:
@@ -785,7 +815,9 @@ def pandas_vector_zone_translation(
     `pandas_single_vector_zone_translation()`
     `pandas_multi_vector_zone_translation()`
     """
-
+    zone_correspondence = _correspondence_from_df(
+        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+    )
     vector = vector.copy()
     zone_correspondence = zone_correspondence.copy()
 
@@ -940,10 +972,13 @@ def _multi_vector_trans_index(
 
 def vector_translation_from_file(
     vector_path: pathlib.Path,
-    zone_correspondence_path: ZoneCorrespondencePath,
+    zone_correspondence_path: ZoneCorrespondencePath | pathlib.Path,
     output_path: pathlib.Path,
     *,
     vector_zone_column: str | int,
+    translation_from_column: str = "from",
+    translation_to_column: str = "to",
+    translation_factors_column: str = "factors",
 ) -> None:
     """Translate zoning system of vector CSV file.
 
@@ -971,7 +1006,12 @@ def vector_translation_from_file(
     # TODO(MB) Add optional from / to unique index parameters, deal with too many locals
     # pylint: disable=too-many-locals
     # otherwise infer from translation file
-
+    zone_correspondence_path = _correspondence_path_from_path(
+        zone_correspondence_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
     LOG.info("Loading vector data from: '%s'", vector_path)
     vector = io.read_csv(vector_path, index_col=[vector_zone_column])
     LOG.info(
@@ -1008,11 +1048,14 @@ def vector_translation_from_file(
 
 def matrix_translation_from_file(
     matrix_path: pathlib.Path,
-    zone_correspondence_path: ZoneCorrespondencePath,
+    zone_correspondence_path: ZoneCorrespondencePath | pathlib.Path,
     output_path: pathlib.Path,
     *,
     matrix_zone_columns: tuple[int | str, int | str],
     matrix_values_column: int | str,
+    translation_from_column: str = "from",
+    translation_to_column: str = "to",
+    translation_factors_column: str = "factors",
     format_: Literal["square", "long"] = "long",
 ) -> None:
     """Translate zoning system of matrix CSV file.
@@ -1037,6 +1080,12 @@ def matrix_translation_from_file(
         Whether the matrix is in long or wide format.
     """
     # TODO(MB)  and deal with too-many-locals
+    zone_correspondence_path = _correspondence_path_from_path(
+        zone_correspondence_path,
+        translation_from_column,
+        translation_to_column,
+        translation_factors_column,
+    )
     if format_ == "square":
         raise NotImplementedError("Square matrices are not yet supported.")
 
@@ -1352,3 +1401,38 @@ class ZoneCorrespondence:
     def copy(self) -> ZoneCorrespondence:
         """Deep copy of the ZoneCorrespondence object."""
         return copy.deepcopy(self)
+
+
+# TO BE DELETED WHEN FULLY DEPRECATED
+def _correspondence_from_df(
+    translation: pd.DataFrame | ZoneCorrespondence,
+    from_col: str = "from",
+    to_col: str = "to",
+    factors_col: str = "factors",
+) -> ZoneCorrespondence:
+    if isinstance(translation, pd.DataFrame):
+        warnings.warn(
+            "Zone translations in caf.toolkit should now use the ZoneCorrespondence "
+            "class as an input, rather than a DataFrame.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return ZoneCorrespondence(translation, from_col, to_col, factors_col)
+    return translation
+
+
+def _correspondence_path_from_path(
+    translation_path: pathlib.Path | ZoneCorrespondencePath,
+    from_col: str,
+    to_col: str,
+    factors_col: str,
+) -> ZoneCorrespondencePath:
+    if isinstance(translation_path, pathlib.Path):
+        warnings.warn(
+            "Zone translations from file in caf.toolkit should now use the ZoneCorrespondencePath "
+            "class as an input, rather than a simple Path.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return ZoneCorrespondencePath(translation_path, from_col, to_col, factors_col)
+    return translation_path
