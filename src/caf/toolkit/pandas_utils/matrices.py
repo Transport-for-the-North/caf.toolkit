@@ -37,7 +37,7 @@ class MatrixReport:
         self,
         matrix: pd.DataFrame,
         translation_vector: translation.ZoneCorrespondence,
-    ):
+    ) -> None:
 
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None

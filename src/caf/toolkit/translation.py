@@ -933,7 +933,7 @@ def pandas_vector_zone_translation(
         raise TypeError("Input translation vector is probably the wrong shape.")
     translated = (
         vector.mul(factors, axis=0)
-        .groupby(level=[zone_correspondence.to_col_name] + ind_names)
+        .groupby(level=[zone_correspondence.to_col_name, *ind_names])
         .sum()
     )
 
@@ -952,9 +952,8 @@ def pandas_vector_zone_translation(
         translated.index.name = None
 
     # Make sure the output has the same name as input series
-    if isinstance(vector, pd.Series):
-        if isinstance(translated, pd.Series):
-            translated.name = vector.name
+    if isinstance(vector, pd.Series) and isinstance(translated, pd.Series):
+        translated.name = vector.name
 
     return translated
 
@@ -1309,7 +1308,7 @@ class ZoneCorrespondencePath:
         from_col_name: int | str,
         to_col_name: int | str,
         factors_col_name: int | str,
-    ):
+    ) -> None:
         headers = pd.read_csv(path, nrows=0).columns.tolist()
         if isinstance(from_col_name, int):
             from_col_name = headers[from_col_name]
@@ -1444,7 +1443,7 @@ class ZoneCorrespondence:
         from_col_name: int | str,
         to_col_name: int | str,
         factors_col_name: int | str,
-    ):
+    ) -> None:
         headers = vector.columns.tolist()
         if isinstance(from_col_name, int):
             from_col_name = headers[from_col_name]

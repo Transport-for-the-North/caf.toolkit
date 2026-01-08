@@ -86,8 +86,8 @@ class PandasTranslation:
         translation_from_col: str = "from_zone_id",
         translation_to_col: str = "to_zone_id",
         translation_factors_col: str = "factors",
-    ):
-        """Convert numpy translation to pandas"""
+    ) -> None:
+        """Convert numpy translation to pandas."""
         # Convert translation from numpy to long pandas
         df = pd.DataFrame(data=np_translation)
         df.index.name = translation_from_col
@@ -1694,7 +1694,7 @@ class TestZoneCorrespondence:
     """Tests for the `ZoneCorrespondencePath` function."""
 
     @pytest.mark.parametrize("filter_on", ["from", "to"])
-    def test_get_correspondence(self, simple_pd_int_translation: PandasTranslation, filter_on):
+    def test_get_correspondence(self, simple_pd_int_translation: PandasTranslation, filter_on) -> None:
         """Test the get_correspondence function with one zone."""
         test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
             1, filter_on=filter_on
@@ -1712,7 +1712,7 @@ class TestZoneCorrespondence:
     @pytest.mark.parametrize("filter_on", ["from", "to"])
     def test_get_correspondence_multi_value(
         self, simple_pd_int_translation: PandasTranslation, filter_on
-    ):
+    ) -> None:
         """Test the get_correspondence function with all zones."""
         if filter_on == "from":
             filter_values = list(

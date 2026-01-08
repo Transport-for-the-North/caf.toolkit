@@ -51,7 +51,7 @@ def fixture_cost_matrix() -> pd.DataFrame:
 
 @pytest.fixture(name="translation_vector", scope="session")
 def fixture_translation() -> translation.ZoneCorrespondencePath:
-    """Translation to test matrix report functionality"""
+    """Translation to test matrix report functionality."""
     trans_data = []
 
     for i in range(MATRIX_SIZE):
@@ -248,7 +248,7 @@ class TestCompareMatricesAndOutput:
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
         translation_vector: translation.ZoneCorrespondence,
-    ):
+    ) -> None:
         """Check that compare_matrices_and_output writes the expected
         sheets.
 
