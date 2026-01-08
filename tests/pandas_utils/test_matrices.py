@@ -51,7 +51,7 @@ def fixture_cost_matrix() -> pd.DataFrame:
 
 @pytest.fixture(name="translation_vector", scope="session")
 def fixture_translation() -> translation.ZoneCorrespondencePath:
-    """Translation to test matrix report functionality."""
+    """Test matrix report functionality."""
     trans_data = []
 
     for i in range(MATRIX_SIZE):
@@ -249,8 +249,8 @@ class TestCompareMatricesAndOutput:
         cost_matrix: pd.DataFrame,
         translation_vector: translation.ZoneCorrespondence,
     ) -> None:
-        """Check that compare_matrices_and_output writes the expected
-        sheets.
+        """
+        Check that compare_matrices_and_output writes the expected sheets.
 
         Content of the sheets has not been tested as this should be covered
         by TestMatrixComparison.
@@ -392,9 +392,7 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_stats(
-
         self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
-
     ) -> None:
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -484,9 +482,7 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_vkms(
-
         self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
-
     ) -> None:
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -517,11 +513,8 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_multi_vkms(
         self,
-
         matrix: pd.DataFrame,
-
         cost_matrix: pd.DataFrame,
-
         translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Checks Multi-Area Vkms comparisons functions as expected."""

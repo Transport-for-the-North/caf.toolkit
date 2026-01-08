@@ -361,9 +361,7 @@ def wide_matrix_internal_external_report(
 
     # Build the initial report
     index = pd.Index(["internal", "external"])
-    report = pd.DataFrame(
-        index=index, columns=index, data=np.zeros((len(index), len(index)))
-    )
+    report = pd.DataFrame(index=index, columns=index, data=np.zeros((len(index), len(index))))
 
     # Build the kwargs to iterate over
     report_kwargs = {

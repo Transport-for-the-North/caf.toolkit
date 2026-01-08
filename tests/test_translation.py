@@ -6,7 +6,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 # Third Party
 import numpy as np
@@ -1694,7 +1694,9 @@ class TestZoneCorrespondence:
     """Tests for the `ZoneCorrespondencePath` function."""
 
     @pytest.mark.parametrize("filter_on", ["from", "to"])
-    def test_get_correspondence(self, simple_pd_int_translation: PandasTranslation, filter_on) -> None:
+    def test_get_correspondence(
+        self, simple_pd_int_translation: PandasTranslation, filter_on: Literal["from", "to"]
+    ) -> None:
         """Test the get_correspondence function with one zone."""
         test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
             1, filter_on=filter_on
@@ -1711,7 +1713,7 @@ class TestZoneCorrespondence:
 
     @pytest.mark.parametrize("filter_on", ["from", "to"])
     def test_get_correspondence_multi_value(
-        self, simple_pd_int_translation: PandasTranslation, filter_on
+        self, simple_pd_int_translation: PandasTranslation, filter_on: Literal["from", "to"]
     ) -> None:
         """Test the get_correspondence function with all zones."""
         if filter_on == "from":

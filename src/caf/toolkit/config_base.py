@@ -191,10 +191,7 @@ class BaseConfig(pydantic.BaseModel):
         """
         data = {}
         for name, field in cls.model_fields.items():
-            if (
-                field.default is not None
-                and field.default != pydantic_core.PydanticUndefined
-            ):
+            if field.default is not None and field.default != pydantic_core.PydanticUndefined:
                 value = field.default
             else:
                 value = "REQUIRED" if field.is_required() else "OPTIONAL"
@@ -330,9 +327,7 @@ def write_config(
         else:
             name = "Config"
 
-        comment_lines.insert(
-            0, f"{name} written on {dt.datetime.now():%Y-%m-%d at %H:%M}"
-        )
+        comment_lines.insert(0, f"{name} written on {dt.datetime.now():%Y-%m-%d at %H:%M}")
 
     if len(comment_lines) > 0:
         comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment_lines]

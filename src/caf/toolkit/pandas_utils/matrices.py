@@ -38,17 +38,14 @@ class MatrixReport:
         matrix: pd.DataFrame,
         translation_vector: translation.ZoneCorrespondence,
     ) -> None:
-
         self._matrix = matrix.sort_index(axis=0).sort_index(axis=1)
         self._describe: pd.DataFrame | None = None
         self._distribution: pd.DataFrame | None = None
         self._vkms: pd.Series | None = None
         self._translation_vector: translation.ZoneCorrespondence = translation_vector
 
-        self._translated_matrix: pd.DataFrame = (
-            translation.pandas_matrix_zone_translation(
-                matrix, self._translation_vector, check_totals=True
-            )
+        self._translated_matrix: pd.DataFrame = translation.pandas_matrix_zone_translation(
+            matrix, self._translation_vector, check_totals=True
         )
 
     def calc_vehicle_kms(
@@ -76,9 +73,7 @@ class MatrixReport:
             cost_matrix.index.equals(self._matrix.index)
             and cost_matrix.columns.equals(self._matrix.columns)
         ):
-            raise ValueError(
-                "Cost matrix must have the same index and columns as the matrix"
-            )
+            raise ValueError("Cost matrix must have the same index and columns as the matrix")
 
         zonal_kms = self._matrix.multiply(cost_matrix)
 
@@ -126,9 +121,7 @@ class MatrixReport:
             cost_matrix.index.equals(self._matrix.index)
             and cost_matrix.columns.equals(self._matrix.columns)
         ):
-            raise ValueError(
-                "Cost matrix must have the same index and columns as the matrix"
-            )
+            raise ValueError("Cost matrix must have the same index and columns as the matrix")
 
         if sector_zone_lookup is None:
             cost_matrix = cost_matrix.loc[self._matrix.index, self._matrix.columns]  # type: ignore[index]
@@ -164,7 +157,6 @@ class MatrixReport:
                 cut_matrix.to_numpy(), cut_cost_matrix.to_numpy(), bin_edges=bins
             ).df
             sector_distribution[sector_zone_lookup.to_col_name] = sector
-            # sector_distribution.set_index([sector_column, "min", "max"], append=True)
             stacked_distribution.append(sector_distribution)
         self._distribution = pd.concat(stacked_distribution).set_index(
             [sector_zone_lookup.to_col_name, "min", "max"]
@@ -349,9 +341,7 @@ class MatrixReport:
         )
 
 
-def matrix_describe(
-    matrix: pd.DataFrame, almost_zero: float | None = None
-) -> pd.Series:
+def matrix_describe(matrix: pd.DataFrame, almost_zero: float | None = None) -> pd.Series:
     """Create a high level summary of a matrix.
 
     Stack Matrix before calling pandas describe with additional metrics added.
@@ -382,9 +372,7 @@ def matrix_describe(
     if almost_zero is None:
         almost_zero = 1 / matrix.size
 
-    info = matrix.stack().describe(
-        percentiles=[0.05, 0.25, 0.5, 0.75, 0.95]
-    )
+    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
     if not isinstance(info, pd.Series):
         raise TypeError(f"info should be Series not: {type(info)}")
 
@@ -443,9 +431,7 @@ def compare_matrices(
         matrix_report_a.sector_matrix / matrix_report_b.sector_matrix
     ) - 1
 
-    comparisons["matrix abs difference"] = matrix_report_a.abs_difference(
-        matrix_report_b
-    )
+    comparisons["matrix abs difference"] = matrix_report_a.abs_difference(matrix_report_b)
 
     comparisons["matrix abs percentage"] = (
         comparisons["matrix abs difference"] / matrix_report_a.sector_matrix
@@ -479,10 +465,7 @@ def compare_matrices(
             {name_a: matrix_report_a.vkms, name_b: matrix_report_b.vkms}
         )
 
-    if (
-        matrix_report_a.distribution is not None
-        and matrix_report_b.distribution is not None
-    ):
+    if matrix_report_a.distribution is not None and matrix_report_b.distribution is not None:
         comparisons["TLD comparison"] = matrix_report_a.distribution.merge(
             matrix_report_b.distribution,
             left_index=True,

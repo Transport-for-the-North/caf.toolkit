@@ -726,7 +726,6 @@ def pandas_matrix_zone_translation(
         )
     else:
         col_translation = zone_correspondence.copy()
-    assert col_translation is not None
 
     # Set the index dtypes to match and validate
     (
@@ -774,9 +773,7 @@ def pandas_matrix_zone_translation(
     if not check_totals:
         return translated
 
-    if not math_utils.is_almost_equal(
-        matrix.to_numpy().sum(), translated.to_numpy().sum()
-    ):
+    if not math_utils.is_almost_equal(matrix.to_numpy().sum(), translated.to_numpy().sum()):
         warnings.warn(
             f"Some values seem to have been dropped during the translation. "
             f"Check the given translation matrix isn't unintentionally "
@@ -904,9 +901,7 @@ def pandas_vector_zone_translation(
     if isinstance(vector, pd.Series):
         vector = pd.Series(index=vector.index, name=vector.name, data=new_values)
     else:
-        vector = pd.DataFrame(
-            index=vector.index, columns=vector.columns, data=new_values
-        )
+        vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
 
     zone_correspondence.factors_column = _convert_dtypes(
         arr=zone_correspondence.factors_column.to_numpy(),
@@ -958,9 +953,7 @@ def pandas_vector_zone_translation(
     return translated
 
 
-def _vector_missing_warning(
-    vector: pd.DataFrame | pd.Series, missing_rows: list
-) -> None:
+def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
     """Warn when zones are missing from vector.
 
     Produces RuntimeWarning detailing the number of missing rows and
@@ -1012,9 +1005,9 @@ def _multi_vector_trans_index(
             vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
-            missing_rows = set(
-                vector.index.get_level_values(translation_from_col)
-            ) - set(translation_from)
+            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
+                translation_from
+            )
             if len(missing_rows) > 0:
                 _vector_missing_warning(vector, list(missing_rows))
 
@@ -1225,7 +1218,7 @@ def matrix_translation_from_file(
     format_: Literal["square", "long"] = "long",
         Whether the matrix is in long or wide format.
     """
-    # TODO(MB)  and deal with too-many-locals
+    # TODO(MB): and deal with too-many-locals
     zone_correspondence_path = _correspondence_path_from_path(
         zone_correspondence_path,
         translation_from_column,
@@ -1320,7 +1313,7 @@ class ZoneCorrespondencePath:
 
     @property
     def generic_from_col(self) -> str:
-        """Column name to replace the `from_col_name` when reading with generic column names."""
+        """Column name to replace the `from_col_name` if reading with generic column names."""
         return "from"
 
     @property
@@ -1384,9 +1377,7 @@ class ZoneCorrespondencePath:
 
         if factors_mandatory:
             if not pd.api.types.is_numeric_dtype(translation[self.factors_col_name]):
-                raise ValueError(
-                    f"{self.factors_col_name} must contain numeric values only."
-                )
+                raise ValueError(f"{self.factors_col_name} must contain numeric values only.")
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
@@ -1413,8 +1404,6 @@ class ZoneCorrespondencePath:
         else:
             from_col = self.from_col_name
             to_col = self.to_col_name
-
-        assert factors_col is not None
 
         return ZoneCorrespondence(
             translation,
@@ -1479,9 +1468,7 @@ class ZoneCorrespondence:
         if self.vector[self.factors_col_name].isna().any():
             raise ValueError("Factors column contains NaNs")
 
-        factor_col_sums = self.vector.groupby(self.from_col_name)[
-            self.factors_col_name
-        ].sum()
+        factor_col_sums = self.vector.groupby(self.from_col_name)[self.factors_col_name].sum()
 
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
             raise ValueError("Factors cannot be greater than one.")
@@ -1567,8 +1554,6 @@ class ZoneCorrespondence:
         if not isinstance(filter_zones, list):
             filter_zones = list(filter_zones)
 
-        assert isinstance(filter_zones, list)
-
         if filter_on == "from":
             filter_col: pd.Series = self.from_column
             filter_col_name: str = self.from_col_name
@@ -1576,9 +1561,7 @@ class ZoneCorrespondence:
             filter_col = self.to_column
             filter_col_name = self.to_col_name
         else:
-            raise ValueError(
-                f"filter_on must be either 'from' or 'to', not {filter_on}"
-            )
+            raise ValueError(f"filter_on must be either 'from' or 'to', not {filter_on}")
 
         if len(missing := (set(filter_zones) - set(filter_col.to_list()))) > 0:
             raise KeyError(f"Zones {missing} not in {filter_col} column")
