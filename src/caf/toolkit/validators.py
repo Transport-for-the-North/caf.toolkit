@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """Tools to validate items. These function return either True or False.
 
 These are mostly commonly used validations across the codebase.
 """
+
 # Built-Ins
 import logging
 from typing import Any
@@ -17,7 +17,7 @@ LOG = logging.getLogger(__name__)
 
 
 # # # FUNCTIONS # # #
-# TODO(BT): Can this take a Collection instead?
+# TODO(BT): Can this take a Collection instead?  # noqa: TD003
 def unique_list(unique_vals: list[Any], name: str = "unique_zones") -> None:
     """Validate that a list of unique values is unique.
 

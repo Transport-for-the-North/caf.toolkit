@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 # Built-Ins
-import pathlib
 import warnings
-from typing import Optional
+from typing import TYPE_CHECKING
 
 # Third Party
 import pandas as pd
 
 # Local Imports
 from caf.toolkit import cost_utils, translation
+
+if TYPE_CHECKING:
+    import pathlib
+
+_EXCEL_SHEET_NAME_LIMIT = 31
 
 
 class MatrixReport:
@@ -163,7 +167,7 @@ class MatrixReport:
     def write_to_excel(
         self,
         writer: pd.ExcelWriter,
-        label: Optional[str] = None,
+        label: str | None = None,
         output_sector_matrix: bool = False,
     ) -> None:
         """Write the report to an Excel file.
@@ -182,16 +186,16 @@ class MatrixReport:
         ValueError
             If the `label` is over 30 characters long.
         """
-
         if label is not None:
             sheet_prefix: str = f"{label}_"
         else:
             sheet_prefix = ""
 
-        if len(sheet_prefix) >= 19:
+        # Name limit minus longest suffix (12)
+        if len(sheet_prefix) >= _EXCEL_SHEET_NAME_LIMIT - 12:
             raise ValueError(
-                "label cannot be over 30 characters as the sheets names will"
-                " be truncated and will not be unique"
+                f"label cannot be over {_EXCEL_SHEET_NAME_LIMIT} characters as"
+                " the sheets names will be truncated and will not be unique"
             )
 
         self.describe.to_excel(writer, sheet_name=f"{sheet_prefix}Summary")
@@ -203,7 +207,9 @@ class MatrixReport:
                 self.sector_matrix.to_excel(writer, sheet_name=f"{sheet_prefix}Matrix")
             else:
                 warnings.warn(
-                    "Cannot output sectorised matrix unless you pass the translation vector on init"
+                    "Cannot output sectorised matrix unless you"
+                    " pass the translation vector on init",
+                    stacklevel=2,
                 )
 
         if self.distribution is not None:
@@ -271,14 +277,14 @@ class MatrixReport:
     def distribution(self) -> pd.DataFrame | None:
         """Distribution if `trip_length_distribution` has been called, otherwise none."""
         if self._distribution is None:
-            warnings.warn("Trip Length Distribution has not been set")
+            warnings.warn("Trip Length Distribution has not been set", stacklevel=2)
         return self._distribution
 
     @property
     def vkms(self) -> pd.Series | None:
         """Vehicle kms if `calc_vehicle_kms` has been called, otherwise none."""
         if self._vkms is None:
-            warnings.warn("Trip VKMs has not been set")
+            warnings.warn("Trip VKMs has not been set", stacklevel=2)
         return self._vkms
 
     @property
@@ -337,7 +343,7 @@ class MatrixReport:
         )
 
 
-def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -> pd.Series:
+def matrix_describe(matrix: pd.DataFrame, almost_zero: float | None = None) -> pd.Series:
     """Create a high level summary of a matrix.
 
     Stack Matrix before calling pandas describe with additional metrics added.
@@ -360,6 +366,7 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
         Count (total, zeros and almost zeros)
         Standard Deviation
         Minimum and Maximum
+
     See Also
     --------
     `pandas.Series.describe`
@@ -367,8 +374,10 @@ def matrix_describe(matrix: pd.DataFrame, almost_zero: Optional[float] = None) -
     if almost_zero is None:
         almost_zero = 1 / matrix.size
 
-    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
-    assert isinstance(info, pd.Series)  # To stop MyPy whinging
+    info = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])  # noqa: PD013
+    if not isinstance(info, pd.Series):
+        raise TypeError(f"info should be Series not: {type(info)}")
+
     info["columns"] = len(matrix.columns)
     info["rows"] = len(matrix.index)
     info["sum"] = matrix.sum().sum()
@@ -409,7 +418,6 @@ def compare_matrices(
     ValueError
         if either matrix report does not have a sector matrix.
     """
-
     comparisons = {}
     if matrix_report_a.sector_matrix is None or matrix_report_b.sector_matrix is None:
         raise ValueError("matrix reports must be sectorised to perform a comparison")
@@ -498,7 +506,7 @@ def compare_matrices_and_output(
     *,
     name_a: str = "a",
     name_b: str = "b",
-    label: Optional[str] = None,
+    label: str | None = None,
 ) -> None:
     """Compare two matrix reports.
 
@@ -526,8 +534,10 @@ def compare_matrices_and_output(
         else:
             sheet_name = name
 
-        if len(sheet_name) > 31:
+        if len(sheet_name) > _EXCEL_SHEET_NAME_LIMIT:
             warnings.warn(
-                f"Sheet name {sheet_name} is over 31 characters and will be truncated"
+                f"Sheet name {sheet_name} is over {_EXCEL_SHEET_NAME_LIMIT}"
+                " characters and will be truncated",
+                stacklevel=2,
             )
         result.to_excel(excel_writer, sheet_name=sheet_name)

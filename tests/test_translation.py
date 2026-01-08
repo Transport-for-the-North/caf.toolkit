@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
-"""Tests for the caf.toolkit.translation module"""
+"""Tests for the caf.toolkit.translation module."""
+
 from __future__ import annotations
 
 # Built-Ins
 import copy
 import dataclasses
-import pathlib
 import sys
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 
 # Third Party
 import numpy as np
@@ -15,9 +14,11 @@ import pandas as pd
 import pytest
 
 # Local Imports
-from caf.toolkit import io
+from caf.toolkit import io, translation
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import translation
+
+if TYPE_CHECKING:
+    import pathlib
 
 # # # CONSTANTS # # #
 
@@ -25,19 +26,19 @@ from caf.toolkit import translation
 # # # CLASSES # # #
 @dataclasses.dataclass
 class NumpyVectorResults:
-    """Collection of I/O data for a numpy vector translation"""
+    """Collection of I/O data for a numpy vector translation."""
 
     vector: np.ndarray
     translation: np.ndarray
     expected_result: np.ndarray
-    translation_dtype: Optional[type] = None
+    translation_dtype: type | None = None
 
     def input_kwargs(
         self,
         check_shapes: bool = True,
         check_totals: bool = True,
     ) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         return {
             "vector": self.vector,
             "translation": self.translation,
@@ -49,21 +50,21 @@ class NumpyVectorResults:
 
 @dataclasses.dataclass
 class NumpyMatrixResults:
-    """Collection of I/O data for a numpy matrix translation"""
+    """Collection of I/O data for a numpy matrix translation."""
 
     mat: np.ndarray
     translation: np.ndarray
     expected_result: np.ndarray
 
-    translation_dtype: Optional[type] = None
-    col_translation: Optional[np.ndarray] = None
+    translation_dtype: type | None = None
+    col_translation: np.ndarray | None = None
 
     def input_kwargs(
         self,
         check_shapes: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         return {
             "matrix": self.mat,
             "translation": self.translation,
@@ -74,7 +75,7 @@ class NumpyMatrixResults:
 
 
 class PandasTranslation:
-    """Container for a pandas based translation
+    """Container for a pandas based translation.
 
     Takes a numpy translation and converts to a standard pandas format
     """
@@ -113,16 +114,16 @@ class PandasTranslation:
         self.unique_to = sorted(self.zone_correspondence.to_column.unique().tolist())
 
     def to_kwargs(self) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         return {
             "zone_correspondence": self.zone_correspondence,
         }
 
     def copy(self) -> PandasTranslation:
-        """Make a copy of this class"""
+        """Make a copy of this class."""
         return copy.deepcopy(self)
 
-    def create_dummy_rows(self):
+    def create_dummy_rows(self) -> pd.DataFrame:
         """Create some dummy rows that can be attached."""
         ret_val = pd.Series(
             data=self.zone_correspondence.to_column.unique(),
@@ -145,20 +146,20 @@ class PandasTranslation:
 
 @dataclasses.dataclass
 class PandasVectorResults:
-    """Collection of I/O data for a pandas vector translation"""
+    """Collection of I/O data for a pandas vector translation."""
 
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.Series = dataclasses.field(init=False)
     expected_result: pd.Series = dataclasses.field(init=False)
     from_unique_index: list[Any] = dataclasses.field(init=False)
     to_unique_index: list[Any] = dataclasses.field(init=False)
 
-    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray):
-        """Convert numpy objects to pandas"""
+    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray) -> None:
+        """Convert numpy objects to pandas."""
         # Input and results
         self.vector = pd.Series(data=np_vector)
         self.vector.index += 1
@@ -171,7 +172,7 @@ class PandasVectorResults:
         self.to_unique_index = self.translation.unique_to
 
     def input_kwargs(self, check_totals: bool = True) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         return {
             "vector": self.vector,
             "translation_dtype": self.translation_dtype,
@@ -181,12 +182,12 @@ class PandasVectorResults:
 
 @dataclasses.dataclass
 class PandasMultiVectorResults:
-    """Collection of I/O data for a pandas multi-vector translation"""
+    """Collection of I/O data for a pandas multi-vector translation."""
 
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.DataFrame = dataclasses.field(init=False)
     expected_result: pd.DataFrame = dataclasses.field(init=False)
@@ -195,13 +196,12 @@ class PandasMultiVectorResults:
 
     n_cols = 10
 
-    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray):
-        """Convert numpy objects to pandas"""
+    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray) -> None:
+        """Convert numpy objects to pandas."""
         # Input and results
         multi_vector_data = np.tile(np_vector, (self.n_cols, 1)).T
         self.vector = pd.DataFrame(data=multi_vector_data)
         self.vector.index += 1
-        # self.vector.index.names = ['to_zone_id']
 
         multi_vector_res = np.tile(np_expected_result, (self.n_cols, 1)).T
         self.expected_result = pd.DataFrame(data=multi_vector_res)
@@ -216,14 +216,14 @@ class PandasMultiVectorResults:
         self,
         check_totals: bool = True,
     ) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         return {
             "vector": self.vector,
             "translation_dtype": self.translation_dtype,
             "check_totals": check_totals,
         } | self.translation.to_kwargs()
 
-    def get_similar_vector(self, data: np.ndarray):
+    def get_similar_vector(self, data: np.ndarray) -> pd.DataFrame:
         """Create a vector in the same shape as this one from a 1d array."""
         multi_vector_data = np.tile(data, (self.n_cols, 1)).T
         return pd.DataFrame(data=multi_vector_data)
@@ -231,12 +231,12 @@ class PandasMultiVectorResults:
 
 @dataclasses.dataclass
 class PandasMultiVectorSeriesResults(PandasMultiVectorResults):
-    """Collection of I/O data for a pandas multi-vector Series translation"""
+    """Collection of I/O data for a pandas multi-vector Series translation."""
 
     np_vector: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
-    translation_dtype: Optional[np.dtype] = None
+    translation_dtype: np.dtype | None = None
 
     vector: pd.Series = dataclasses.field(init=False)
     expected_result: pd.Series = dataclasses.field(init=False)
@@ -245,30 +245,30 @@ class PandasMultiVectorSeriesResults(PandasMultiVectorResults):
 
     n_cols = 1
 
-    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray):
-        """Convert numpy objects to pandas"""
+    def __post_init__(self, np_vector: np.ndarray, np_expected_result: np.ndarray) -> None:
+        """Convert numpy objects to pandas."""
         super().__post_init__(np_vector, np_expected_result)
         self.vector = self.vector.iloc[:, 0]
         self.expected_result = self.expected_result.iloc[:, 0]
 
-    def get_similar_vector(self, data: np.ndarray):
+    def get_similar_vector(self, data: np.ndarray) -> pd.Series:
         """Create a vector in the same shape as this one from a 1d array."""
         return super().get_similar_vector(data).iloc[:, 0]
 
 
 @dataclasses.dataclass
 class PandasMatrixResults:
-    """Collection of I/O data for a pandas matrix translation"""
+    """Collection of I/O data for a pandas matrix translation."""
 
     np_matrix: dataclasses.InitVar[np.ndarray]
     np_expected_result: dataclasses.InitVar[np.ndarray]
     translation: PandasTranslation
 
-    translation_dtype: Optional[type] = None
-    col_translation: Optional[PandasTranslation] = None
+    translation_dtype: type | None = None
+    col_translation: PandasTranslation | None = None
 
-    def __post_init__(self, np_matrix: np.ndarray, np_expected_result: np.ndarray):
-        """Convert numpy objects to pandas"""
+    def __post_init__(self, np_matrix: np.ndarray, np_expected_result: np.ndarray) -> None:
+        """Convert numpy objects to pandas."""
         # Base from / to zones on translation
         self.from_unique_index = self.translation.unique_from
         self.to_unique_index = self.translation.unique_to
@@ -295,7 +295,7 @@ class PandasMatrixResults:
         check_totals: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         kwargs = (
             {
                 "matrix": self.mat,
@@ -313,16 +313,16 @@ class PandasMatrixResults:
 
 @dataclasses.dataclass
 class PandasLongMatrixResults:
-    """Collection of I/O data for a pandas matrix translation"""
+    """Collection of I/O data for a pandas matrix translation."""
 
     wide_results: dataclasses.InitVar[PandasMatrixResults]
     index_col_1_name: str = "production"
     index_col_2_name: str = "attraction"
     values_col: str = "values"
-    index_col_1_out_name: Optional[str] = None
-    index_col_2_out_name: Optional[str] = None
+    index_col_1_out_name: str | None = None
+    index_col_2_out_name: str | None = None
 
-    def __post_init__(self, wide_results: PandasMatrixResults):
+    def __post_init__(self, wide_results: PandasMatrixResults) -> None:
         """Produce the new expected input and outputs."""
         if self.index_col_1_out_name is None:
             self.index_col_1_out_name = self.index_col_1_name
@@ -336,7 +336,10 @@ class PandasLongMatrixResults:
         self.expected_result = pd_utils.wide_to_long_infill(
             df=wide_results.expected_result,
         )
-        self.expected_result.index.names = [self.index_col_1_name, self.index_col_2_name]
+        self.expected_result.index.names = [
+            self.index_col_1_name,
+            self.index_col_2_name,
+        ]
 
         # Misc args to carry over
         self.translation_dtype = wide_results.translation_dtype
@@ -348,8 +351,6 @@ class PandasLongMatrixResults:
         renamed = self.expected_result.copy()
         renamed.index.names = [index_col_1_out_name, index_col_2_out_name]
 
-        # self.index_col_1_out_name = index_col_1_out_name
-        # self.index_col_2_out_name = index_col_2_out_name
         return renamed
 
     def input_kwargs(
@@ -357,7 +358,7 @@ class PandasLongMatrixResults:
         check_totals: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
-        """Return a dictionary of key-word arguments"""
+        """Return a dictionary of key-word arguments."""
         kwargs = (
             {
                 "matrix": self.df,
@@ -381,7 +382,7 @@ class PandasLongMatrixResults:
 # # # FIXTURES # # #
 @pytest.fixture(name="simple_np_int_translation", scope="class")
 def fixture_simple_np_int_translation() -> np.ndarray:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return np.array(
         [
             [1, 0, 0],
@@ -395,7 +396,7 @@ def fixture_simple_np_int_translation() -> np.ndarray:
 
 @pytest.fixture(name="simple_np_int_translation2", scope="class")
 def fixture_simple_np_int_translation2() -> np.ndarray:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return np.array(
         [
             [0, 0, 1],
@@ -409,7 +410,7 @@ def fixture_simple_np_int_translation2() -> np.ndarray:
 
 @pytest.fixture(name="incomplete_np_int_translation", scope="class")
 def fixture_incomplete_np_int_translation() -> np.ndarray:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return np.array(
         [
             [1, 0, 0],
@@ -423,7 +424,7 @@ def fixture_incomplete_np_int_translation() -> np.ndarray:
 
 @pytest.fixture(name="simple_np_float_translation", scope="class")
 def fixture_simple_np_float_translation() -> np.ndarray:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return np.array(
         [
             [0.5, 0.0, 0.5],
@@ -439,7 +440,7 @@ def fixture_simple_np_float_translation() -> np.ndarray:
 def fixture_simple_pd_int_translation(
     simple_np_int_translation: np.ndarray,
 ) -> PandasTranslation:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return PandasTranslation(simple_np_int_translation)
 
 
@@ -447,7 +448,7 @@ def fixture_simple_pd_int_translation(
 def fixture_simple_pd_int_translation2(
     simple_np_int_translation2: np.ndarray,
 ) -> PandasTranslation:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return PandasTranslation(simple_np_int_translation2)
 
 
@@ -455,7 +456,7 @@ def fixture_simple_pd_int_translation2(
 def fixture_incomplete_pd_int_translation(
     incomplete_np_int_translation: np.ndarray,
 ) -> PandasTranslation:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return PandasTranslation(incomplete_np_int_translation)
 
 
@@ -463,13 +464,15 @@ def fixture_incomplete_pd_int_translation(
 def fixture_simple_pd_float_translation(
     simple_np_float_translation: np.ndarray,
 ) -> PandasTranslation:
-    """Generate a simple 5 to 3 complete translation array"""
+    """Generate a simple 5 to 3 complete translation array."""
     return PandasTranslation(simple_np_float_translation)
 
 
 @pytest.fixture(name="np_vector_aggregation", scope="class")
-def fixture_np_vector_aggregation(simple_np_int_translation: np.ndarray) -> NumpyVectorResults:
-    """Generate an aggregation vector, translation, and results"""
+def fixture_np_vector_aggregation(
+    simple_np_int_translation: np.ndarray,
+) -> NumpyVectorResults:
+    """Generate an aggregation vector, translation, and results."""
     return NumpyVectorResults(
         vector=np.array([8, 2, 8, 8, 5]),
         translation=simple_np_int_translation,
@@ -478,8 +481,10 @@ def fixture_np_vector_aggregation(simple_np_int_translation: np.ndarray) -> Nump
 
 
 @pytest.fixture(name="np_vector_split", scope="class")
-def fixture_np_vector_split(simple_np_float_translation: np.ndarray) -> NumpyVectorResults:
-    """Generate a splitting vector, translation, and results"""
+def fixture_np_vector_split(
+    simple_np_float_translation: np.ndarray,
+) -> NumpyVectorResults:
+    """Generate a splitting vector, translation, and results."""
     return NumpyVectorResults(
         vector=np.array([8, 2, 8, 8, 5]),
         translation=simple_np_float_translation,
@@ -488,8 +493,10 @@ def fixture_np_vector_split(simple_np_float_translation: np.ndarray) -> NumpyVec
 
 
 @pytest.fixture(name="np_incomplete", scope="class")
-def fixture_np_incomplete(incomplete_np_int_translation: np.ndarray) -> NumpyVectorResults:
-    """Generate an incomplete vector, translation, and results
+def fixture_np_incomplete(
+    incomplete_np_int_translation: np.ndarray,
+) -> NumpyVectorResults:
+    """Generate an incomplete vector, translation, and results.
 
     Incomplete meaning some demand will be dropped during the translation
     """
@@ -501,8 +508,10 @@ def fixture_np_incomplete(incomplete_np_int_translation: np.ndarray) -> NumpyVec
 
 
 @pytest.fixture(name="np_translation_dtype", scope="class")
-def fixture_np_translation_dtype(simple_np_int_translation: np.ndarray) -> NumpyVectorResults:
-    """Generate an incomplete vector, translation, and results
+def fixture_np_translation_dtype(
+    simple_np_int_translation: np.ndarray,
+) -> NumpyVectorResults:
+    """Generate an incomplete vector, translation, and results.
 
     Incomplete meaning some demand will be dropped during the translation
     """
@@ -520,7 +529,7 @@ def fixture_pd_vector_aggregation(
     np_vector_aggregation: NumpyVectorResults,
     simple_pd_int_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate an aggregation vector, translation, and results"""
+    """Generate an aggregation vector, translation, and results."""
     return PandasVectorResults(
         np_vector=np_vector_aggregation.vector,
         np_expected_result=np_vector_aggregation.expected_result,
@@ -533,7 +542,7 @@ def fixture_pd_multi_vector_aggregation(
     np_vector_aggregation: NumpyVectorResults,
     simple_pd_int_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate an aggregation vector, translation, and results"""
+    """Generate an aggregation vector, translation, and results."""
     return PandasMultiVectorResults(
         np_vector=np_vector_aggregation.vector,
         np_expected_result=np_vector_aggregation.expected_result,
@@ -546,7 +555,7 @@ def fixture_pd_vector_split(
     np_vector_split: NumpyVectorResults,
     simple_pd_float_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate a splitting vector, translation, and results"""
+    """Generate a splitting vector, translation, and results."""
     return PandasVectorResults(
         np_vector=np_vector_split.vector,
         np_expected_result=np_vector_split.expected_result,
@@ -559,7 +568,7 @@ def fixture_pd_multi_vector_split(
     np_vector_split: NumpyVectorResults,
     simple_pd_float_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate a splitting vector, translation, and results"""
+    """Generate a splitting vector, translation, and results."""
     return PandasMultiVectorResults(
         np_vector=np_vector_split.vector,
         np_expected_result=np_vector_split.expected_result,
@@ -584,7 +593,7 @@ def fixture_pd_multi_vector_series(
 def fixture_pd_multi_vector_multiindex(
     pd_multi_vector_split: PandasMultiVectorResults,
 ) -> PandasMultiVectorResults:
-    """Generate a splitting vector, translation, and results"""
+    """Generate a splitting vector, translation, and results."""
     return pd_multi_vector_split
 
 
@@ -593,7 +602,7 @@ def fixture_pd_incomplete(
     np_incomplete: NumpyVectorResults,
     incomplete_pd_int_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate a splitting vector, translation, and results"""
+    """Generate a splitting vector, translation, and results."""
     return PandasVectorResults(
         np_vector=np_incomplete.vector,
         np_expected_result=np_incomplete.expected_result,
@@ -606,7 +615,7 @@ def fixture_pd_multi_incomplete(
     np_incomplete: NumpyVectorResults,
     incomplete_pd_int_translation: PandasTranslation,
 ) -> PandasVectorResults:
-    """Generate a splitting vector, translation, and results"""
+    """Generate a splitting vector, translation, and results."""
     return PandasMultiVectorResults(
         np_vector=np_incomplete.vector,
         np_expected_result=np_incomplete.expected_result,
@@ -616,8 +625,10 @@ def fixture_pd_multi_incomplete(
 
 # ## NUMPY MATRIX FIXTURES ## #
 @pytest.fixture(name="np_matrix_aggregation", scope="class")
-def fixture_np_matrix_aggregation(simple_np_int_translation: np.ndarray) -> NumpyMatrixResults:
-    """Generate a matrix, translation, and results"""
+def fixture_np_matrix_aggregation(
+    simple_np_int_translation: np.ndarray,
+) -> NumpyMatrixResults:
+    """Generate a matrix, translation, and results."""
     mat = np.array(
         [
             [4, 2, 3, 1, 1],
@@ -646,7 +657,7 @@ def fixture_np_matrix_aggregation2(
     np_matrix_aggregation: NumpyMatrixResults,
     simple_np_int_translation2: np.ndarray,
 ) -> NumpyMatrixResults:
-    """Generate a matrix, translation, and results"""
+    """Generate a matrix, translation, and results."""
     expected_result = np.array(
         [
             [14, 6, 16],
@@ -667,7 +678,7 @@ def fixture_np_matrix_split(
     np_matrix_aggregation: NumpyMatrixResults,
     simple_np_float_translation: np.ndarray,
 ) -> NumpyMatrixResults:
-    """Generate a matrix, translation, and results"""
+    """Generate a matrix, translation, and results."""
     expected_result = np.array(
         [
             [9.6875, 11.625, 9.6875],
@@ -683,8 +694,10 @@ def fixture_np_matrix_split(
 
 
 @pytest.fixture(name="np_matrix_dtype", scope="class")
-def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatrixResults:
-    """Generate an incomplete vector, translation, and results
+def fixture_np_matrix_dtype(
+    simple_np_int_translation: np.ndarray,
+) -> NumpyMatrixResults:
+    """Generate an incomplete vector, translation, and results.
 
     Incomplete meaning some demand will be dropped during the translation
     """
@@ -717,7 +730,7 @@ def fixture_np_matrix_dtype(simple_np_int_translation: np.ndarray) -> NumpyMatri
 def fixture_np_matrix_incomplete(
     incomplete_np_int_translation: np.ndarray, np_matrix_aggregation: NumpyMatrixResults
 ) -> NumpyMatrixResults:
-    """Generate an incomplete vector, translation, and results
+    """Generate an incomplete vector, translation, and results.
 
     Incomplete meaning some demand will be dropped during the translation
     """
@@ -741,7 +754,7 @@ def fixture_pd_matrix_aggregation(
     np_matrix_aggregation: NumpyMatrixResults,
     simple_pd_int_translation: PandasTranslation,
 ) -> PandasMatrixResults:
-    """Generate an aggregation matrix, translation, and results"""
+    """Generate an aggregation matrix, translation, and results."""
     return PandasMatrixResults(
         np_matrix=np_matrix_aggregation.mat,
         np_expected_result=np_matrix_aggregation.expected_result,
@@ -755,7 +768,7 @@ def fixture_pd_matrix_aggregation2(
     simple_pd_int_translation: PandasTranslation,
     simple_pd_int_translation2: PandasTranslation,
 ) -> PandasMatrixResults:
-    """Generate an aggregation matrix, translation, and results"""
+    """Generate an aggregation matrix, translation, and results."""
     return PandasMatrixResults(
         np_matrix=np_matrix_aggregation2.mat,
         np_expected_result=np_matrix_aggregation2.expected_result,
@@ -769,7 +782,7 @@ def fixture_pd_matrix_split(
     np_matrix_split: NumpyMatrixResults,
     simple_pd_float_translation: PandasTranslation,
 ) -> PandasMatrixResults:
-    """Generate an aggregation matrix, translation, and results"""
+    """Generate an aggregation matrix, translation, and results."""
     return PandasMatrixResults(
         np_matrix=np_matrix_split.mat,
         np_expected_result=np_matrix_split.expected_result,
@@ -782,7 +795,7 @@ def fixture_pd_matrix_dtype(
     np_matrix_dtype: NumpyMatrixResults,
     simple_pd_int_translation: PandasTranslation,
 ) -> PandasMatrixResults:
-    """Generate an aggregation matrix, translation, and results"""
+    """Generate an aggregation matrix, translation, and results."""
     return PandasMatrixResults(
         np_matrix=np_matrix_dtype.mat,
         np_expected_result=np_matrix_dtype.expected_result,
@@ -796,7 +809,7 @@ def fixture_pd_matrix_incomplete(
     np_matrix_incomplete: NumpyMatrixResults,
     incomplete_pd_int_translation: PandasTranslation,
 ) -> PandasMatrixResults:
-    """Generate an aggregation matrix, translation, and results"""
+    """Generate an aggregation matrix, translation, and results."""
     return PandasMatrixResults(
         np_matrix=np_matrix_incomplete.mat,
         np_expected_result=np_matrix_incomplete.expected_result,
@@ -839,7 +852,8 @@ def fixture_pd_long_matrix_dtype(
 
 @pytest.fixture(name="translation_path", scope="class")
 def fixture_translation_path(
-    simple_pd_int_translation: PandasTranslation, tmp_path_factory
+    simple_pd_int_translation: PandasTranslation,
+    tmp_path_factory: pytest.TempPathFactory,
 ) -> translation.ZoneCorrespondencePath:
     """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
@@ -855,7 +869,8 @@ def fixture_translation_path(
 
 @pytest.fixture(name="translation_path_no_factors", scope="class")
 def fixture_translation_path_no_factors(
-    simple_pd_int_translation: PandasTranslation, tmp_path_factory
+    simple_pd_int_translation: PandasTranslation,
+    tmp_path_factory: pytest.TempPathFactory,
 ) -> translation.ZoneCorrespondencePath:
     """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
@@ -876,11 +891,13 @@ def fixture_translation_path_no_factors(
     "np_translation_dtype",
 )
 class TestNumpyVector:
-    """Tests for caf.toolkit.translation.numpy_vector_zone_translation"""
+    """Tests for caf.toolkit.translation.numpy_vector_zone_translation."""
 
     @pytest.mark.parametrize("check_totals", [True, False])
-    def test_dropped_totals(self, np_incomplete: NumpyVectorResults, check_totals: bool):
-        """Test for total checking with dropped demand"""
+    def test_dropped_totals(
+        self, np_incomplete: NumpyVectorResults, check_totals: bool
+    ) -> None:
+        """Test for total checking with dropped demand."""
         kwargs = np_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.numpy_vector_zone_translation(**kwargs)
@@ -890,8 +907,8 @@ class TestNumpyVector:
                 translation.numpy_vector_zone_translation(**kwargs)
 
     @pytest.mark.parametrize("check_shapes", [True, False])
-    def test_non_vector(self, np_vector_split: NumpyVectorResults, check_shapes: bool):
-        """Test for error when non-vector given"""
+    def test_non_vector(self, np_vector_split: NumpyVectorResults, check_shapes: bool) -> None:
+        """Test for error when non-vector given."""
         # Convert vector to matrix
         new_vector = np_vector_split.vector
         new_vector = np.broadcast_to(new_vector, (new_vector.shape[0], new_vector.shape[0]))
@@ -912,8 +929,8 @@ class TestNumpyVector:
         self,
         np_vector_split: NumpyVectorResults,
         check_shapes: bool,
-    ):
-        """Test for error when wrong shape translation"""
+    ) -> None:
+        """Test for error when wrong shape translation."""
         # Convert vector to matrix
         new_trans = np_vector_split.translation
         new_trans = np.vstack([new_trans, new_trans])
@@ -933,8 +950,8 @@ class TestNumpyVector:
         "np_vector_str",
         ["np_vector_aggregation", "np_vector_split", "np_translation_dtype"],
     )
-    def test_vector_like(self, np_vector_str: str, request):
-        """Test vector-like arrays (empty in 2nd dim)"""
+    def test_vector_like(self, np_vector_str: str, request: pytest.FixtureRequest) -> None:
+        """Test vector-like arrays (empty in 2nd dim)."""
         np_vector = request.getfixturevalue(np_vector_str)
         new_vector = np.expand_dims(np_vector.vector, 1)
         kwargs = np_vector.input_kwargs()
@@ -950,9 +967,9 @@ class TestNumpyVector:
         self,
         np_vector_str: str,
         check_totals: bool,
-        request,
-    ):
-        """Test that aggregation and splitting give correct results
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """Test that aggregation and splitting give correct results.
 
         Also checks that totals are correctly checked.
         """
@@ -970,13 +987,13 @@ class TestNumpyVector:
     "pd_vector_split",
 )
 class TestPandasMultiVector:
-    """Tests for caf.toolkit.translation.pandas_vector_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_vector_zone_translation."""
 
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(
         self, pd_multi_incomplete: PandasMultiVectorResults, check_totals: bool
-    ):
-        """Test for total checking with dropped demand"""
+    ) -> None:
+        """Test for total checking with dropped demand."""
         kwargs = pd_multi_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.pandas_vector_zone_translation(**kwargs)
@@ -1003,9 +1020,9 @@ class TestPandasMultiVector:
         self,
         pd_vector_str: str,
         check_totals: bool,
-        request,
-    ):
-        """Test that aggregation and splitting give correct results
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """Test that aggregation and splitting give correct results.
 
         Also checks that totals are correctly checked.
         """
@@ -1022,9 +1039,15 @@ class TestPandasMultiVector:
 
     @pytest.mark.parametrize(
         "pd_vector_str",
-        ["pd_multi_vector_aggregation", "pd_multi_vector_split", "pd_multi_vector_series"],
+        [
+            "pd_multi_vector_aggregation",
+            "pd_multi_vector_split",
+            "pd_multi_vector_series",
+        ],
     )
-    def test_additional_vector_index(self, pd_vector_str: str, request):
+    def test_additional_vector_index(
+        self, pd_vector_str: str, request: pytest.FixtureRequest
+    ) -> None:
         """Check a warning is raised when there are missing translation indexes."""
         pd_vector: PandasMultiVectorResults = request.getfixturevalue(pd_vector_str)
 
@@ -1057,7 +1080,9 @@ class TestPandasMultiVector:
             "pd_vector_split",
         ],
     )
-    def test_additional_translation_index(self, pd_vector_str: str, request):
+    def test_additional_translation_index(
+        self, pd_vector_str: str, request: pytest.FixtureRequest
+    ) -> None:
         """Check that additional translation values are ignored."""
         pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
             pd_vector_str
@@ -1103,8 +1128,8 @@ class TestPandasMultiVector:
     def test_check_allow_similar_types(
         self,
         pd_vector_str: str,
-        request,
-    ):
+        request: pytest.FixtureRequest,
+    ) -> None:
         """Test that similar types are allowed in translation and data."""
         pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
             pd_vector_str
@@ -1125,18 +1150,20 @@ class TestPandasMultiVector:
         else:
             pd.testing.assert_series_equal(result, pd_vector.expected_result)
 
-    def test_indexing_error(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
+    def test_indexing_error(
+        self, pd_multi_vector_multiindex: PandasMultiVectorResults
+    ) -> None:
         """Check that an error is thrown when the index is not unique."""
         new_vector = pd_multi_vector_multiindex.vector.copy()
         new_vector["wrong_1"] = new_vector.index
         new_vector["wrong_2"] = new_vector.index
-        new_vector.set_index(["wrong_1", "wrong_2"], inplace=True)
+        new_vector = new_vector.set_index(["wrong_1", "wrong_2"])
         with pytest.raises(ValueError, match="The input vector is MultiIndexed"):
             translation.pandas_vector_zone_translation(
                 **(pd_multi_vector_multiindex.input_kwargs() | {"vector": new_vector})
             )
 
-    def test_multiindex(self, pd_multi_vector_multiindex: PandasMultiVectorResults):
+    def test_multiindex(self, pd_multi_vector_multiindex: PandasMultiVectorResults) -> None:
         """Test that a multiindex is allowed."""
         # Setup
         new_vector = pd_multi_vector_multiindex.vector.copy()
@@ -1179,10 +1206,10 @@ class TestPandasMultiVector:
     "np_matrix_incomplete",
 )
 class TestNumpyMatrix:
-    """Tests for caf.toolkit.translation.numpy_matrix_zone_translation"""
+    """Tests for caf.toolkit.translation.numpy_matrix_zone_translation."""
 
-    def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults):
-        """Check an error is raised with a non-square matrix given"""
+    def test_mismatch_translations(self, np_matrix_aggregation2: NumpyMatrixResults) -> None:
+        """Check an error is raised with a non-square matrix given."""
         col_trans = np_matrix_aggregation2.col_translation
         col_trans = np.delete(col_trans, 0, axis=0)
         msg = "Row and column translations are not the same shape"
@@ -1192,8 +1219,8 @@ class TestNumpyMatrix:
                 **(np_matrix_aggregation2.input_kwargs() | {"col_translation": col_trans})
             )
 
-    def test_bad_translation(self, np_matrix_aggregation2: NumpyMatrixResults):
-        """Check an error is raised with a non-square matrix given"""
+    def test_bad_translation(self, np_matrix_aggregation2: NumpyMatrixResults) -> None:
+        """Check an error is raised with a non-square matrix given."""
         new_trans = np_matrix_aggregation2.translation
         col_trans = np_matrix_aggregation2.col_translation
         new_kwargs = {
@@ -1207,8 +1234,8 @@ class TestNumpyMatrix:
                 **(np_matrix_aggregation2.input_kwargs() | new_kwargs)
             )
 
-    def test_bad_matrix(self, np_matrix_split: NumpyMatrixResults):
-        """Check an error is raised with a non-square matrix given"""
+    def test_bad_matrix(self, np_matrix_split: NumpyMatrixResults) -> None:
+        """Check an error is raised with a non-square matrix given."""
         new_mat = np_matrix_split.mat
         new_mat = np.delete(new_mat, 0, axis=0)
         msg = "given matrix is not square"
@@ -1221,8 +1248,8 @@ class TestNumpyMatrix:
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(
         self, np_matrix_incomplete: NumpyMatrixResults, check_totals: bool
-    ):
-        """Test for total checking with dropped demand"""
+    ) -> None:
+        """Test for total checking with dropped demand."""
         kwargs = np_matrix_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.numpy_matrix_zone_translation(**kwargs)
@@ -1248,9 +1275,9 @@ class TestNumpyMatrix:
         self,
         np_matrix_str: str,
         check_totals: bool,
-        request,
-    ):
-        """Test translation works as expected
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """Test translation works as expected.
 
         Tests the matrix aggregation, using 2 different translations, and
         translation splitting.
@@ -1264,13 +1291,13 @@ class TestNumpyMatrix:
 
 @pytest.mark.usefixtures("pd_matrix_incomplete")
 class TestPandasMatrixEdges:
-    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation."""
 
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_dropped_totals(
         self, pd_matrix_incomplete: PandasMatrixResults, check_totals: bool
-    ):
-        """Test for total checking with dropped demand"""
+    ) -> None:
+        """Test for total checking with dropped demand."""
         kwargs = pd_matrix_incomplete.input_kwargs(check_totals=check_totals)
         if not check_totals:
             result = translation.pandas_matrix_zone_translation(**kwargs)
@@ -1296,15 +1323,15 @@ class TestPandasMatrixEdges:
     ],
 )
 class TestPandasMatrixParams:
-    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_matrix_zone_translation."""
 
     def test_translation_correct(
         self,
         pd_matrix_str: str,
         check_totals: bool,
-        request,
-    ):
-        """Test translation works as expected
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """Test translation works as expected.
 
         Tests the matrix aggregation, using 2 different translations, and
         translation splitting.
@@ -1315,7 +1342,9 @@ class TestPandasMatrixParams:
         )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
-    def test_additional_index(self, pd_matrix_str: str, check_totals: bool, request):
+    def test_additional_index(
+        self, pd_matrix_str: str, check_totals: bool, request: pytest.FixtureRequest
+    ) -> None:
         """Check a warning is raised if no translation exists for an index value."""
         pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
@@ -1334,7 +1363,9 @@ class TestPandasMatrixParams:
                 **pd_mat.input_kwargs(check_totals=check_totals) | {"matrix": new_df}
             )
 
-    def test_additional_column(self, pd_matrix_str: str, check_totals: bool, request):
+    def test_additional_column(
+        self, pd_matrix_str: str, check_totals: bool, request: pytest.FixtureRequest
+    ) -> None:
         """Check a warning is raised if no translation exists for a column value."""
         pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
@@ -1355,8 +1386,8 @@ class TestPandasMatrixParams:
         pd_matrix_str: str,
         row: bool,
         check_totals: bool,
-        request,
-    ):
+        request: pytest.FixtureRequest,
+    ) -> None:
         """Test that similar types are allowed in translation and data."""
         pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
@@ -1396,8 +1427,8 @@ class TestPandasMatrixParams:
         trans_dtype: type,
         matrix_dtype: type,
         check_totals: bool,
-        request,
-    ):
+        request: pytest.FixtureRequest,
+    ) -> None:
         """Test that similar types are allowed in translation and data."""
         pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
@@ -1444,15 +1475,15 @@ class TestPandasMatrixParams:
     ],
 )
 class TestLongPandasMatrixParams:
-    """Tests for caf.toolkit.translation.pandas_long_matrix_zone_translation"""
+    """Tests for caf.toolkit.translation.pandas_long_matrix_zone_translation."""
 
     def test_translation_correct(
         self,
         pd_matrix_str: str,
         check_totals: bool,
-        request,
-    ):
-        """Test translation works as expected
+        request: pytest.FixtureRequest,
+    ) -> None:
+        """Test translation works as expected.
 
         Tests the matrix aggregation, using 2 different translations, and
         translation splitting.
@@ -1469,8 +1500,8 @@ class TestLongPandasMatrixParams:
         self,
         pd_matrix_str: str,
         check_totals: bool,
-        request,
-    ):
+        request: pytest.FixtureRequest,
+    ) -> None:
         """Test translation works with different output column names."""
         pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
         renamed = pd_mat.update_output_cols(
@@ -1491,8 +1522,8 @@ class TestLongPandasMatrixParams:
         self,
         pd_matrix_str: str,
         check_totals: bool,
-        request,
-    ):
+        request: pytest.FixtureRequest,
+    ) -> None:
         """Test a warning is raised when there are additional columns."""
         pd_mat: PandasLongMatrixResults = request.getfixturevalue(pd_matrix_str)
         new_mat = pd_mat.df.copy().to_frame().reset_index()
@@ -1571,7 +1602,7 @@ def fix_matrix_file_translation(
 ) -> PandasFileMatrixResults:
     """Write matrix translation test files to temp directory."""
     # Convert square to long format
-    data = pd_matrix_split.mat.stack().to_frame()
+    data = pd_matrix_split.mat.stack().to_frame()  # noqa: PD013
     data.index.names = ["origin", "destination"]
     data.columns = ["value"]
     trans_data = pd_matrix_split.translation
@@ -1789,7 +1820,7 @@ class TestZoneCorrespondencePath:
     ) -> None:
         """Test zone correspondence path read raises ValueError when
         factors are mandatory and not provided.
-        """
+        """  # noqa:D205
         msg = "Factors column name is mandatory."
         with pytest.raises(ValueError, match=msg):
             translation_path_no_factors.read(factors_mandatory=True, generic_column_names=True)

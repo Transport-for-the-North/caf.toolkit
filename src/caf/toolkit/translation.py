@@ -1,27 +1,18 @@
-# -*- coding: utf-8 -*-
 """Tools to convert numpy/pandas vectors/matrices between different index systems.
 
 In transport, these tools are very useful for translating data between different
 zoning systems.
 """
+
 from __future__ import annotations
+
+import contextlib
 
 # Built-Ins
 import copy
 import logging
-import pathlib
 import warnings
-from collections.abc import Hashable
-from typing import (
-    Any,
-    Collection,
-    Literal,
-    Optional,
-    Sequence,
-    TypedDict,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -29,9 +20,12 @@ import pandas as pd
 from pydantic import ConfigDict, FilePath, dataclasses
 
 # Local Imports
-from caf.toolkit import io, math_utils
+from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import validators
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Hashable
 
 # # # CONSTANTS # # #
 _T = TypeVar("_T")
@@ -45,7 +39,7 @@ VALID_ZONE_ID_DTYPE = str | int
 class _MultiVectorKwargs(TypedDict):
     """Typed dict for multi_vector_translation kwarg expansion."""
 
-    translation_dtype: Optional[np.dtype]
+    translation_dtype: np.dtype | None
     check_totals: bool
 
 
@@ -62,7 +56,7 @@ def _check_matrix_translation_shapes(
         raise ValueError(
             f"The given matrix is not square. Matrix needs to be square "
             f"for the numpy zone translations to work.\n"
-            f"Given matrix shape: {str(matrix.shape)}"
+            f"Given matrix shape: {matrix.shape!s}"
         )
 
     # Check translations are the same shape
@@ -86,7 +80,7 @@ def _check_matrix_translation_shapes(
         )
 
 
-# TODO(BT): Move to numpy_utils??
+# TODO(BT): Move to numpy_utils??  # noqa: TD003
 #  Would mean making array_utils sparse specific
 def _convert_dtypes(
     arr: np.ndarray,
@@ -176,7 +170,8 @@ def _pandas_vector_validation(
             f"Some zones in `{name}.index` have not been defined in "
             f"`from_unique_zones`. These zones will be dropped before "
             f"translating.\n"
-            f"Additional rows count: {len(missing_rows)}"
+            f"Additional rows count: {len(missing_rows)}",
+            stacklevel=2,
         )
 
     # Check all needed values are in from_zone_col
@@ -185,7 +180,8 @@ def _pandas_vector_validation(
     if len(missing_zones) != 0:
         warnings.warn(
             f"Some zones in `{name}.index` are missing in `translation`. "
-            f"Missing zones count: {len(missing_zones)}"
+            f"Missing zones count: {len(missing_zones)}",
+            stacklevel=2,
         )
 
 
@@ -236,7 +232,8 @@ def _pandas_matrix_validation(
             f"`row_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_rows)}\n"
-            f"Total value dropped: {total_value_dropped}"
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
     # Throw a warning if any column values are in the matrix, but not in the
@@ -250,7 +247,8 @@ def _pandas_matrix_validation(
             f"`col_translation`. These zones will be dropped before "
             f"translating.\n"
             f"Additional rows count: {len(missing_cols)}\n"
-            f"Total value dropped: {total_value_dropped}"
+            f"Total value dropped: {total_value_dropped}",
+            stacklevel=2,
         )
 
 
@@ -259,8 +257,8 @@ def numpy_matrix_zone_translation(
     matrix: np.ndarray,
     translation: np.ndarray,
     *,
-    col_translation: Optional[np.ndarray] = None,
-    translation_dtype: Optional[np.dtype] = None,
+    col_translation: np.ndarray | None = None,
+    translation_dtype: np.dtype | None = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
@@ -346,15 +344,22 @@ def numpy_matrix_zone_translation(
     to_id_vals = list(range(translation.shape[1]))
 
     # Convert numpy arrays into pandas arrays
-    dimension_cols = {translation_from_col: from_id_vals, translation_to_col: to_id_vals}
+    dimension_cols = {
+        translation_from_col: from_id_vals,
+        translation_to_col: to_id_vals,
+    }
     pd_row_translation = pd_utils.n_dimensional_array_to_dataframe(
-        mat=row_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+        mat=row_translation,
+        dimension_cols=dimension_cols,
+        value_col=translation_factors_col,
     ).reset_index()
     zero_mask = pd_row_translation[translation_factors_col] == 0
     pd_row_translation = pd_row_translation[~zero_mask]
 
     pd_col_translation = pd_utils.n_dimensional_array_to_dataframe(
-        mat=col_translation, dimension_cols=dimension_cols, value_col=translation_factors_col
+        mat=col_translation,
+        dimension_cols=dimension_cols,
+        value_col=translation_factors_col,
     ).reset_index()
     zero_mask = pd_col_translation[translation_factors_col] == 0
     pd_col_translation = pd_col_translation[~zero_mask]
@@ -381,7 +386,7 @@ def numpy_matrix_zone_translation(
 def numpy_vector_zone_translation(
     vector: np.ndarray,
     translation: np.ndarray,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
     check_shapes: bool = True,
     check_totals: bool = True,
 ) -> np.ndarray:
@@ -436,7 +441,7 @@ def numpy_vector_zone_translation(
     if check_shapes:
         # Check that vector is 1D
         if len(vector.shape) > 1:
-            if len(vector.shape) == 2 and vector.shape[1] == 1:
+            if len(vector.shape) == 2 and vector.shape[1] == 1:  # noqa: PLR2004
                 vector = vector.flatten()
             else:
                 raise ValueError(
@@ -482,7 +487,7 @@ def numpy_vector_zone_translation(
                 "Set 'check_shapes' to True, or see above error for more "
                 "information."
             ) from err
-        raise err
+        raise
 
     if not check_totals:
         return out_vector
@@ -500,7 +505,7 @@ def numpy_vector_zone_translation(
     return out_vector
 
 
-def pandas_long_matrix_zone_translation(
+def pandas_long_matrix_zone_translation(  # noqa: PLR0913
     matrix: pd.DataFrame | pd.Series,
     index_col_1_name: str,
     index_col_2_name: str,
@@ -579,22 +584,23 @@ def pandas_long_matrix_zone_translation(
         col_translation = _correspondence_from_df(
             col_translation, translation_from_col, translation_to_col, translation_factors_col
         )
-    if bool(index_col_2_out_name) != bool(index_col_1_out_name):
+    if (index_col_2_out_name is None) ^ (index_col_1_out_name is None):
         raise ValueError("If one of index_col_out_name is set, both must be set.")
     matrix = matrix.copy()
     keep_cols = [index_col_1_name, index_col_2_name, values_col]
     if isinstance(matrix, pd.DataFrame):
-
         all_cols = matrix.columns.tolist()
         # Drop any columns we're not keeping
         drop_cols = set(all_cols) - set(keep_cols)
         if len(drop_cols) > 0:
             warnings.warn(
-                f"Extra columns found in matrix, dropping the following: {drop_cols}"
+                f"Extra columns found in matrix, dropping the following: {drop_cols}",
+                stacklevel=2,
             )
         matrix = pd_utils.reindex_cols(df=matrix, columns=keep_cols)
         series_mat = matrix.set_index([index_col_1_name, index_col_2_name]).squeeze()
-        assert isinstance(series_mat, pd.Series)
+        if not isinstance(series_mat, pd.Series):
+            raise TypeError("")
     else:
         series_mat = matrix
 
@@ -613,7 +619,7 @@ def pandas_long_matrix_zone_translation(
     out_mat = pd_utils.wide_to_long_infill(df=translated_wide_mat)
     if index_col_2_out_name is not None:
         # Check at the start of function makes sure if one is not None, both are
-        assert index_col_1_out_name is not None
+        assert index_col_1_out_name is not None  # noqa: S101
         out_mat.index.names = [index_col_1_out_name, index_col_2_out_name]
 
     return out_mat
@@ -738,7 +744,8 @@ def pandas_matrix_zone_translation(
             f"dropping values. If the difference is small, it's likely a "
             f"rounding error.\n"
             f"Before: {matrix.to_numpy().sum()}\n"
-            f"After: {translated.to_numpy().sum()}"
+            f"After: {translated.to_numpy().sum()}",
+            stacklevel=2,
         )
 
     return translated
@@ -752,7 +759,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str = "to",
     translation_factors_col: str = "factors",
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -767,7 +774,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str = "to",
     translation_factors_col: str = "factors",
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.Series:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -781,7 +788,7 @@ def pandas_vector_zone_translation(
     translation_to_col: str = "to",
     translation_factors_col: str = "factors",
     check_totals: bool = True,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
 ) -> pd.Series | pd.DataFrame:
     # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -834,8 +841,6 @@ def pandas_vector_zone_translation(
             zone_correspondence.factors_column.to_numpy().dtype, vector.to_numpy().dtype
         )
 
-    assert translation_dtype is not None
-
     new_values = _convert_dtypes(
         arr=vector.to_numpy(),
         to_type=translation_dtype,
@@ -881,7 +886,8 @@ def pandas_vector_zone_translation(
         if not math_utils.is_almost_equal(translated.sum().sum(), vector.sum().sum()):
             warnings.warn(
                 "Some values seem to have been dropped. The difference "
-                f"total is {overall_diff} (translated - original)."
+                f"total is {overall_diff} (translated - original).",
+                stacklevel=2,
             )
 
     # Sometimes we need to remove the index name to make sure the same style of
@@ -917,6 +923,7 @@ def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list
         f"Missing rows count: {len(missing_rows)}\n"
         f"Total value dropped: {total_value_dropped}\n"
         f"NaN cells: {n_nans} / {n_cells} ({n_nans / n_cells:.0%} of missing rows)",
+        stacklevel=2,
     )
     LOG.debug("Missing zones dropped before translation: %s", missing_rows)
 
@@ -935,16 +942,17 @@ def _multi_vector_trans_index(
                 "The input vector is MultiIndexed. The translation "
                 f"will be done using the {translation_from_col} level "
                 "of the index. If this is unexpected, check your "
-                "inputs."
+                "inputs.",
+                stacklevel=2,
             )
-            vector.reset_index(inplace=True)
+            vector = vector.reset_index()
             (
                 vector[translation_from_col],
                 translation[translation_from_col],
             ) = pd_utils.cast_to_common_type(
                 [vector[translation_from_col], translation[translation_from_col]],
             )
-            vector.set_index(ind_names, inplace=True)
+            vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
             missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
@@ -973,6 +981,72 @@ def _multi_vector_trans_index(
         ind_names = []
 
     return ind_names, vector, translation
+
+
+def _load_translation(
+    path: pathlib.Path,
+    from_column: int | str,
+    to_column: int | str,
+    factors_column: int | str,
+) -> tuple[pd.DataFrame, tuple[str, str, str]]:
+    """Load translation file and determine name of any column positions given.
+
+    Returns
+    -------
+    pd.DataFrame
+        Translation data.
+    (str, str, str)
+        From, to and factors column names.
+    """
+    LOG.info("Loading translation lookup data from: '%s'", path)
+    data = io.read_csv(
+        path,
+        name="translation lookup",
+        usecols=[from_column, to_column, factors_column],
+        dtype={factors_column: float},
+    )
+
+    columns = (from_column, to_column, factors_column)
+    str_columns = [data.columns[i] if isinstance(i, int) else i for i in columns]
+
+    # Attempt to convert ID columns to integers,
+    # but not necessarily a problem if they aren't
+    for column in str_columns[:2]:
+        with contextlib.suppress(ValueError):
+            data[column] = pd.to_numeric(data[column], downcast="integer")
+
+    columns = ("from_column", "to_column", "factors_column")
+    LOG.info(
+        "Translation loaded with following columns:\n\t%s",
+        "\n\t".join(f"{i}: {j}" for i, j in zip(columns, str_columns, strict=True)),
+    )
+
+    #  MyPy is confused about the tuple
+    return data, tuple(str_columns)  # type: ignore[return-value]
+
+
+def _validate_column_name_parameters(params: dict[str, Any], *names: str) -> None:
+    """Check all `names` are present and are strings in `params`.
+
+    Raises TypeError for any `names` which aren't strings in `params`.
+    """
+    any_positions = False
+    for name in names:
+        value = params.get(name)
+        if isinstance(value, int):
+            any_positions = True
+
+        elif not isinstance(value, str):
+            raise TypeError(
+                f"{name} parameter should be the name of a column not {type(value)}"
+            )
+
+    if any_positions:
+        warnings.warn(
+            "column positions are given instead of names,"
+            " make sure the columns are in the correct order",
+            stacklevel=2,
+        )
 
 
 def vector_translation_from_file(
@@ -1008,7 +1082,7 @@ def vector_translation_from_file(
         Name, or position, of column in translation containing the
         splitting factors.
     """
-    # TODO(MB) Add optional from / to unique index parameters, deal with too many locals
+    # TODO(MB): Add optional from / to unique index parameters  # noqa: TD003
     # pylint: disable=too-many-locals
     # otherwise infer from translation file
     zone_correspondence_path = _correspondence_path_from_path(
@@ -1095,11 +1169,12 @@ def matrix_translation_from_file(
         raise NotImplementedError("Square matrices are not yet supported.")
 
     matrix_zone_columns = tuple(matrix_zone_columns)
-    are_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
-    if len(matrix_zone_columns) != 2 or are_strings:
+    not_strings = any(not isinstance(i, str) for i in matrix_zone_columns)
+    expected_columns = 2
+    if len(matrix_zone_columns) != expected_columns or not_strings:
         raise TypeError(
-            "matrix_zone_columns should be a tuple containing "
-            f"the names of 2 columns not {matrix_zone_columns}"
+            "matrix_zone_columns should be a tuple containing the names"
+            f" of {expected_columns} columns not {matrix_zone_columns}"
         )
 
     LOG.info("Loading matrix data from: '%s'", matrix_path)
@@ -1129,7 +1204,7 @@ def matrix_translation_from_file(
 
     if format_ == "long":
         # Stack is returning a Series, MyPy is wrong
-        translated = translated.stack().to_frame()  # type: ignore[operator]
+        translated = translated.stack().to_frame()  # type: ignore[operator]  # noqa: PD013
 
         # Get name of value column
         if isinstance(matrix_values_column, str):
@@ -1230,12 +1305,14 @@ class ZoneCorrespondencePath:
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
-                    " this does not make sense for a zone translation factor"
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
             if (translation[self.factors_col_name] < 0).any():
                 warnings.warn(
                     "%s contains values less than one,"
-                    " this does not make sense for a zone translation factor"
+                    " this does not make sense for a zone translation factor",
+                    stacklevel=2,
                 )
             factors_col = self.factors_col_name
 
