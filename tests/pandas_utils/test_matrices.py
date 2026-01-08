@@ -522,7 +522,7 @@ class TestMatrixComparison:
        
         cost_matrix: pd.DataFrame,
        
-        translation_vector: translation.ZoneCorrespondence,,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Checks Multi-Area Vkms comparisons functions as expected."""
         matrix_report = pd_utils.MatrixReport(
