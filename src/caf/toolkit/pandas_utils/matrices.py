@@ -384,7 +384,7 @@ def matrix_describe(
 
     info = matrix.stack().describe(
         percentiles=[0.05, 0.25, 0.5, 0.75, 0.95]
-    )  # noqa: PD013
+    )
     if not isinstance(info, pd.Series):
         raise TypeError(f"info should be Series not: {type(info)}")
 

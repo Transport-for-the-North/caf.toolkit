@@ -392,9 +392,9 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_stats(
-        
+
         self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
-    
+
     ) -> None:
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -484,9 +484,9 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_vkms(
-        
+
         self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
-    
+
     ) -> None:
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
@@ -517,11 +517,11 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_multi_vkms(
         self,
-       
+
         matrix: pd.DataFrame,
-       
+
         cost_matrix: pd.DataFrame,
-       
+
         translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Checks Multi-Area Vkms comparisons functions as expected."""
@@ -553,12 +553,9 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_multi_tlds(
         self,
-       
         matrix: pd.DataFrame,
-       
         cost_matrix: pd.DataFrame,
-       
-        translation_vector: translation.ZoneCorrespondence,,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Check Multi-Area TLDs functions as expected."""
         matrix_report = pd_utils.MatrixReport(
@@ -590,12 +587,9 @@ class TestMatrixComparison:
     @pytest.mark.filterwarnings("ignore:Trip VKMs has not been set:UserWarning")
     def test_comparison_tlds(
         self,
-       
         matrix: pd.DataFrame,
-       
         cost_matrix: pd.DataFrame,
-       
-        translation_vector: translation.ZoneCorrespondence,,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Check TLD comparison functions as expected."""
         matrix_report = pd_utils.MatrixReport(

@@ -13,8 +13,8 @@ import copy
 import logging
 import pathlib
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -22,9 +22,8 @@ import pandas as pd
 from pydantic import ConfigDict, FilePath, dataclasses
 
 # Local Imports
-from caf.toolkit import io, math_utils
+from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import validators
 
 if TYPE_CHECKING:
     from collections.abc import Hashable
@@ -1550,6 +1549,7 @@ class ZoneCorrespondence:
         """Retrieve the correspondence for a subset of zones.
 
         If the filter zones do not exist an empty dataframe is returned
+
         Parameters
         ----------
         filter_zones : VALID_ZONE_ID_DTYPE | Sequence[VALID_ZONE_ID_DTYPE]
@@ -1563,7 +1563,6 @@ class ZoneCorrespondence:
         pd.DataFrame
             All columns in the zone correspondence for the selected zones.
         """
-
         if not isinstance(filter_zones, Sequence):
             filter_zones = [filter_zones]
         if not isinstance(filter_zones, list):
