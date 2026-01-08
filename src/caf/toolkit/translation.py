@@ -1404,6 +1404,9 @@ class ZoneCorrespondencePath:
         else:
             from_col = self.from_col_name
             to_col = self.to_col_name
+        
+        if factors_col is None:
+            raise ValueError("Should not be None here.")
 
         return ZoneCorrespondence(
             translation,
