@@ -11,8 +11,10 @@ import contextlib
 # Built-Ins
 import copy
 import logging
+import pathlib
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
+from collections.abc import Collection, Sequence
 
 # Third Party
 import numpy as np
@@ -20,11 +22,11 @@ import pandas as pd
 from pydantic import ConfigDict, FilePath, dataclasses
 
 # Local Imports
-from caf.toolkit import io, math_utils, validators
+from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import validators
 
 if TYPE_CHECKING:
-    import pathlib
     from collections.abc import Hashable
 
 # # # CONSTANTS # # #
@@ -514,10 +516,10 @@ def pandas_long_matrix_zone_translation(  # noqa: PLR0913
     translation_from_col: str = "from",
     translation_to_col: str = "to",
     translation_factors_col: str = "factors",
-    col_translation: Optional[ZoneCorrespondence | pd.DataFrame] = None,
-    translation_dtype: Optional[np.dtype] = None,
-    index_col_1_out_name: Optional[str] = None,
-    index_col_2_out_name: Optional[str] = None,
+    col_translation: ZoneCorrespondence | pd.DataFrame | None = None,
+    translation_dtype: np.dtype | None = None,
+    index_col_1_out_name: str | None = None,
+    index_col_2_out_name: str | None = None,
     check_totals: bool = True,
 ) -> pd.Series:
     # pylint: disable=too-many-positional-arguments
@@ -543,6 +545,18 @@ def pandas_long_matrix_zone_translation(  # noqa: PLR0913
         When `col_translation` is None, this defines the translation to use
         for both the rows and columns. When `col_translation` is set, this
         defines the translation to use for the rows.
+
+    translation_from_col : str = "from"
+        Name of zone ID column in translation which corresponds to the current vector
+        zone ID. Deprecated, only provide if zone correspondence is a dataframe.
+
+    translation_to_col : str = "to"
+        Name of column in translation for the new zone IDs. Deprecated, only provide if zone
+        correspondence is a dataframe.
+
+    translation_factors_col : str = "factors
+        Name of column in translation. Deprecated, only provide if zone correspondence is a
+        dataframe.
 
     col_translation:
         A `ZoneCorrespondence` object defining the weights to use to translate the columns.
@@ -578,11 +592,17 @@ def pandas_long_matrix_zone_translation(  # noqa: PLR0913
     # pylint: disable=too-many-arguments, too-many-locals
     # Init
     zone_correspondence = _correspondence_from_df(
-        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+        zone_correspondence,
+        translation_from_col,
+        translation_to_col,
+        translation_factors_col,
     )
     if col_translation is not None:
         col_translation = _correspondence_from_df(
-            col_translation, translation_from_col, translation_to_col, translation_factors_col
+            col_translation,
+            translation_from_col,
+            translation_to_col,
+            translation_factors_col,
         )
     if (index_col_2_out_name is None) ^ (index_col_1_out_name is None):
         raise ValueError("If one of index_col_out_name is set, both must be set.")
@@ -632,7 +652,7 @@ def pandas_matrix_zone_translation(
     translation_to_col: str = "to",
     translation_factors_col: str = "factors",
     col_translation: ZoneCorrespondence | pd.DataFrame | None = None,
-    translation_dtype: Optional[np.dtype] = None,
+    translation_dtype: np.dtype | None = None,
     check_totals: bool = True,
 ) -> pd.DataFrame:
     # pylint: disable=too-many-positional-arguments
@@ -652,6 +672,18 @@ def pandas_matrix_zone_translation(
         When `col_translation` is None, this defines the translation to use
         for both the rows and columns. When `col_translation` is set, this
         defines the translation to use for the rows.
+
+    translation_from_col : str = "from"
+        Name of zone ID column in translation which corresponds to the current vector
+        zone ID. Deprecated, only provide if zone correspondence is a dataframe.
+
+    translation_to_col : str = "to"
+        Name of column in translation for the new zone IDs. Deprecated, only provide if zone
+        correspondence is a dataframe.
+
+    translation_factors_col : str = "factors
+        Name of column in translation. Deprecated, only provide if zone correspondence is a
+        dataframe.
 
     col_translation:
         A `ZoneCorrespondence` object defining the weights to use to translate the columns.
@@ -680,12 +712,18 @@ def pandas_matrix_zone_translation(
     """
     # Init
     zone_correspondence = _correspondence_from_df(
-        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+        zone_correspondence,
+        translation_from_col,
+        translation_to_col,
+        translation_factors_col,
     )
     row_translation = zone_correspondence
     if col_translation is not None:
         col_translation = _correspondence_from_df(
-            col_translation, translation_from_col, translation_to_col, translation_factors_col
+            col_translation,
+            translation_from_col,
+            translation_to_col,
+            translation_factors_col,
         )
     else:
         col_translation = zone_correspondence.copy()
@@ -737,7 +775,9 @@ def pandas_matrix_zone_translation(
     if not check_totals:
         return translated
 
-    if not math_utils.is_almost_equal(matrix.to_numpy().sum(), translated.to_numpy().sum()):
+    if not math_utils.is_almost_equal(
+        matrix.to_numpy().sum(), translated.to_numpy().sum()
+    ):
         warnings.warn(
             f"Some values seem to have been dropped during the translation. "
             f"Check the given translation matrix isn't unintentionally "
@@ -807,6 +847,18 @@ def pandas_vector_zone_translation(
         A `ZoneCorrespondence` object defining the weights to translate use when
         translating.
 
+    translation_from_col : str = "from"
+        Name of zone ID column in translation which corresponds to the current vector
+        zone ID. Deprecated, only provide if zone correspondence is a dataframe.
+
+    translation_to_col : str = "to"
+        Name of column in translation for the new zone IDs. Deprecated, only provide if zone
+        correspondence is a dataframe.
+
+    translation_factors_col : str = "factors
+        Name of column in translation. Deprecated, only provide if zone correspondence is a
+        dataframe.
+
     check_totals:
         Whether to check that the input and output matrices sum to the same
         total.
@@ -827,7 +879,10 @@ def pandas_vector_zone_translation(
     `pandas_multi_vector_zone_translation()`
     """
     zone_correspondence = _correspondence_from_df(
-        zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
+        zone_correspondence,
+        translation_from_col,
+        translation_to_col,
+        translation_factors_col,
     )
     vector = vector.copy()
     zone_correspondence = zone_correspondence.copy()
@@ -850,7 +905,9 @@ def pandas_vector_zone_translation(
     if isinstance(vector, pd.Series):
         vector = pd.Series(index=vector.index, name=vector.name, data=new_values)
     else:
-        vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
+        vector = pd.DataFrame(
+            index=vector.index, columns=vector.columns, data=new_values
+        )
 
     zone_correspondence.factors_column = _convert_dtypes(
         arr=zone_correspondence.factors_column.to_numpy(),
@@ -903,7 +960,9 @@ def pandas_vector_zone_translation(
     return translated
 
 
-def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
+def _vector_missing_warning(
+    vector: pd.DataFrame | pd.Series, missing_rows: list
+) -> None:
     """Warn when zones are missing from vector.
 
     Produces RuntimeWarning detailing the number of missing rows and
@@ -955,9 +1014,9 @@ def _multi_vector_trans_index(
             vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
-            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
-                translation_from
-            )
+            missing_rows = set(
+                vector.index.get_level_values(translation_from_col)
+            ) - set(translation_from)
             if len(missing_rows) > 0:
                 _vector_missing_warning(vector, list(missing_rows))
 
@@ -1073,14 +1132,15 @@ def vector_translation_from_file(
         CSV path to save the translated data to.
     vector_zone_column : str | int
         Name, or position, of the zone ID column in `vector_path` file.
-    translation_from_column : str | int
-        Name, or position, of zone ID column in translation which
-        corresponds to the current vector zone ID.
-    translation_to_column : str | int
-        Name, or position, of column in translation for the new zone IDs.
-    translation_factors_column : str | int
-        Name, or position, of column in translation containing the
-        splitting factors.
+    translation_from_col : str = "from"
+        Name of zone ID column in translation which corresponds to the current vector
+        zone ID. Deprecated, only provide if zone correspondence is a dataframe.
+    translation_to_col : str = "to"
+        Name of column in translation for the new zone IDs. Deprecated, only provide if zone
+        correspondence is a dataframe.
+    translation_factors_col : str = "factors
+        Name of column in translation. Deprecated, only provide if zone correspondence is a
+        dataframe.
     """
     # TODO(MB): Add optional from / to unique index parameters  # noqa: TD003
     # pylint: disable=too-many-locals
@@ -1155,6 +1215,15 @@ def matrix_translation_from_file(
         the zone IDs in the matrix file.
     matrix_values_column : int | str
         Name, or position, of the column containing the matrix values.
+    translation_from_col : str = "from"
+        Name of zone ID column in translation which corresponds to the current vector
+        zone ID. Deprecated, only provide if zone correspondence is a dataframe.
+    translation_to_col : str = "to"
+        Name of column in translation for the new zone IDs. Deprecated, only provide if zone
+        correspondence is a dataframe.
+    translation_factors_col : str = "factors
+        Name of column in translation. Deprecated, only provide if zone correspondence is a
+        dataframe.
     format_: Literal["square", "long"] = "long",
         Whether the matrix is in long or wide format.
     """
@@ -1235,6 +1304,22 @@ class ZoneCorrespondencePath:
     factors_col_name: str | None = None
     """Column name for the translation factors."""
 
+    def __init__(
+        self,
+        path: FilePath,
+        from_col_name: int | str,
+        to_col_name: int | str,
+        factors_col_name: int | str,
+    ):
+        headers = pd.read_csv(path, nrows=0).columns.tolist()
+        if isinstance(from_col_name, int):
+            from_col_name = headers[from_col_name]
+        if isinstance(to_col_name, int):
+            to_col_name = headers[to_col_name]
+        if isinstance(factors_col_name, int):
+            factors_col_name = headers[factors_col_name]
+        super().__init__()
+
     @property
     def generic_from_col(self) -> str:
         """Column name to replace the `from_col_name` when reading with generic column names."""
@@ -1301,7 +1386,9 @@ class ZoneCorrespondencePath:
 
         if factors_mandatory:
             if not pd.api.types.is_numeric_dtype(translation[self.factors_col_name]):
-                raise ValueError(f"{self.factors_col_name} must contain numeric values only.")
+                raise ValueError(
+                    f"{self.factors_col_name} must contain numeric values only."
+                )
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
@@ -1352,6 +1439,22 @@ class ZoneCorrespondence:
     factors_col_name: str = "factors"
     """Factors column name in translation `vector`."""
 
+    def __init__(
+        self,
+        vector: pd.DataFrame,
+        from_col_name: int | str,
+        to_col_name: int | str,
+        factors_col_name: int | str,
+    ):
+        headers = vector.columns.tolist()
+        if isinstance(from_col_name, int):
+            from_col_name = headers[from_col_name]
+        if isinstance(to_col_name, int):
+            to_col_name = headers[to_col_name]
+        if isinstance(factors_col_name, int):
+            factors_col_name = headers[factors_col_name]
+        super().__init__()
+
     def __post_init__(self) -> None:
         """Format and check translation vector."""
         try:
@@ -1378,7 +1481,9 @@ class ZoneCorrespondence:
         if self.vector[self.factors_col_name].isna().any():
             raise ValueError("Factors column contains NaNs")
 
-        factor_col_sums = self.vector.groupby(self.from_col_name)[self.factors_col_name].sum()
+        factor_col_sums = self.vector.groupby(self.from_col_name)[
+            self.factors_col_name
+        ].sum()
 
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
             raise ValueError("Factors cannot be greater than one.")
@@ -1473,7 +1578,9 @@ class ZoneCorrespondence:
             filter_col = self.to_column
             filter_col_name = self.to_col_name
         else:
-            raise ValueError(f"filter_on must be either 'from' or 'to', not {filter_on}")
+            raise ValueError(
+                f"filter_on must be either 'from' or 'to', not {filter_on}"
+            )
 
         if len(missing := (set(filter_zones) - set(filter_col.to_list()))) > 0:
             raise KeyError(f"Zones {missing} not in {filter_col} column")
@@ -1495,7 +1602,7 @@ def _correspondence_from_df(
     if isinstance(translation, pd.DataFrame):
         warnings.warn(
             "Zone translations in caf.toolkit should now use the ZoneCorrespondence "
-            "class as an input, rather than a DataFrame.",
+            "class as an input, rather than a DataFrame. DataFrames will raise an error in caf.toolkit 1.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1512,7 +1619,7 @@ def _correspondence_path_from_path(
     if isinstance(translation_path, pathlib.Path):
         warnings.warn(
             "Zone translations from file in caf.toolkit should now use the ZoneCorrespondencePath "
-            "class as an input, rather than a simple Path.",
+            "class as an input, rather than a simple Path. Paths will raise error in caf.toolkit 1.0.",
             DeprecationWarning,
             stacklevel=2,
         )

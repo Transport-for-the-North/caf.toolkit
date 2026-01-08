@@ -167,7 +167,9 @@ class UniqueIdGenerator(DataGenerator):
             Generated data.
         """
         del generator
-        values = np.arange(start=self.starting_val, stop=self.starting_val + self.length)
+        values = np.arange(
+            start=self.starting_val, stop=self.starting_val + self.length
+        )
         return pd.Series(values, name=self.name)
 
 
@@ -207,5 +209,7 @@ class IntGenerator(DataGenerator):
         pd.Series
             Generated data.
         """
-        values = generator.integers(self.lower_range, self.upper_range, size=self.length)
+        values = generator.integers(
+            self.lower_range, self.upper_range, size=self.length
+        )
         return pd.Series(values, name=self.name)

@@ -134,7 +134,9 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
+        for nm, value in zip(
+            ("usecols", "dtype", "index_col"), parameters, strict=True
+        ):
             if value is not None:
                 kwargs[nm] = value
 
@@ -369,7 +371,9 @@ def read_csv_matrix(
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
+    matrix.columns = utility.to_numeric(
+        matrix.columns, errors="ignore", downcast="integer"
+    )
     matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
@@ -513,7 +517,9 @@ def find_file_with_name(
         )
 
     if len(found) == 0:
-        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
+        raise FileNotFoundError(
+            f'cannot find any files named "{name}" inside "{folder}"'
+        )
 
     # Order found based on expected_suffixes
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
