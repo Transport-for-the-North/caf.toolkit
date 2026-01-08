@@ -677,7 +677,11 @@ def pandas_matrix_zone_translation(
         zone_correspondence, translation_from_col, translation_to_col, translation_factors_col
     )
     row_translation = zone_correspondence
-    if col_translation is None:
+    if col_translation is not None:
+        col_translation = _correspondence_from_df(
+            col_translation, translation_from_col, translation_to_col, translation_factors_col
+        )
+    else:
         col_translation = zone_correspondence.copy()
     assert col_translation is not None
 
@@ -887,7 +891,8 @@ def pandas_vector_zone_translation(
 
     # Make sure the output has the same name as input series
     if isinstance(vector, pd.Series):
-        translated.name = vector.name
+        if isinstance(translated, pd.Series):
+            translated.name = vector.name
 
     return translated
 
