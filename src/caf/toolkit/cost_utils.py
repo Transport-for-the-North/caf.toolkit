@@ -286,8 +286,8 @@ class CostDistribution:  # noqa: PLW1641
         # Calculate distance weighted demand
         df = pd.DataFrame(
             {
-                "cost": pd.DataFrame(cost_matrix).stack(),  # noqa: PD013
-                "demand": pd.DataFrame(matrix).stack(),  # noqa: PD013
+                "cost": pd.DataFrame(cost_matrix).stack(),
+                "demand": pd.DataFrame(matrix).stack(),
             }
         )
         df["weighted"] = df["cost"] * df["demand"]

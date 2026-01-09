@@ -10,11 +10,7 @@ import os
 import time
 import traceback
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, TypeVar
 
 # Third Party
 import tqdm
