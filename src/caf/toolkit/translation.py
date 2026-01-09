@@ -1323,7 +1323,7 @@ class ZoneCorrespondencePath:
 
     @property
     def generic_factor_col(self) -> str:
-        """Column name to replace the `factors_col_name` when reading with generic column names."""
+        """Replace the `factors_col_name` when reading with generic column names."""
         return "factors"
 
     @property
@@ -1404,7 +1404,7 @@ class ZoneCorrespondencePath:
         else:
             from_col = self.from_col_name
             to_col = self.to_col_name
-        
+
         if factors_col is None:
             raise ValueError("Should not be None here.")
 
@@ -1586,7 +1586,8 @@ def _correspondence_from_df(
     if isinstance(translation, pd.DataFrame):
         warnings.warn(
             "Zone translations in caf.toolkit should now use the ZoneCorrespondence "
-            "class as an input, rather than a DataFrame. DataFrames will raise an error in caf.toolkit 1.0.",
+            "class as an input, rather than a DataFrame. DataFrames will raise an error in "
+            "caf.toolkit 1.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -1602,8 +1603,9 @@ def _correspondence_path_from_path(
 ) -> ZoneCorrespondencePath:
     if isinstance(translation_path, pathlib.Path):
         warnings.warn(
-            "Zone translations from file in caf.toolkit should now use the ZoneCorrespondencePath "
-            "class as an input, rather than a simple Path. Paths will raise error in caf.toolkit 1.0.",
+            "Zone translations from file in caf.toolkit should now use the "
+            "ZoneCorrespondencePath class as an input, rather than a simple Path. "
+            "Paths will raise error in caf.toolkit 1.0.",
             DeprecationWarning,
             stacklevel=2,
         )

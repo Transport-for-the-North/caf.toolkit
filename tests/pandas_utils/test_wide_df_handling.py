@@ -167,7 +167,9 @@ class TestGetWideMask:
         # Should be a boolean array, so exactly the same
         np.testing.assert_array_equal(result, expected)
 
-    @pytest.mark.parametrize("non_square_matrix", ((6, 5), (11, 13), (7,)), indirect=True)
+    @pytest.mark.parametrize(
+        "non_square_matrix", ((6, 5), (11, 13), (7,)), indirect=True
+    )
     def test_non_square_error(self, non_square_matrix: WideMatrixData) -> None:
         """Test an error is raised when the matrix is not square."""
         select = [1, 2]
@@ -175,7 +177,9 @@ class TestGetWideMask:
 
         msg = "Only square matrices with 2 dimensions are supported"
         with pytest.raises(ValueError, match=msg):
-            pd_utils.get_wide_mask(non_square_matrix.matrix, select=select, join_fn=join_fn)
+            pd_utils.get_wide_mask(
+                non_square_matrix.matrix, select=select, join_fn=join_fn
+            )
 
     @pytest.mark.parametrize("random_square_matrix", [5], indirect=True)
     def test_bad_input_error(self, random_square_matrix: WideMatrixData) -> None:
@@ -328,7 +332,9 @@ class TestWideMatrixIntExtReport:
         )
 
     @pytest.fixture(name="missing_bad_report", scope="class")
-    def fixture_missing_bad_report(self, correct_report: ReportMatrixData) -> ReportMatrixData:
+    def fixture_missing_bad_report(
+        self, correct_report: ReportMatrixData
+    ) -> ReportMatrixData:
         """Create an example of a bad report where some df values are missed."""
         int_select = [1, 2, 3]
         ext_select = [4, 5]
@@ -347,7 +353,9 @@ class TestWideMatrixIntExtReport:
         )
 
     @pytest.fixture(name="overlap_bad_report", scope="class")
-    def fixture_overlap_bad_report(self, correct_report: ReportMatrixData) -> ReportMatrixData:
+    def fixture_overlap_bad_report(
+        self, correct_report: ReportMatrixData
+    ) -> ReportMatrixData:
         """Create an example of a bad report where some df values are counted twice."""
         int_select = [0, 1, 2]
         ext_select = [2, 3, 4]
@@ -367,7 +375,9 @@ class TestWideMatrixIntExtReport:
 
     def test_correct(self, correct_report: ReportMatrixData) -> None:
         """Test that the correct result is produced with correct data."""
-        result = pd_utils.wide_matrix_internal_external_report(**correct_report.get_kwargs())
+        result = pd_utils.wide_matrix_internal_external_report(
+            **correct_report.get_kwargs()
+        )
         pd.testing.assert_frame_equal(result, correct_report.expected_report)
 
     def test_missing_warn(self, missing_bad_report: ReportMatrixData) -> None:

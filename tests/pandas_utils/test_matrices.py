@@ -57,7 +57,9 @@ def fixture_translation() -> translation.ZoneCorrespondencePath:
     for i in range(MATRIX_SIZE):
         trans_data.append({"from": i, "to": int(str(i)[0]), "factor": 1})
 
-    return translation.ZoneCorrespondence(pd.DataFrame(trans_data), "from", "to", "factor")
+    return translation.ZoneCorrespondence(
+        pd.DataFrame(trans_data), "from", "to", "factor"
+    )
 
 
 class TestMatrices:
@@ -69,7 +71,9 @@ class TestMatrices:
 
         almost_zero = 1 / matrix.size
 
-        control = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])  # noqa: PD013
+        control = matrix.stack().describe(
+            percentiles=[0.05, 0.25, 0.5, 0.75, 0.95]
+        )  # noqa: PD013
         control["columns"] = len(matrix.columns)
         control["rows"] = len(matrix.index)
         control["sum"] = matrix.sum().sum()
@@ -79,7 +83,9 @@ class TestMatrices:
 
         pd.testing.assert_series_equal(test, control, check_exact=False)
 
-    def test_trip_ends(self, matrix: pd.DataFrame, translation_vector: pd.DataFrame) -> None:
+    def test_trip_ends(
+        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+    ) -> None:
         """Test the trip ends property produces the expected output."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
@@ -310,8 +316,12 @@ class TestMatrixComparison:
 
         assert len(comparison) != 0
 
-        pd.testing.assert_frame_equal(comparison["a matrix"], matrix_report.sector_matrix)
-        pd.testing.assert_frame_equal(comparison["b matrix"], matrix_report.sector_matrix)
+        pd.testing.assert_frame_equal(
+            comparison["a matrix"], matrix_report.sector_matrix
+        )
+        pd.testing.assert_frame_equal(
+            comparison["b matrix"], matrix_report.sector_matrix
+        )
         pd.testing.assert_frame_equal(
             comparison["matrix difference"],
             pd.DataFrame(
@@ -404,8 +414,12 @@ class TestMatrixComparison:
 
         assert len(comparison) != 0
 
-        pd.testing.assert_frame_equal(comparison["a matrix"], matrix_report.sector_matrix)
-        pd.testing.assert_frame_equal(comparison["b matrix"], matrix_report.sector_matrix)
+        pd.testing.assert_frame_equal(
+            comparison["a matrix"], matrix_report.sector_matrix
+        )
+        pd.testing.assert_frame_equal(
+            comparison["b matrix"], matrix_report.sector_matrix
+        )
         pd.testing.assert_frame_equal(
             comparison["matrix difference"],
             pd.DataFrame(
@@ -480,7 +494,9 @@ class TestMatrixComparison:
             check_names=False,
         )
 
-    @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:Trip Length Distribution has not been set:UserWarning"
+    )
     def test_comparison_vkms(
         self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
     ) -> None:
@@ -510,7 +526,9 @@ class TestMatrixComparison:
             check_names=False,
         )
 
-    @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
+    @pytest.mark.filterwarnings(
+        "ignore:Trip Length Distribution has not been set:UserWarning"
+    )
     def test_comparison_multi_vkms(
         self,
         matrix: pd.DataFrame,

@@ -274,7 +274,9 @@ class TestToolDetails:
                 f"full_version : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct
+        assert (
+            str(ToolDetails(name, version, url, url, full_version=describe)) == correct
+        )
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
@@ -428,9 +430,9 @@ class TestLogHelper:
 
         with LogHelper(root, log_init.details) as log:
             assert len(log.logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(log.logger.handlers[0], logging.StreamHandler), (
-                "incorrect stream handler"
-            )
+            assert isinstance(
+                log.logger.handlers[0], logging.StreamHandler
+            ), "incorrect stream handler"
             assert log.logger.handlers[0].level == answer
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
@@ -456,7 +458,9 @@ class TestLogHelper:
 
         # Messages logged after the log helper class has
         # cleaned up so shouldn't be saved to file
-        unlogged_messages = _log_messages(log, "not logging this message for level {level}")
+        unlogged_messages = _log_messages(
+            log, "not logging this message for level {level}"
+        )
 
         text = _load_log(log_file)
 
@@ -474,9 +478,9 @@ class TestLogHelper:
 
         with LogHelper(root, log_init.details):
             assert len(logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(logger.handlers[0], logging.StreamHandler), (
-                "incorrect stream handler"
-            )
+            assert isinstance(
+                logger.handlers[0], logging.StreamHandler
+            ), "incorrect stream handler"
 
         assert len(logger.handlers) == 0, "handlers not cleaned up"
 
@@ -489,9 +493,9 @@ class TestLogHelper:
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(warnings_logger.handlers[0], logging.StreamHandler), (
-                "error with stream handler"
-            )
+            assert isinstance(
+                warnings_logger.handlers[0], logging.StreamHandler
+            ), "error with stream handler"
 
         assert len(warnings_logger.handlers) == 0, "incorrect handler cleanup"
 
@@ -511,9 +515,9 @@ class TestLogHelper:
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(warnings_logger.handlers[0], logging.FileHandler), (
-                "error with file handler"
-            )
+            assert isinstance(
+                warnings_logger.handlers[0], logging.FileHandler
+            ), "error with file handler"
 
         assert log_file.is_file(), "log file not created"
 
@@ -566,17 +570,23 @@ class TestLogHelper:
                 "test", log_init.details, console=False, warning_capture=warning_capture
             ) as helper:
                 assert helper.logger.handlers == [], "logger already has handlers"
-                assert warnings_logger.handlers == [], "warnings logger already has handlers"
+                assert (
+                    warnings_logger.handlers == []
+                ), "warnings logger already has handlers"
 
                 helper.add_handler(stream)
-                assert helper.logger.handlers == [stream], "list of handlers is incorrect"
+                assert helper.logger.handlers == [
+                    stream
+                ], "list of handlers is incorrect"
 
                 if warning_capture:
-                    assert warnings_logger.handlers == [stream], (
-                        "handler not added to warnings logger"
-                    )
+                    assert warnings_logger.handlers == [
+                        stream
+                    ], "handler not added to warnings logger"
                 else:
-                    assert warnings_logger.handlers == [], "handlers added to warnings logger"
+                    assert (
+                        warnings_logger.handlers == []
+                    ), "handlers added to warnings logger"
 
 
 class TestTemporaryLogFile:
@@ -595,7 +605,9 @@ class TestTemporaryLogFile:
 
         # Messages logged after the temporary log file class has
         # cleaned up so shouldn't be saved to file
-        unlogged_messages = _log_messages(logger, "not logging this message for level {level}")
+        unlogged_messages = _log_messages(
+            logger, "not logging this message for level {level}"
+        )
 
         text = _load_log(log_file)
 
@@ -617,9 +629,9 @@ class TestGetLogger:
         logger = get_logger(logger_name, "1.2.3")
 
         assert logger.name == logger_name, "incorrect logger name"
-        assert isinstance(logger.handlers[0], logging.StreamHandler), (
-            "incorrect stream handler"
-        )
+        assert isinstance(
+            logger.handlers[0], logging.StreamHandler
+        ), "incorrect stream handler"
 
     def test_file_handler(self, tmp_path: pathlib.Path) -> None:
         """Test file handler is added and log file is created."""
@@ -633,7 +645,9 @@ class TestGetLogger:
         )
 
         assert log_file.is_file(), "log file not created"
-        assert isinstance(logger.handlers[0], logging.FileHandler), "incorrect file handler"
+        assert isinstance(
+            logger.handlers[0], logging.FileHandler
+        ), "incorrect file handler"
 
     def test_instantiate_message(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test instantiation message and code version are logged."""
@@ -645,7 +659,9 @@ class TestGetLogger:
         get_logger(logger_name, version, instantiate_msg=message)
 
         assert f"Code Version: v{version}" in caplog.messages, "missing version log"
-        assert f"***  {message}  ***" in caplog.messages, "missing instantiation message"
+        assert (
+            f"***  {message}  ***" in caplog.messages
+        ), "missing instantiation message"
 
 
 class TestCaptureWarnings:
@@ -656,9 +672,9 @@ class TestCaptureWarnings:
         capture_warnings()
 
         assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-        assert isinstance(warnings_logger.handlers[0], logging.StreamHandler), (
-            "error with stream handler"
-        )
+        assert isinstance(
+            warnings_logger.handlers[0], logging.StreamHandler
+        ), "error with stream handler"
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     def test_file_handler_logger(
@@ -675,9 +691,9 @@ class TestCaptureWarnings:
         assert log_file.is_file(), "log file not created"
 
         assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-        assert isinstance(warnings_logger.handlers[0], logging.FileHandler), (
-            "error with file handler"
-        )
+        assert isinstance(
+            warnings_logger.handlers[0], logging.FileHandler
+        ), "error with file handler"
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     @pytest.mark.skip(

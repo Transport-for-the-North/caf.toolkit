@@ -231,7 +231,9 @@ class TestDataframeToNDimensionalArray:
         np.testing.assert_array_equal(got_return, conversion_data.np_matrix)
 
     @pytest.mark.parametrize("sparse_ok", [*list(SparseLiteral.__args__), "nsdtg", 23])
-    def test_sparse_ok(self, conversion_data_2d: ConversionData, sparse_ok: str) -> None:
+    def test_sparse_ok(
+        self, conversion_data_2d: ConversionData, sparse_ok: str
+    ) -> None:
         """Test valid and invalid values of sparse_ok."""
         if sparse_ok in SparseLiteral.__args__:
             got_return, _ = pd_utils.dataframe_to_n_dimensional_array(
@@ -294,7 +296,9 @@ class TestDataframeToNDimensionalArray:
         assert got_return.shape == conversion_data_massive.sparse_matrix.shape
 
 
-@pytest.mark.usefixtures("conversion_data_1d", "conversion_data_2d", "conversion_data_3d")
+@pytest.mark.usefixtures(
+    "conversion_data_1d", "conversion_data_2d", "conversion_data_3d"
+)
 class TestNDimensionalArrayToDataframe:
     """Tests for :func:`pandas_utils.numpy_conversions.n_dimensional_array_to_dataframe`."""
 
@@ -312,7 +316,9 @@ class TestNDimensionalArrayToDataframe:
             dimension_cols=conversion_data.dimension_cols,
             value_col=conversion_data.pd_value_col,
         )
-        pd.testing.assert_frame_equal(got_return.reset_index(), conversion_data.pd_matrix)
+        pd.testing.assert_frame_equal(
+            got_return.reset_index(), conversion_data.pd_matrix
+        )
 
     @pytest.mark.parametrize(
         "conversion_data_str",

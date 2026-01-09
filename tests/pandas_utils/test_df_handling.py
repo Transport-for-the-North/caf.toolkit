@@ -214,7 +214,9 @@ class TestFilterDf:
         pd.testing.assert_series_equal(new_mask, expected_mask)
 
     @pytest.mark.parametrize("filter_dict", [{"a": [1], "b": [2]}, {"a": 1, "b": 2}])
-    def test_filter_df(self, filter_df: pd.DataFrame, filter_dict: dict[str, Any]) -> None:
+    def test_filter_df(
+        self, filter_df: pd.DataFrame, filter_dict: dict[str, Any]
+    ) -> None:
         """Test the mask is generated correctly."""
         expected_df = pd.DataFrame(
             data=[[1, 2, 3], [1, 2, 2]],
@@ -294,7 +296,9 @@ class TestChunkDf:
         ]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 1), strict=True):
+        for expected, got in zip(
+            expected_output, pd_utils.chunk_df(df, 1), strict=True
+        ):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     def test_chunk_size_two(self, basic_long_df: pd.DataFrame) -> None:
@@ -307,7 +311,9 @@ class TestChunkDf:
         ]
 
         # Check outputs
-        for expected, got in zip(expected_output, pd_utils.chunk_df(df, 2), strict=True):
+        for expected, got in zip(
+            expected_output, pd_utils.chunk_df(df, 2), strict=True
+        ):
             pd.testing.assert_frame_equal(expected, got.reset_index(drop=True))
 
     @pytest.mark.parametrize("chunk_size", [3, 4])
@@ -342,7 +348,9 @@ class TestLongProductInfill:
         expected_data.append([3, infill_val, infill_val])
 
         df = pd.DataFrame(data=data, columns=col_names).set_index("idx1")
-        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index("idx1")
+        expected_df = pd.DataFrame(data=expected_data, columns=col_names).set_index(
+            "idx1"
+        )
 
         # Check
         df = pd_utils.long_product_infill(
@@ -630,14 +638,18 @@ class TestLongWideConversions:
 
         # Create expected output
         exp_long = df_data_complete.long.copy()
-        mask = (exp_long[self.index_col1] == index) | (exp_long[self.index_col2] == index)
+        mask = (exp_long[self.index_col1] == index) | (
+            exp_long[self.index_col2] == index
+        )
         exp_long.loc[mask, self.value_col] = infill_val
 
         # Check
         long_df = pd_utils.wide_to_long_infill(
             df=wide_df, correct_ind=[1, 2, 3], correct_cols=[1, 2, 3], infill=0
         )
-        pd.testing.assert_series_equal(long_df, exp_long.set_index(["idx1", "idx2"]).squeeze())
+        pd.testing.assert_series_equal(
+            long_df, exp_long.set_index(["idx1", "idx2"]).squeeze()
+        )
 
     def test_long_df_to_wide_ndarray(self, df_data_complete: DfData) -> None:
         """Test function is a numpy wrapper around long_to_wide_infill."""
@@ -693,10 +705,14 @@ class TestGetFullIndex:
 
     def test_single_index(self, example_single_index: IndexData) -> None:
         """Test correct return when sending a single index."""
-        gen_index = pd_utils.get_full_index(dimension_cols=example_single_index.names_and_vals)
+        gen_index = pd_utils.get_full_index(
+            dimension_cols=example_single_index.names_and_vals
+        )
         pd.testing.assert_index_equal(gen_index, example_single_index.output_index)
 
     def test_multi_index(self, example_multi_index: IndexData) -> None:
         """Test correct return when sending a single index."""
-        gen_index = pd_utils.get_full_index(dimension_cols=example_multi_index.names_and_vals)
+        gen_index = pd_utils.get_full_index(
+            dimension_cols=example_multi_index.names_and_vals
+        )
         pd.testing.assert_index_equal(gen_index, example_multi_index.output_index)

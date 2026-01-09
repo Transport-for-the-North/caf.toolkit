@@ -142,7 +142,9 @@ class TestCreateConfig:
         assert isinstance(val, type_iter)
 
     @pytest.mark.parametrize("param, type_iter", [("default", True), ("option", None)])
-    def test_default(self, basic: ConfigTestClass, param: str, type_iter: None | bool) -> None:
+    def test_default(
+        self, basic: ConfigTestClass, param: str, type_iter: None | bool
+    ) -> None:
         """
         Tests default values are correctly written.
 
@@ -175,7 +177,9 @@ class TestCreateConfig:
         basic
             The test config, the config is altered.
         """
-        with pytest.raises(ValidationError, match="validation error for ConfigTestClass"):
+        with pytest.raises(
+            ValidationError, match="validation error for ConfigTestClass"
+        ):
             ConfigTestClass(
                 dictionary=["a", "list"],
                 path=basic.path,
@@ -373,7 +377,9 @@ class TestConfigComments:
             assert written == formatted + "\n" + yaml, "comment formatting error"
 
         else:
-            comment_lines = [i if i.startswith("#") else f"# {i}" for i in comment.split("\n")]
+            comment_lines = [
+                i if i.startswith("#") else f"# {i}" for i in comment.split("\n")
+            ]
             comment = "\n".join(comment_lines)
 
             assert written == comment + "\n" + yaml, "comment no formatting error"
