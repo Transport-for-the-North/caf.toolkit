@@ -73,7 +73,7 @@ class TestMatrices:
 
         control = matrix.stack().describe(
             percentiles=[0.05, 0.25, 0.5, 0.75, 0.95]
-        )  # noqa: PD013
+        )
         control["columns"] = len(matrix.columns)
         control["rows"] = len(matrix.index)
         control["sum"] = matrix.sum().sum()
