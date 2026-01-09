@@ -33,7 +33,7 @@ _T = TypeVar("_T")
 
 LOG = logging.getLogger(__name__)
 DP_TOLERANCE = 6
-VALID_ZONE_ID_DTYPE = str | int
+ValidZoneIdDtype = str | int
 
 
 # # # CLASSES # # #
@@ -1531,7 +1531,7 @@ class ZoneCorrespondence:
 
     def get_correspondence(
         self,
-        filter_zones: VALID_ZONE_ID_DTYPE | Sequence[VALID_ZONE_ID_DTYPE],
+        filter_zones: ValidZoneIdDtype | Sequence[ValidZoneIdDtype],
         filter_on: Literal["from", "to"] = "from",
     ) -> pd.DataFrame:
         """Retrieve the correspondence for a subset of zones.
@@ -1540,7 +1540,7 @@ class ZoneCorrespondence:
 
         Parameters
         ----------
-        filter_zones : VALID_ZONE_ID_DTYPE | Sequence[VALID_ZONE_ID_DTYPE]
+        filter_zones : ValidZoneIdDtype | Sequence[ValidZoneIdDtype]
             The zones for which to retrieve correspondence.
         filter_on : Literal["from", "to"], optional
             If set to "from" (default) the filter is applied to the from column in the
