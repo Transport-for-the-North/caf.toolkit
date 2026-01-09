@@ -1853,7 +1853,7 @@ class TestZoneCorrespondencePath:
                     columns={
                         simple_pd_int_translation.zone_correspondence.from_col_name: "from",
                         simple_pd_int_translation.zone_correspondence.to_col_name: "to",
-                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors", # noqa: E501
                     }
                 )
                 .set_index(["from", "to"], drop=True)
@@ -1892,7 +1892,7 @@ class TestZoneCorrespondencePath:
                     columns={
                         simple_pd_int_translation.zone_correspondence.from_col_name: "from",
                         simple_pd_int_translation.zone_correspondence.to_col_name: "to",
-                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors", # noqa: E501
                     }
                 )
                 .set_index(["from", "to"])
