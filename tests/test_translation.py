@@ -1646,7 +1646,7 @@ def fix_matrix_file_translation(
 ) -> PandasFileMatrixResults:
     """Write matrix translation test files to temp directory."""
     # Convert square to long format
-    data = pd_matrix_split.mat.stack().to_frame()  # noqa: PD013
+    data = pd_matrix_split.mat.stack().to_frame()
     data.index.names = ["origin", "destination"]
     data.columns = ["value"]
     trans_data = pd_matrix_split.translation
@@ -1698,9 +1698,7 @@ class TestVectorTranslationFromFile:
                 vector_zone_column=vector_file_translation.vector_zone_column,
             )
         else:
-            msg = (
-                "Zone translations from file in caf.toolkit"
-            )
+            msg = "Zone translations from file in caf.toolkit"
             with pytest.warns(DeprecationWarning, match=msg):
                 correspondence = vector_file_translation.translation_path
                 translation.vector_translation_from_file(
@@ -1749,9 +1747,7 @@ class TestMatrixTranslationFromFile:
                 matrix_values_column=matrix_file_translation.matrix_value_column,
             )
         else:
-            msg = (
-                "Zone translations from file in caf.toolkit"
-            )
+            msg = "Zone translations from file in caf.toolkit"
             with pytest.warns(DeprecationWarning, match=msg):
                 correspondence = matrix_file_translation.translation_path
                 translation.matrix_translation_from_file(
@@ -1853,7 +1849,7 @@ class TestZoneCorrespondencePath:
                     columns={
                         simple_pd_int_translation.zone_correspondence.from_col_name: "from",
                         simple_pd_int_translation.zone_correspondence.to_col_name: "to",
-                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors", # noqa: E501
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",  # noqa: E501
                     }
                 )
                 .set_index(["from", "to"], drop=True)
@@ -1892,7 +1888,7 @@ class TestZoneCorrespondencePath:
                     columns={
                         simple_pd_int_translation.zone_correspondence.from_col_name: "from",
                         simple_pd_int_translation.zone_correspondence.to_col_name: "to",
-                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors", # noqa: E501
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",  # noqa: E501
                     }
                 )
                 .set_index(["from", "to"])

@@ -660,7 +660,7 @@ def wide_to_long_infill(
             "zones and matching the columns."
         )
 
-    stacked = df.stack(future_stack=True)  # noqa: PD013
+    stacked = df.stack(future_stack=True)
     # Stack returns Series because df index is not MultiIndex
     assert isinstance(stacked, pd.Series)  # noqa: S101
 

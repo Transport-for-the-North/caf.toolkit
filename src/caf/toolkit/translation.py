@@ -1263,7 +1263,7 @@ def matrix_translation_from_file(
 
     if format_ == "long":
         # Stack is returning a Series, MyPy is wrong
-        translated = translated.stack().to_frame()  # type: ignore[operator]  # noqa: PD013
+        translated = translated.stack().to_frame()  # type: ignore[operator]
 
         # Get name of value column
         if isinstance(matrix_values_column, str):
