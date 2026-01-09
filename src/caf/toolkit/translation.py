@@ -1218,7 +1218,6 @@ def matrix_translation_from_file(
     format_: Literal["square", "long"] = "long",
         Whether the matrix is in long or wide format.
     """
-    # TODO(MB): and deal with too-many-locals
     zone_correspondence_path = _correspondence_path_from_path(
         zone_correspondence_path,
         translation_from_column,

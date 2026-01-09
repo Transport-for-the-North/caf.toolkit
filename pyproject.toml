@@ -105,6 +105,7 @@ ignore = [
     "DOC502", # docstring-extraneous-exception (sometimes necessary)
     "ANN002", # allow missing type annotations for *args
     "ANN003", # allow missing type annotations for **kwargs
+    "PD013",  # allow using stack as it's often simpler
 ]
 unfixable = [
     "T20",  # print-statements (flake8-print)
