@@ -54,9 +54,7 @@ class TestParseArgDetails:
     """Tests for `parse_arg_details` function."""
 
     @pytest.mark.parametrize("test_data", CORRECT_ANNOTATIONS)
-    def test_correct(
-        self, test_data: tuple[str, tuple[type, bool, int | str | None]]
-    ) -> None:
+    def test_correct(self, test_data: tuple[str, tuple[type, bool, int | str | None]]) -> None:
         """Test annotations the function can handle."""
         annotation, expected = test_data
         type_, optional, nargs = arguments.parse_arg_details(annotation)

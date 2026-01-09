@@ -201,9 +201,7 @@ class TestReadCSV:
     """Tests for `read_csv` function."""
 
     @pytest.mark.parametrize("name", [None, "missing-dEg0N"])
-    def test_missing(
-        self, tmp_path_factory: pytest.TempPathFactory, name: str | None
-    ) -> None:
+    def test_missing(self, tmp_path_factory: pytest.TempPathFactory, name: str | None) -> None:
         """Test file not found error, with and without name."""
         path = tmp_path_factory.mktemp("empty")
         filename = "missing_file-bqiPI.csv"
@@ -245,9 +243,9 @@ class TestReadCSV:
         with pytest.raises(io.MissingColumnsError, match=pattern) as excinfo:
             io.read_csv(data.path, name=name, usecols=data.incorrect_columns)
 
-            assert set(excinfo.value.columns) == set(
-                data.incorrect_columns
-            ), "incorrect columns in exception"
+            assert set(excinfo.value.columns) == set(data.incorrect_columns), (
+                "incorrect columns in exception"
+            )
 
     def test_incorrect_dtypes(self, data: DataFrameResults) -> None:
         """Test correct error is raised for incorrect dtypes."""
@@ -364,9 +362,7 @@ class TestReadCSVMatrix:
     def test_reindexing(self, tmp_path: pathlib.Path, columns: bool) -> None:
         """Test adjusting the index if the matrix has missing columns or indices."""
         zones = [f"zone{i}" for i in range(1, 7)]
-        matrix = pd.DataFrame(
-            np.arange(9).reshape((3, 3)), index=zones[:3], columns=zones[:3]
-        )
+        matrix = pd.DataFrame(np.arange(9).reshape((3, 3)), index=zones[:3], columns=zones[:3])
         new_zones = matrix.copy()
         if columns:
             new_zones.columns = zones[3:]
@@ -417,9 +413,7 @@ class TestReadCSVMatrix:
 class TestFindFile:
     """Tests for the `find_file` function."""
 
-    @pytest.mark.filterwarnings(
-        'ignore:Found 2 files named "test_file"*:RuntimeWarning'
-    )
+    @pytest.mark.filterwarnings('ignore:Found 2 files named "test_file"*:RuntimeWarning')
     def test_correct(self) -> None:
         """Test single correct file exists and is found."""
         suffixes = [".csv.bz2"]

@@ -191,9 +191,7 @@ class TestSetComparison:
         "item_results_str",
         ["equal_items", "similar_items", "different_items"],
     )
-    def test_correct_sets(
-        self, item_results_str: str, request: pytest.FixtureRequest
-    ) -> None:
+    def test_correct_sets(self, item_results_str: str, request: pytest.FixtureRequest) -> None:
         """Check that the list function returns the correct result."""
         item_results = request.getfixturevalue(item_results_str)
         result = toolbox.compare_sets(set(item_results.item1), set(item_results.item2))

@@ -129,12 +129,8 @@ class TestRootMeanSquaredError:
         """Check error isn't raised when sparse isn't imported when running with np arrays."""
         monkeypatch.setitem(sys.modules, "sparse", None)
         importlib.reload(sys.modules["caf.toolkit.math_utils"])
-        targets: np.ndarray = np.hstack([rmse_example.targets, rmse_example.targets])[
-            :, :6
-        ]
-        achieved: np.ndarray = np.hstack(
-            [rmse_example.achieved, rmse_example.achieved]
-        )[:, :6]
+        targets: np.ndarray = np.hstack([rmse_example.targets, rmse_example.targets])[:, :6]
+        achieved: np.ndarray = np.hstack([rmse_example.achieved, rmse_example.achieved])[:, :6]
 
         math_utils.root_mean_squared_error(
             targets=targets,
@@ -146,9 +142,7 @@ class TestRootMeanSquaredError:
         "rmse_example_str",
         ["rmse_example", "rmse_example_1d"],
     )
-    def test_numpy_arrays(
-        self, rmse_example_str: str, request: pytest.FixtureRequest
-    ) -> None:
+    def test_numpy_arrays(self, rmse_example_str: str, request: pytest.FixtureRequest) -> None:
         """Test that the calculation works for numpy arrays."""
         rmse_example = request.getfixturevalue(rmse_example_str)
         result = math_utils.root_mean_squared_error(
@@ -250,18 +244,14 @@ class TestCurveConvergence:
     def fixture_zero_match_conv(self) -> ConvergenceExample:
         """Define data where there is no match."""
         target = np.arange(10)
-        return self.ConvergenceExample(
-            target=target, achieved=np.zeros_like(target), result=0
-        )
+        return self.ConvergenceExample(target=target, achieved=np.zeros_like(target), result=0)
 
     @pytest.fixture(name="random_conv", scope="class")
     def fixture_random_conv(self) -> ConvergenceExample:
         """Define data where there is a random match."""
         target = np.arange(10)
         midpoint = 0.5
-        noise = [
-            1 if random.random() > midpoint else -1 for _ in range(target.shape[0])
-        ]
+        noise = [1 if random.random() > midpoint else -1 for _ in range(target.shape[0])]
         achieved = target + noise
         return self.ConvergenceExample(
             target=target,
