@@ -103,10 +103,10 @@ class PandasTranslation:
         df[translation_to_col] = df[translation_to_col].astype(np.int64)
         df = df[df[translation_factors_col] != 0]
         self.zone_correspondence = translation.ZoneCorrespondence(
-            df,
-            translation_from_col,
-            translation_to_col,
-            translation_factors_col,
+            vector=df,
+            from_col_name=translation_from_col,
+            to_col_name=translation_to_col,
+            factors_col_name=translation_factors_col,
         )
 
         # Get the unique from / to lists
@@ -870,10 +870,10 @@ def fixture_translation_path(
     simple_pd_int_translation.zone_correspondence.translation_vector.to_csv(path)
 
     return translation.ZoneCorrespondencePath(
-        path,
-        simple_pd_int_translation.zone_correspondence.from_col_name,
-        simple_pd_int_translation.zone_correspondence.to_col_name,
-        simple_pd_int_translation.zone_correspondence.factors_col_name,
+        path=path,
+        from_col_name=simple_pd_int_translation.zone_correspondence.from_col_name,
+        to_col_name=simple_pd_int_translation.zone_correspondence.to_col_name,
+        factors_col_name=simple_pd_int_translation.zone_correspondence.factors_col_name,
     )
 
 
@@ -887,9 +887,9 @@ def fixture_translation_path_no_factors(
     simple_pd_int_translation.zone_correspondence.translation_vector.to_csv(path)
 
     return translation.ZoneCorrespondencePath(
-        path,
-        simple_pd_int_translation.zone_correspondence.from_col_name,
-        simple_pd_int_translation.zone_correspondence.to_col_name,
+        path=path,
+        from_col_name=simple_pd_int_translation.zone_correspondence.from_col_name,
+        to_col_name=simple_pd_int_translation.zone_correspondence.to_col_name,
     )
 
 
@@ -1118,16 +1118,16 @@ class TestPandasMultiVector:
         # Add some additional data to the translation
         new_rows = pd_vector.translation.create_dummy_rows()
         new_trans = translation.ZoneCorrespondence(
-            pd.concat(
+            vector=pd.concat(
                 [
                     pd_vector.translation.zone_correspondence.translation_vector.reset_index(),
                     new_rows,
                 ],
                 ignore_index=True,
             ),
-            pd_vector.translation.zone_correspondence.from_col_name,
-            pd_vector.translation.zone_correspondence.to_col_name,
-            pd_vector.translation.zone_correspondence.factors_col_name,
+            from_col_name=pd_vector.translation.zone_correspondence.from_col_name,
+            to_col_name=pd_vector.translation.zone_correspondence.to_col_name,
+            factors_col_name=pd_vector.translation.zone_correspondence.factors_col_name,
         )
 
         # Check that the translation still works as before
@@ -1630,10 +1630,10 @@ def fix_vector_file_translation(
         vector_path=data_path,
         vector_zone_column=data.index.name,
         translation_path=translation.ZoneCorrespondencePath(
-            translation_path,
-            trans_data.zone_correspondence.from_col_name,
-            trans_data.zone_correspondence.to_col_name,
-            trans_data.zone_correspondence.factors_col_name,
+            path=translation_path,
+            from_col_name=trans_data.zone_correspondence.from_col_name,
+            to_col_name=trans_data.zone_correspondence.to_col_name,
+            factors_col_name=trans_data.zone_correspondence.factors_col_name,
         ),
         expected=pd_multi_vector_multiindex.expected_result,
     )
@@ -1670,10 +1670,10 @@ def fix_matrix_file_translation(
         matrix_zone_columns=data.index.names,
         matrix_value_column=data.columns[0],
         translation_path=translation.ZoneCorrespondencePath(
-            translation_path,
-            trans_data.zone_correspondence.from_col_name,
-            trans_data.zone_correspondence.to_col_name,
-            trans_data.zone_correspondence.factors_col_name,
+            path=translation_path,
+            from_col_name=trans_data.zone_correspondence.from_col_name,
+            to_col_name=trans_data.zone_correspondence.to_col_name,
+            factors_col_name=trans_data.zone_correspondence.factors_col_name,
         ),
         expected=expected,
     )

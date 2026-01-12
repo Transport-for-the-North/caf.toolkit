@@ -19,11 +19,12 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
 # Third Party
 import numpy as np
 import pandas as pd
-from pydantic import ConfigDict, FilePath, dataclasses
+from pydantic import ConfigDict, Field, FilePath, dataclasses, model_validator
 
 # Local Imports
-from caf.toolkit import io, math_utils, validators
+from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import validators
 
 if TYPE_CHECKING:
     from collections.abc import Hashable
@@ -1287,28 +1288,38 @@ class ZoneCorrespondencePath:
 
     path: FilePath
     """Path to the translation file."""
-    from_col_name: str
+    _from_col_name: str | int = Field(alias="from_col_name")
     """Column name for the from zoning IDs."""
-    to_col_name: str
+    _to_col_name: str | int = Field(alias="to_col_name")
     """Column name for the to zoning IDs."""
-    factors_col_name: str | None = None
+    _factors_col_name: str | int | None = Field(alias="factors_col_name", default=None)
     """Column name for the translation factors."""
 
-    def __init__(
-        self,
-        path: FilePath,
-        from_col_name: int | str,
-        to_col_name: int | str,
-        factors_col_name: int | str,
-    ) -> None:
-        headers = pd.read_csv(path, nrows=0).columns.tolist()
-        if isinstance(from_col_name, int):
-            from_col_name = headers[from_col_name]
-        if isinstance(to_col_name, int):
-            to_col_name = headers[to_col_name]
-        if isinstance(factors_col_name, int):
-            factors_col_name = headers[factors_col_name]
-        super().__init__()
+    @property
+    def from_col_name(self) -> str:
+        """Get _from_col_name."""
+        if isinstance(self._from_col_name, str):
+            return self._from_col_name
+        headers = pd.read_csv(self.path, nrows=0).columns.tolist()
+        return headers[self._from_col_name]
+
+    @property
+    def to_col_name(self) -> str:
+        """Get _to_col_name."""
+        if isinstance(self._to_col_name, str):
+            return self._to_col_name
+        headers = pd.read_csv(self.path, nrows=0).columns.tolist()
+        return headers[self._to_col_name]
+
+    @property
+    def factors_col_name(self) -> str | None:
+        """Get _factors_col_name."""
+        if isinstance(self._factors_col_name, str):
+            return self._factors_col_name
+        if self._factors_col_name is None:
+            return self._factors_col_name
+        headers = pd.read_csv(self.path, nrows=0).columns.tolist()
+        return headers[self._factors_col_name]
 
     @property
     def generic_from_col(self) -> str:
@@ -1421,30 +1432,41 @@ class ZoneCorrespondence:
 
     vector: pd.DataFrame
     """Translation vector."""
-    from_col_name: str = "from"
-    """From zone id column name in translation `vector`."""
-    to_col_name: str = "to"
-    """To zone id column name in translation `vector`."""
-    factors_col_name: str = "factors"
-    """Factors column name in translation `vector`."""
+    _from_col_name: str | int = Field(alias="from_col_name")
+    """Column name for the from zoning IDs."""
+    _to_col_name: str | int = Field(alias="to_col_name")
+    """Column name for the to zoning IDs."""
+    _factors_col_name: str | int = Field(alias="factors_col_name")
+    """Column name for the translation factors."""
 
-    def __init__(
-        self,
-        vector: pd.DataFrame,
-        from_col_name: int | str,
-        to_col_name: int | str,
-        factors_col_name: int | str,
-    ) -> None:
-        headers = vector.columns.tolist()
-        if isinstance(from_col_name, int):
-            from_col_name = headers[from_col_name]
-        if isinstance(to_col_name, int):
-            to_col_name = headers[to_col_name]
-        if isinstance(factors_col_name, int):
-            factors_col_name = headers[factors_col_name]
-        super().__init__()
+    @property
+    def from_col_name(self) -> str:
+        """Get _from_col_name."""
+        if isinstance(self._from_col_name, str):
+            return self._from_col_name
+        headers = self.vector.columns.tolist()
+        return headers[self._from_col_name]
 
-    def __post_init__(self) -> None:
+    @property
+    def factors_col_name(self) -> str | None:
+        """Get _factors_col_name."""
+        if isinstance(self._factors_col_name, str):
+            return self._factors_col_name
+        if self._factors_col_name is None:
+            return self._factors_col_name
+        headers = self.vector.columns.tolist()
+        return headers[self._factors_col_name]
+
+    @property
+    def to_col_name(self) -> str:
+        """Get _to_col_name."""
+        if isinstance(self._to_col_name, str):
+            return self._to_col_name
+        headers = self.vector.columns.tolist()
+        return headers[self._to_col_name]
+
+    @model_validator(mode="after")
+    def _validate_cols(self) -> None:
         """Format and check translation vector."""
         try:
             self.vector = self.vector.reset_index()
@@ -1460,6 +1482,8 @@ class ZoneCorrespondence:
 
     def _validate_factors(self) -> None:
         """Validate the factors are in the right format and make logical sense."""
+        if self.factors_col_name is None:
+            raise TypeError("factor")
         factor_type = self.vector[self.factors_col_name].dtype.kind
 
         if factor_type not in ("i", "f"):
@@ -1590,7 +1614,12 @@ def _correspondence_from_df(
             DeprecationWarning,
             stacklevel=2,
         )
-        return ZoneCorrespondence(translation, from_col, to_col, factors_col)
+        return ZoneCorrespondence(
+            vector=translation,
+            from_col_name=from_col,
+            to_col_name=to_col,
+            factors_col_name=factors_col,
+        )
     return translation
 
 
@@ -1608,5 +1637,10 @@ def _correspondence_path_from_path(
             DeprecationWarning,
             stacklevel=2,
         )
-        return ZoneCorrespondencePath(translation_path, from_col, to_col, factors_col)
+        return ZoneCorrespondencePath(
+            path=translation_path,
+            from_col_name=from_col,
+            to_col_name=to_col,
+            factors_col_name=factors_col,
+        )
     return translation_path

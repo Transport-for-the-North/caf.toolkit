@@ -22,9 +22,4 @@ from caf.toolkit import (
     validators,
 )
 from caf.toolkit.config_base import BaseConfig
-from caf.toolkit.log_helpers import (
-    LogHelper,
-    SystemInformation,
-    TemporaryLogFile,
-    ToolDetails,
-)
+from caf.toolkit.log_helpers import LogHelper, SystemInformation, TemporaryLogFile, ToolDetails
