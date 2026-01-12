@@ -1499,7 +1499,7 @@ class ZoneCorrespondence:
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
             raise ValueError("Factors cannot be greater than one.")
 
-        if any(self.vector[self.from_col_name] < 0):
+        if any(self.vector[self.factors_col_name] < 0):
             raise ValueError("Factors cannot be negative.")
 
     @property
