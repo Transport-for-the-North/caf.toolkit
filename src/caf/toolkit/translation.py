@@ -22,9 +22,8 @@ import pandas as pd
 from pydantic import ConfigDict, Field, FilePath, dataclasses, model_validator
 
 # Local Imports
-from caf.toolkit import io, math_utils
+from caf.toolkit import io, math_utils, validators
 from caf.toolkit import pandas_utils as pd_utils
-from caf.toolkit import validators
 
 if TYPE_CHECKING:
     from collections.abc import Hashable
