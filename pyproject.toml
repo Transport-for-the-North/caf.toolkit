@@ -8,14 +8,14 @@ dynamic = ["version", "dependencies", "optional-dependencies"]
 description = "A toolkit of transport planning and appraisal functionalities"
 readme = "README.md"
 license = { "file" = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "Transport for the North" }]
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -50,7 +50,7 @@ where = ["src"]
 # Linters
 [tool.ruff]
 line-length = 95
-target-version = "py310"
+target-version = "py311"
 # fix = true
 extend-exclude = ["conf.py", "_version.py"]
 
