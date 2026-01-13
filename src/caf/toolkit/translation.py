@@ -22,7 +22,7 @@ import pandas as pd
 from pydantic import ConfigDict, Field, FilePath, dataclasses, model_validator
 
 # Local Imports
-from caf.toolkit import io, math_utils, validators
+from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
 
 if TYPE_CHECKING:
@@ -125,65 +125,6 @@ def _convert_dtypes(
         )
 
     return arr.astype(to_type)
-
-
-def _pandas_vector_validation(
-    vector: pd.Series | pd.DataFrame,
-    translation: ZoneCorrespondence | pd.DataFrame,
-    from_unique_index: list[Any],
-    to_unique_index: list[Any],
-    translation_from_col: str = "from",
-    name: str = "vector",
-) -> None:
-    # pylint: disable=too-many-positional-arguments
-    """Validate the given parameters for a vector zone translation.
-
-    Parameters
-    ----------
-    vector:
-        The vector to translate. The index must be the values to be translated.
-
-    translation:
-        A `ZoneCorrespondence` object defining the weights to use when
-        translating.
-
-    from_unique_index:
-        A list of all the unique IDs in the input indexing system.
-
-    to_unique_index:
-        A list of all the unique IDs in the output indexing system.
-
-    name:
-        The name to use in any warnings messages when they are raised.
-
-    Returns
-    -------
-    None
-    """
-    translation = _correspondence_from_df(translation, translation_from_col)
-    validators.unique_list(from_unique_index, name="from_unique_index")
-    validators.unique_list(to_unique_index, name="to_unique_index")
-
-    # Make sure the vector only has the zones defined in from_unique_zones
-    missing_rows = set(vector.index.to_list()) - set(from_unique_index)
-    if len(missing_rows) > 0:
-        warnings.warn(
-            f"Some zones in `{name}.index` have not been defined in "
-            f"`from_unique_zones`. These zones will be dropped before "
-            f"translating.\n"
-            f"Additional rows count: {len(missing_rows)}",
-            stacklevel=2,
-        )
-
-    # Check all needed values are in from_zone_col
-    trans_from_zones = set(translation.from_column.unique())
-    missing_zones = set(from_unique_index) - trans_from_zones
-    if len(missing_zones) != 0:
-        warnings.warn(
-            f"Some zones in `{name}.index` are missing in `translation`. "
-            f"Missing zones count: {len(missing_zones)}",
-            stacklevel=2,
-        )
 
 
 def _pandas_matrix_validation(
