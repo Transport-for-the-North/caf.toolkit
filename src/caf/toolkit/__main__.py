@@ -87,7 +87,8 @@ class TranslationArgs(_BaseTranslationArgs):
         """Run vector zone translation with the given arguments."""
         translation.vector_translation_from_file(
             vector_path=self.data_file,
-            zone_correspondence_path=translation.ZoneCorrespondencePath(
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
                 self.translation_file,
                 from_col_name=self.from_column,
                 to_col_name=self.to_column,
@@ -116,7 +117,8 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         """Run matrix zone translation with the given arguments."""
         translation.matrix_translation_from_file(
             matrix_path=self.data_file,
-            zone_correspondence_path=translation.ZoneCorrespondencePath(
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
                 self.translation_file,
                 from_col_name=self.from_column,
                 to_col_name=self.to_column,

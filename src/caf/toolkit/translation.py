@@ -14,7 +14,7 @@ import logging
 import pathlib
 import warnings
 from collections.abc import Collection, Sequence
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict, TypeVar, overload
 
 # Third Party
 import numpy as np
@@ -1464,8 +1464,8 @@ class ZoneCorrespondence:
         headers = self.vector.columns.tolist()
         return headers[self._to_col_name]
 
-    @model_validator(mode="after")
-    def _validate_cols(self) -> None:
+    @model_validator(mode="after")  # type: ignore[arg-type]
+    def _validate_cols(self: Self) -> None:
         """Format and check translation vector."""
         try:
             self.vector = self.vector.reset_index()
@@ -1613,7 +1613,8 @@ def _correspondence_from_df(
             DeprecationWarning,
             stacklevel=2,
         )
-        return ZoneCorrespondence(
+        # PyLint doesn't recognise pydantic Field aliases
+        return ZoneCorrespondence(  # pylint: disable=unexpected-keyword-arg
             vector=translation,
             from_col_name=from_col,
             to_col_name=to_col,
@@ -1636,7 +1637,8 @@ def _correspondence_path_from_path(
             DeprecationWarning,
             stacklevel=2,
         )
-        return ZoneCorrespondencePath(
+        # PyLint doesn't recognise pydantic Field aliases
+        return ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
             path=translation_path,
             from_col_name=from_col,
             to_col_name=to_col,
