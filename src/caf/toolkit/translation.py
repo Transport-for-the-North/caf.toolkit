@@ -100,8 +100,8 @@ def _convert_dtypes(
     dtype_max: np.floating | int
     dtype_min: np.floating | int
     if np.issubdtype(to_type, np.floating):
-        dtype_max = np.finfo(to_type).max
-        dtype_min = np.finfo(to_type).min
+        dtype_max = np.finfo(to_type).max  # #210 pylint: disable=no-member
+        dtype_min = np.finfo(to_type).min  # #210 pylint: disable=no-member
     elif np.issubdtype(to_type, np.integer):
         dtype_max = np.iinfo(to_type).max
         dtype_min = np.iinfo(to_type).min
