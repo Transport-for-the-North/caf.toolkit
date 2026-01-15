@@ -622,26 +622,28 @@ class PackageFilter(logging.Filter):
 
         # Build package match pattern
         pkg_str = "|".join(re.escape(i) for i in pkgs)
-        self._pattern = re.compile(rf"^({pkg_str})(\..*)*$", re.I)
+        self._pattern = re.compile(rf"^({pkg_str})(\..*)*$", re.IGNORECASE)
 
         LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102 parent has docstring
         matched = self._pattern.match(record.name.strip())
-        if matched is None:
-            return False
+        return matched is not None
 
-        return True
-
-    def __eq__(self, value) -> bool:
-        """Checks if filter pattern is the same."""
+    def __eq__(
+        self,
+        value: Any,  # noqa: ANN401
+    ) -> bool:
+        """Check if filter pattern is the same."""
         if value is self:
             return True
         if not isinstance(value, self.__class__):
             return False
-        if self._pattern == value._pattern:
-            return True
-        return False
+        return self._pattern == value._pattern
+
+    def __hash__(self) -> int:
+        """Hash of package constraint RegEx."""
+        return hash(self._pattern)
 
 
 # # # FUNCTIONS # # #

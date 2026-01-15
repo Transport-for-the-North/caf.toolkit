@@ -753,7 +753,7 @@ class TestPackageFilter:
     def test_eq(self, allowed: list[str]) -> None:
         """Test `__eq__` method works when equal."""
         filter_ = PackageFilter(allowed)
-        assert filter_ == filter_  # pylint: disable=comparison-with-itself
+        assert filter_ == filter_  # noqa: PLR0124 pylint: disable=comparison-with-itself
         assert filter_ == PackageFilter(allowed)
 
     def test_not_eq(self) -> None:
