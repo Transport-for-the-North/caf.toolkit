@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """Helper functions for handling wide pandas DataFrames, usually as demand matrices."""
+
 # Built-Ins
 import logging
 import operator
 import warnings
-from typing import Any, Callable, Collection, Optional
+from collections.abc import Callable, Collection
+from typing import Any
 
 # Third Party
 import numpy as np
@@ -22,9 +23,9 @@ LOG = logging.getLogger(__name__)
 
 
 # # # FUNCTIONS # # #
-def _guess_pandas_dtype(things):
+def _guess_pandas_dtype(things):  # noqa: ANN001, ANN202
     """Get the type of pandas object, avoiding object type."""
-    # TODO(BT) Figure out a better way to do this. I don't like this way, but
+    # TODO(BT): Figure out a better way to do this. I don't like this way, but  # noqa: TD003
     #  it avoids all the trouble you get into with pandas telling you that a
     #  column of integers is "object" type, but "object" type is also used
     #  to describe strings...
@@ -37,9 +38,9 @@ def _guess_pandas_dtype(things):
 
 def get_wide_mask(
     df: pd.DataFrame,
-    select: Optional[Collection[Any]] = None,
-    col_select: Optional[Collection[Any]] = None,
-    index_select: Optional[Collection[Any]] = None,
+    select: Collection[Any] | None = None,
+    col_select: Collection[Any] | None = None,
+    index_select: Collection[Any] | None = None,
     join_fn: Callable = operator.and_,
 ) -> np.ndarray:
     """Generate an index/column mask for a wide Pandas matrix.
@@ -98,7 +99,7 @@ def get_wide_mask(
     2   8   9  10  11
     3  12  13  14  15
 
-    >>> get_wide_mask(df,select=[0, 1])
+    >>> get_wide_mask(df, select=[0, 1])
     array([[ True,  True, False, False],
            [ True,  True, False, False],
            [False, False, False, False],
@@ -106,7 +107,7 @@ def get_wide_mask(
 
     It's possible to select differently for the index and columns
 
-    >>> get_wide_mask(df,col_select=[0, 1],index_select=[1, 2, 3])
+    >>> get_wide_mask(df, col_select=[0, 1], index_select=[1, 2, 3])
     array([[False, False, False, False],
            [ True,  True, False, False],
            [ True,  True, False, False],
@@ -114,7 +115,7 @@ def get_wide_mask(
 
     The operator for joining the column and index selections can also be changed
 
-    >>> get_wide_mask(df,select=[0, 1],join_fn=operator.or_)
+    >>> get_wide_mask(df, select=[0, 1], join_fn=operator.or_)
     array([[ True,  True,  True,  True],
            [ True,  True,  True,  True],
            [ True,  True, False, False],
@@ -134,16 +135,16 @@ def get_wide_mask(
         index_select = select
 
     # Validate matrix shape
-    if len(df.shape) != 2 or df.shape[0] != df.shape[1]:
+    if len(df.shape) != 2 or df.shape[0] != df.shape[1]:  # noqa: PLR2004
         raise ValueError(
             f"Only square matrices with 2 dimensions are supported. Got: {df.shape}"
         )
 
     # Try match dtypes in rows and cols
     if df.columns.dtype != type(col_select):
-        col_select = np.array(col_select, dtype=_guess_pandas_dtype(df.columns))  # type: ignore
+        col_select = np.array(col_select, dtype=_guess_pandas_dtype(df.columns))
     if df.index.dtype != type(index_select):
-        index_select = np.array(index_select, dtype=_guess_pandas_dtype(df.index))  # type: ignore
+        index_select = np.array(index_select, dtype=_guess_pandas_dtype(df.index))
 
     # Create square masks for the rows and cols
     col_mask = np.broadcast_to(df.columns.isin(col_select), df.shape)
@@ -152,11 +153,13 @@ def get_wide_mask(
     # Warn the user if nothing has matched
     if col_mask.sum() == 0:
         warnings.warn(
-            "No columns matched the given selection. Please check values and datatypes."
+            "No columns matched the given selection. Please check values and datatypes.",
+            stacklevel=2,
         )
     if index_mask.sum() == 0:
         warnings.warn(
-            "No index matched the given selection. Please check values and datatypes."
+            "No index matched the given selection. Please check values and datatypes.",
+            stacklevel=2,
         )
 
     # Combine to get the full mask
@@ -205,7 +208,7 @@ def get_wide_internal_only_mask(
     2  5  5  5  5
     3  5  5  5  5
 
-    >>> mask = get_wide_internal_only_mask(df,select=[0, 1])
+    >>> mask = get_wide_internal_only_mask(df, select=[0, 1])
     >>> mask
     array([[ True,  True, False, False],
            [ True,  True, False, False],
@@ -267,7 +270,7 @@ def get_wide_all_external_mask(
     2  5  5  5  5
     3  5  5  5  5
 
-    >>> mask = get_wide_all_external_mask(df,select=[2, 3])
+    >>> mask = get_wide_all_external_mask(df, select=[2, 3])
     >>> mask
     array([[False, False,  True,  True],
            [False, False,  True,  True],
@@ -331,7 +334,7 @@ def wide_matrix_internal_external_report(
     3  15  16  17  18  19
     4  20  21  22  23  24
 
-    >>> wide_matrix_internal_external_report(df,[0, 1, 2],[3, 4])
+    >>> wide_matrix_internal_external_report(df, [0, 1, 2], [3, 4])
               internal  external  total
     internal      54.0      51.0  105.0
     external     111.0      84.0  195.0
@@ -342,7 +345,8 @@ def wide_matrix_internal_external_report(
         warnings.warn(
             "internal_selection and external_selection having overlapping values. "
             "The produced report will contain double counting and could be "
-            f"unreliable. {overlap=}"
+            f"unreliable. {overlap=}",
+            stacklevel=2,
         )
 
     # Warn if not all given index and column values are included in the given selection
@@ -351,7 +355,8 @@ def wide_matrix_internal_external_report(
     if len(missing := df_ids - select_ids):
         warnings.warn(
             "The given selection of internal and external values do not contain "
-            f"all values in the dataframe index and columns. {missing=}"
+            f"all values in the dataframe index and columns. {missing=}",
+            stacklevel=2,
         )
 
     # Build the initial report
@@ -360,10 +365,22 @@ def wide_matrix_internal_external_report(
 
     # Build the kwargs to iterate over
     report_kwargs = {
-        ("internal", "internal"): {"index_select": int_select, "col_select": int_select},
-        ("internal", "external"): {"index_select": int_select, "col_select": ext_select},
-        ("external", "internal"): {"index_select": ext_select, "col_select": int_select},
-        ("external", "external"): {"index_select": ext_select, "col_select": ext_select},
+        ("internal", "internal"): {
+            "index_select": int_select,
+            "col_select": int_select,
+        },
+        ("internal", "external"): {
+            "index_select": int_select,
+            "col_select": ext_select,
+        },
+        ("external", "internal"): {
+            "index_select": ext_select,
+            "col_select": int_select,
+        },
+        ("external", "external"): {
+            "index_select": ext_select,
+            "col_select": ext_select,
+        },
     }
 
     # Build the report from the kwargs
@@ -378,6 +395,6 @@ def wide_matrix_internal_external_report(
         report.loc[row_idx, col_idx] = total
 
     # Add a total row and column
-    report["total"] = report.values.sum(axis=1)
-    report.loc["total"] = report.values.sum(axis=0)
+    report["total"] = report.to_numpy().sum(axis=1)
+    report.loc["total"] = report.to_numpy().sum(axis=0)
     return report
