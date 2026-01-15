@@ -26,7 +26,7 @@ import re
 import subprocess
 import sys
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 # Third Party
 import psutil
@@ -37,7 +37,7 @@ from pydantic import dataclasses, types
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from types import TracebackType
-    from typing import Annotated, Any, Self
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -78,11 +78,16 @@ class LoggingWarning(Warning):
 def git_describe() -> str | None:
     """Run git describe command and return string if successful."""
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
-    comp = subprocess.run(  # noqa: S602
-        cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
-    )
+    try:
+        comp = subprocess.run(  # noqa: S602
+            cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
+        )
+    except subprocess.TimeoutExpired:
+        LOG.debug("git describe command timed out")
+        return None
 
     if comp.returncode != 0:
+        LOG.debug("git describe command failed: %s", comp.stderr.decode().strip())
         return None
 
     return comp.stdout.decode().strip()
