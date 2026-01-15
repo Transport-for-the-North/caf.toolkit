@@ -167,7 +167,7 @@ class UniqueIdGenerator(DataGenerator):
             Generated data.
         """
         del generator
-        values = np.arange(start=self.starting_val, stop=self.starting_val + self.length)
+        values = np.arange(start=self.starting_val, stop=self.starting_val + self.length)  # type: ignore[call-overload]
         return pd.Series(values, name=self.name)
 
 
