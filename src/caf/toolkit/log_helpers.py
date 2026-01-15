@@ -111,9 +111,9 @@ class ToolDetails:
     ]
     """Version of the tool, should be in semantic versioning
     format https://semver.org/."""
-    homepage: pydantic.HttpUrl | None = None
+    homepage: Annotated[str, pydantic.AfterValidator(pydantic.HttpUrl)] | None = None
     """URL of the homepage for the tool."""
-    source_url: pydantic.HttpUrl | None = None
+    source_url: Annotated[str, pydantic.AfterValidator(pydantic.HttpUrl)] | None = None
     """URL of the source code repository for the tool."""
     full_version: str | None = pydantic.Field(default_factory=git_describe)
     """Full version from git describe output, None if git command fails.

@@ -50,14 +50,14 @@ def fixture_cost_matrix() -> pd.DataFrame:
 
 
 @pytest.fixture(name="translation_vector", scope="session")
-def fixture_translation() -> pd.DataFrame:
-    """Translation to test matrix report functionality."""  # noqa:D401
+def fixture_translation() -> translation.ZoneCorrespondencePath:
+    """Test matrix report functionality."""
     trans_data = []
 
     for i in range(MATRIX_SIZE):
         trans_data.append({"from": i, "to": int(str(i)[0]), "factor": 1})
 
-    return pd.DataFrame(trans_data)
+    return translation.ZoneCorrespondence(pd.DataFrame(trans_data), "from", "to", "factor")
 
 
 class TestMatrices:
@@ -69,7 +69,7 @@ class TestMatrices:
 
         almost_zero = 1 / matrix.size
 
-        control = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])  # noqa: PD013
+        control = matrix.stack().describe(percentiles=[0.05, 0.25, 0.5, 0.75, 0.95])
         control["columns"] = len(matrix.columns)
         control["rows"] = len(matrix.index)
         control["sum"] = matrix.sum().sum()
@@ -83,16 +83,13 @@ class TestMatrices:
         """Test the trip ends property produces the expected output."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         test_trip_ends = matrix_report.trip_ends
 
         translated_matrix = translation.pandas_matrix_zone_translation(
-            matrix, translation_vector, "from", "to", "factor"
+            matrix, translation_vector
         )
 
         control_trip_ends = pd.DataFrame(
@@ -113,10 +110,7 @@ class TestMatrices:
         """Test whether trip length distribution calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
         matrix_report.trip_length_distribution(
             cost_matrix, [0, 1, 2, 5, 10, 20, 50, 100, 200, 400]
@@ -135,29 +129,24 @@ class TestMatrices:
     def test_multi_vkms(
         self,
         matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
         cost_matrix: pd.DataFrame,
     ) -> None:
         """Test whether multi area vkm calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
         matrix_report.calc_vehicle_kms(
             cost_matrix,
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         test_vkms = matrix_report.vkms
 
         zonal_kms = matrix.multiply(cost_matrix)
         origin_kms = zonal_kms.sum(axis=1)
-        sector_replace = translation_vector.set_index("from")["to"].to_dict()
+        sector_replace = translation_vector.vector.set_index("from")["to"].to_dict()
         sector_kms = origin_kms.rename(sector_replace).groupby(level=0).sum()
         sector_kms.name = "vkms"
 
@@ -166,16 +155,13 @@ class TestMatrices:
     def test_vkms(
         self,
         matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
         cost_matrix: pd.DataFrame,
     ) -> None:
         """Test whether vkm calculation works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
         matrix_report.calc_vehicle_kms(cost_matrix)
 
@@ -192,30 +178,27 @@ class TestMatrices:
     def test_multi_trip_length_distribution(
         self,
         matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
         cost_matrix: pd.DataFrame,
     ) -> None:
         """Test whether the multi area TLD works as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
         matrix_report.trip_length_distribution(
             cost_matrix,
             [0, 1, 2, 5, 10, 20, 50, 100, 200, 400],
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         test_tld = matrix_report.distribution
 
         stacked_distribution = []
-        for sector in translation_vector["to"].unique():
-            zones = translation_vector.loc[translation_vector["to"] == sector, "from"]
+        for sector in translation_vector.vector["to"].unique():
+            zones = translation_vector.vector.loc[
+                translation_vector.vector["to"] == sector, "from"
+            ]
             cut_matrix = matrix.loc[zones, :]
             cut_cost_matrix = cost_matrix.loc[cut_matrix.index, cut_matrix.columns]  # type: ignore[index]
             sector_distribution = cost_utils.CostDistribution.from_data(
@@ -232,30 +215,23 @@ class TestMatrices:
     def test_writing_matrix_report(
         self,
         matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
         cost_matrix: pd.DataFrame,
         tmp_path: pathlib.Path,
     ) -> None:
         """Test whether writing out the matrix report classes executes without erroring."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
         matrix_report.trip_length_distribution(
             cost_matrix,
             [0, 1, 2, 5, 10, 20, 50, 100, 200, 400],
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
         matrix_report.calc_vehicle_kms(
             cost_matrix,
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
         with pd.ExcelWriter(tmp_path / "test.xlsx", mode="w") as writer:
             matrix_report.write_to_excel(writer, "test", True)
@@ -271,34 +247,28 @@ class TestCompareMatricesAndOutput:
         tmp_path: pathlib.Path,
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
-        """Check that compare_matrices_and_output writes the expected sheets.
+        """
+        Check that compare_matrices_and_output writes the expected sheets.
 
         Content of the sheets has not been tested as this should be covered
         by TestMatrixComparison.
         """
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         matrix_report.trip_length_distribution(
             cost_matrix,
             [0, 1, 2, 5, 10, 20, 50, 100, 200, 400],
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         matrix_report.calc_vehicle_kms(
             matrix,
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         expected_sheets = [
@@ -328,15 +298,12 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_sector_matrix(
-        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+        self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
     ) -> None:
         """Test sector matrix comparison produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -384,15 +351,12 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_trip_ends(
-        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+        self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
     ) -> None:
         """Test Trip End Comparison produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -428,15 +392,12 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip .* has not been set:UserWarning")
     def test_comparison_stats(
-        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+        self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
     ) -> None:
         """Check Stats produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -521,22 +482,17 @@ class TestMatrixComparison:
 
     @pytest.mark.filterwarnings("ignore:Trip Length Distribution has not been set:UserWarning")
     def test_comparison_vkms(
-        self, matrix: pd.DataFrame, translation_vector: pd.DataFrame
+        self, matrix: pd.DataFrame, translation_vector: translation.ZoneCorrespondence
     ) -> None:
         """Check Vkms produces expected results."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         matrix_report.calc_vehicle_kms(
             matrix,
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -559,22 +515,17 @@ class TestMatrixComparison:
         self,
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Checks Multi-Area Vkms comparisons functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         matrix_report.calc_vehicle_kms(
             cost_matrix,
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -597,23 +548,18 @@ class TestMatrixComparison:
         self,
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Check Multi-Area TLDs functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         matrix_report.trip_length_distribution(
             cost_matrix,
             [0, 1, 2, 5, 10, 20, 50, 100, 200, 400],
             sector_zone_lookup=translation_vector,
-            zone_column="from",
-            sector_column="to",
         )
 
         comparison = pd_utils.compare_matrices(matrix_report, matrix_report)
@@ -636,15 +582,12 @@ class TestMatrixComparison:
         self,
         matrix: pd.DataFrame,
         cost_matrix: pd.DataFrame,
-        translation_vector: pd.DataFrame,
+        translation_vector: translation.ZoneCorrespondence,
     ) -> None:
         """Check TLD comparison functions as expected."""
         matrix_report = pd_utils.MatrixReport(
             matrix,
-            translation_factors=translation_vector,
-            translation_from_col="from",
-            translation_to_col="to",
-            translation_factors_col="factor",
+            translation_vector=translation_vector,
         )
 
         matrix_report.trip_length_distribution(

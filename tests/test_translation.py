@@ -6,7 +6,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 # Third Party
 import numpy as np
@@ -74,74 +74,57 @@ class NumpyMatrixResults:
         } | kwargs
 
 
-@dataclasses.dataclass
 class PandasTranslation:
     """Container for a pandas based translation.
 
     Takes a numpy translation and converts to a standard pandas format
     """
 
-    np_translation: dataclasses.InitVar[np.ndarray]
-    translation_from_col: str = "from_zone_id"
-    translation_to_col: str = "to_zone_id"
-    translation_factors_col: str = "factors"
-    df: pd.DataFrame = dataclasses.field(init=False)
-    unique_from: list[Any] = dataclasses.field(init=False)
-    unique_to: list[Any] = dataclasses.field(init=False)
-
-    def __post_init__(self, np_translation: np.ndarray) -> None:
+    def __init__(
+        self,
+        np_translation: np.ndarray,
+        translation_from_col: str = "from_zone_id",
+        translation_to_col: str = "to_zone_id",
+        translation_factors_col: str = "factors",
+    ) -> None:
         """Convert numpy translation to pandas."""
         # Convert translation from numpy to long pandas
         df = pd.DataFrame(data=np_translation)
-        df.index.name = self.translation_from_col
-        df.columns.name = self.translation_to_col
+        df.index.name = translation_from_col
+        df.columns.name = translation_to_col
         df.columns += 1
         df.index += 1
         df = df.reset_index()
         df = df.melt(
-            id_vars=self.translation_from_col,
-            value_name=self.translation_factors_col,
+            id_vars=translation_from_col,
+            value_name=translation_factors_col,
         )
-        df[self.translation_from_col] = df[self.translation_from_col].astype(np.int64)
-        df[self.translation_to_col] = df[self.translation_to_col].astype(np.int64)
-        self.df = df
+        df[translation_from_col] = df[translation_from_col].astype(np.int64)
+        df[translation_to_col] = df[translation_to_col].astype(np.int64)
+        df = df[df[translation_factors_col] != 0]
+        self.zone_correspondence = translation.ZoneCorrespondence(
+            vector=df,
+            from_col_name=translation_from_col,
+            to_col_name=translation_to_col,
+            factors_col_name=translation_factors_col,
+        )
 
         # Get the unique from / to lists
-        self.unique_from = sorted(self.df[self.translation_from_col].unique().tolist())
-        self.unique_to = sorted(self.df[self.translation_to_col].unique().tolist())
+        self.unique_from = sorted(self.zone_correspondence.from_column.unique().tolist())
+        self.unique_to = sorted(self.zone_correspondence.to_column.unique().tolist())
 
-    @property
-    def from_col(self) -> pd.Series:
-        """The data from the "from zone col" of the translation."""
-        return self.df[self.translation_from_col]
-
-    @from_col.setter
-    def from_col(self, value: pd.Series) -> None:
-        """Set the "factor zone col" data."""
-        self.df[self.translation_from_col] = value
-
-    @property
-    def to_col(self) -> pd.Series:
-        """The data from the "to zone col" of the translation."""
-        return self.df[self.translation_to_col]
-
-    @property
-    def factor_col(self) -> pd.Series:
-        """The data from the "to zone col" of the translation."""
-        return self.df[self.translation_factors_col]
-
-    @factor_col.setter
-    def factor_col(self, value: pd.Series) -> None:
-        """Set the "factor col" data."""
-        self.df[self.translation_factors_col] = value
-
-    def to_kwargs(self) -> dict[str, Any]:
+    def to_kwargs(self, use_correspondence_class: bool = True) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
+        if use_correspondence_class:
+            return {
+                "zone_correspondence": self.zone_correspondence,
+            }
+        corr = self.zone_correspondence
         return {
-            "translation": self.df,
-            "translation_from_col": self.translation_from_col,
-            "translation_to_col": self.translation_to_col,
-            "translation_factors_col": self.translation_factors_col,
+            "zone_correspondence": corr.vector,
+            "translation_from_col": corr.from_col_name,
+            "translation_to_col": corr.to_col_name,
+            "translation_factors_col": corr.factors_col_name,
         }
 
     def copy(self) -> PandasTranslation:
@@ -150,16 +133,21 @@ class PandasTranslation:
 
     def create_dummy_rows(self) -> pd.DataFrame:
         """Create some dummy rows that can be attached."""
-        ret_val = pd.Series(data=self.to_col.unique(), name=self.translation_to_col)
+        ret_val = pd.Series(
+            data=self.zone_correspondence.to_column.unique(),
+            name=self.zone_correspondence.to_col_name,
+        )
         ret_val = pd.DataFrame(ret_val)
-        ret_val[self.translation_from_col] = self.from_col.max() + 1
-        ret_val[self.translation_factors_col] = 0
-        ret_val.loc[0, self.translation_factors_col] = 1
+        ret_val[self.zone_correspondence.from_col_name] = (
+            self.zone_correspondence.from_column.max() + 1
+        )
+        ret_val[self.zone_correspondence.factors_col_name] = 0
+        ret_val.loc[0, self.zone_correspondence.factors_col_name] = 1
         return ret_val.reindex(
             columns=[
-                self.translation_from_col,
-                self.translation_to_col,
-                self.translation_factors_col,
+                self.zone_correspondence.from_col_name,
+                self.zone_correspondence.to_col_name,
+                self.zone_correspondence.factors_col_name,
             ]
         )
 
@@ -191,13 +179,15 @@ class PandasVectorResults:
         self.from_unique_index = self.translation.unique_from
         self.to_unique_index = self.translation.unique_to
 
-    def input_kwargs(self, check_totals: bool = True) -> dict[str, Any]:
+    def input_kwargs(
+        self, check_totals: bool = True, use_correspondence_class: bool = True
+    ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
         return {
             "vector": self.vector,
             "translation_dtype": self.translation_dtype,
             "check_totals": check_totals,
-        } | self.translation.to_kwargs()
+        } | self.translation.to_kwargs(use_correspondence_class)
 
 
 @dataclasses.dataclass
@@ -233,15 +223,14 @@ class PandasMultiVectorResults:
         self.to_unique_index = self.translation.unique_to
 
     def input_kwargs(
-        self,
-        check_totals: bool = True,
+        self, check_totals: bool = True, use_correspondence_class: bool = True
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
         return {
             "vector": self.vector,
             "translation_dtype": self.translation_dtype,
             "check_totals": check_totals,
-        } | self.translation.to_kwargs()
+        } | self.translation.to_kwargs(use_correspondence_class)
 
     def get_similar_vector(self, data: np.ndarray) -> pd.DataFrame:
         """Create a vector in the same shape as this one from a 1d array."""
@@ -313,6 +302,7 @@ class PandasMatrixResults:
     def input_kwargs(
         self,
         check_totals: bool = True,
+        use_correspondence_class: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
         """Return a dictionary of key-word arguments."""
@@ -322,13 +312,13 @@ class PandasMatrixResults:
                 "translation_dtype": self.translation_dtype,
                 "check_totals": check_totals,
             }
-            | self.translation.to_kwargs()
+            | self.translation.to_kwargs(use_correspondence_class)
             | kwargs
         )
 
         if self.col_translation is None:
             return kwargs
-        return kwargs | {"col_translation": self.col_translation.df}
+        return kwargs | {"col_translation": self.col_translation.zone_correspondence}
 
 
 @dataclasses.dataclass
@@ -396,7 +386,7 @@ class PandasLongMatrixResults:
 
         if self.col_translation is None:
             return kwargs
-        return kwargs | {"col_translation": self.col_translation.df}
+        return kwargs | {"col_translation": self.col_translation.zone_correspondence}
 
 
 # # # FIXTURES # # #
@@ -877,13 +867,13 @@ def fixture_translation_path(
 ) -> translation.ZoneCorrespondencePath:
     """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
-    simple_pd_int_translation.df.to_csv(path)
+    simple_pd_int_translation.zone_correspondence.translation_vector.to_csv(path)
 
     return translation.ZoneCorrespondencePath(
-        path,
-        simple_pd_int_translation.translation_from_col,
-        simple_pd_int_translation.translation_to_col,
-        simple_pd_int_translation.translation_factors_col,
+        path=path,
+        from_col_name=simple_pd_int_translation.zone_correspondence.from_col_name,
+        to_col_name=simple_pd_int_translation.zone_correspondence.to_col_name,
+        factors_col_name=simple_pd_int_translation.zone_correspondence.factors_col_name,
     )
 
 
@@ -894,12 +884,12 @@ def fixture_translation_path_no_factors(
 ) -> translation.ZoneCorrespondencePath:
     """Temporary path for I/O."""
     path = tmp_path_factory.mktemp("main") / "translation.csv"
-    simple_pd_int_translation.df.to_csv(path)
+    simple_pd_int_translation.zone_correspondence.translation_vector.to_csv(path)
 
     return translation.ZoneCorrespondencePath(
-        path,
-        simple_pd_int_translation.translation_from_col,
-        simple_pd_int_translation.translation_to_col,
+        path=path,
+        from_col_name=simple_pd_int_translation.zone_correspondence.from_col_name,
+        to_col_name=simple_pd_int_translation.zone_correspondence.to_col_name,
     )
 
 
@@ -1035,11 +1025,13 @@ class TestPandasMultiVector:
             "pd_vector_split",
         ],
     )
+    @pytest.mark.parametrize("use_correspondence_class", [True, False])
     @pytest.mark.parametrize("check_totals", [True, False])
     def test_translation_correct(
         self,
         pd_vector_str: str,
         check_totals: bool,
+        use_correspondence_class: bool,
         request: pytest.FixtureRequest,
     ) -> None:
         """Test that aggregation and splitting give correct results.
@@ -1049,9 +1041,24 @@ class TestPandasMultiVector:
         pd_vector: PandasMultiVectorResults | PandasVectorResults = request.getfixturevalue(
             pd_vector_str
         )
-        result = translation.pandas_vector_zone_translation(
-            **pd_vector.input_kwargs(check_totals=check_totals)
-        )
+        if use_correspondence_class:
+            result = translation.pandas_vector_zone_translation(
+                **pd_vector.input_kwargs(
+                    check_totals=check_totals,
+                    use_correspondence_class=use_correspondence_class,
+                )
+            )
+        else:
+            msg = (
+                "Zone translations in caf.toolkit should now use the ZoneCorrespondence class"
+            )
+            with pytest.warns(DeprecationWarning, match=msg):
+                result = translation.pandas_vector_zone_translation(
+                    **pd_vector.input_kwargs(
+                        check_totals=check_totals,
+                        use_correspondence_class=use_correspondence_class,
+                    )
+                )
         if isinstance(pd_vector.expected_result, pd.DataFrame):
             pd.testing.assert_frame_equal(result, pd_vector.expected_result)
         else:
@@ -1110,12 +1117,22 @@ class TestPandasMultiVector:
 
         # Add some additional data to the translation
         new_rows = pd_vector.translation.create_dummy_rows()
-        new_trans = pd_vector.translation.df.copy()
-        new_trans = pd.concat([new_trans, new_rows], ignore_index=True)
+        new_trans = translation.ZoneCorrespondence(
+            vector=pd.concat(
+                [
+                    pd_vector.translation.zone_correspondence.translation_vector.reset_index(),
+                    new_rows,
+                ],
+                ignore_index=True,
+            ),
+            from_col_name=pd_vector.translation.zone_correspondence.from_col_name,
+            to_col_name=pd_vector.translation.zone_correspondence.to_col_name,
+            factors_col_name=pd_vector.translation.zone_correspondence.factors_col_name,
+        )
 
         # Check that the translation still works as before
         result = translation.pandas_vector_zone_translation(
-            **(pd_vector.input_kwargs() | {"translation": new_trans})
+            **(pd_vector.input_kwargs() | {"zone_correspondence": new_trans})
         )
 
         if isinstance(pd_vector.expected_result, pd.DataFrame):
@@ -1145,9 +1162,14 @@ class TestPandasMultiVector:
             pd_vector_str
         )
         new_trans = pd_vector.translation.copy()
-        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        new_trans.zone_correspondence.from_column = (
+            new_trans.zone_correspondence.from_column.astype(np.int32)
+        )
         result = translation.pandas_vector_zone_translation(
-            **(pd_vector.input_kwargs() | {"translation": new_trans.df})
+            **(
+                pd_vector.input_kwargs()
+                | {"zone_correspondence": new_trans.zone_correspondence}
+            )
         )
 
         if isinstance(pd_vector.expected_result, pd.DataFrame):
@@ -1330,10 +1352,12 @@ class TestPandasMatrixEdges:
 class TestPandasMatrixParams:
     """Tests for caf.toolkit.translation.pandas_matrix_zone_translation."""
 
+    @pytest.mark.parametrize("use_correspondence_class", [True, False])
     def test_translation_correct(
         self,
         pd_matrix_str: str,
         check_totals: bool,
+        use_correspondence_class: bool,
         request: pytest.FixtureRequest,
     ) -> None:
         """Test translation works as expected.
@@ -1342,9 +1366,24 @@ class TestPandasMatrixParams:
         translation splitting.
         """
         pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
-        result = translation.pandas_matrix_zone_translation(
-            **pd_mat.input_kwargs(check_totals=check_totals)
-        )
+        if use_correspondence_class:
+            result = translation.pandas_matrix_zone_translation(
+                **pd_mat.input_kwargs(
+                    check_totals=check_totals,
+                    use_correspondence_class=use_correspondence_class,
+                )
+            )
+        else:
+            msg = (
+                "Zone translations in caf.toolkit should now use the ZoneCorrespondence class"
+            )
+            with pytest.warns(DeprecationWarning, match=msg):
+                result = translation.pandas_matrix_zone_translation(
+                    **pd_mat.input_kwargs(
+                        check_totals=check_totals,
+                        use_correspondence_class=use_correspondence_class,
+                    )
+                )
         pd.testing.assert_frame_equal(result, pd_mat.expected_result)
 
     def test_additional_index(
@@ -1394,20 +1433,25 @@ class TestPandasMatrixParams:
         request: pytest.FixtureRequest,
     ) -> None:
         """Test that similar types are allowed in translation and data."""
-        pd_mat = request.getfixturevalue(pd_matrix_str)
+        pd_mat: PandasMatrixResults = request.getfixturevalue(pd_matrix_str)
 
         # Change the dtype of the row / col
         if row:
             new_trans = pd_mat.translation.copy()
-            keyword = "translation"
+            keyword = "zone_correspondence"
         else:
             new_trans = pd_mat.col_translation.copy()
             keyword = "col_translation"
 
         # Run the translation
-        new_trans.from_col = new_trans.from_col.astype(np.int32)
+        new_trans.zone_correspondence.from_column = (
+            new_trans.zone_correspondence.from_column.astype(np.int32)
+        )
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
+            **(
+                pd_mat.input_kwargs(check_totals=check_totals)
+                | {keyword: new_trans.zone_correspondence}
+            )
         )
 
         # Need to enforce types so this works in linux
@@ -1436,7 +1480,7 @@ class TestPandasMatrixParams:
         new_matrix = pd_mat.mat.copy()
         if row:
             new_trans = pd_mat.translation.copy()
-            keyword = "translation"
+            keyword = "zone_correspondence"
             new_matrix.index = new_matrix.index.astype(matrix_dtype)
         else:
             new_trans = pd_mat.col_translation.copy()
@@ -1444,9 +1488,14 @@ class TestPandasMatrixParams:
             new_matrix.columns = new_matrix.columns.astype(matrix_dtype)
 
         # Run the translation
-        new_trans.from_col = new_trans.from_col.astype(trans_dtype)
+        new_trans.zone_correspondence.from_column = (
+            new_trans.zone_correspondence.from_column.astype(trans_dtype)
+        )
         result = translation.pandas_matrix_zone_translation(
-            **(pd_mat.input_kwargs(check_totals=check_totals) | {keyword: new_trans.df})
+            **(
+                pd_mat.input_kwargs(check_totals=check_totals)
+                | {keyword: new_trans.zone_correspondence}
+            )
         )
 
         # Need to enforce types so this works in linux
@@ -1542,10 +1591,7 @@ class PandasFileVectorResults:
 
     vector_path: pathlib.Path
     vector_zone_column: str
-    translation_path: pathlib.Path
-    translation_from_column: str
-    translation_to_column: str
-    translation_factors_column: str
+    translation_path: translation.ZoneCorrespondencePath
     expected: pd.DataFrame
 
 
@@ -1556,10 +1602,7 @@ class PandasFileMatrixResults:
     matrix_path: pathlib.Path
     matrix_zone_columns: str
     matrix_value_column: str
-    translation_path: pathlib.Path
-    translation_from_column: str
-    translation_to_column: str
-    translation_factors_column: str
+    translation_path: translation.ZoneCorrespondencePath
     expected: pd.DataFrame
 
 
@@ -1580,16 +1623,18 @@ def fix_vector_file_translation(
 
     translation_path = tmp_path / "test_translation.csv"
     assert not translation_path.is_file(), "test translation file already exists"
-    trans_data.df.to_csv(translation_path, index=False)
+    trans_data.zone_correspondence.translation_vector.to_csv(translation_path)
     assert translation_path.is_file(), "test translation not created"
 
     return PandasFileVectorResults(
         vector_path=data_path,
         vector_zone_column=data.index.name,
-        translation_path=translation_path,
-        translation_from_column=trans_data.translation_from_col,
-        translation_to_column=trans_data.translation_to_col,
-        translation_factors_column=trans_data.translation_factors_col,
+        translation_path=translation.ZoneCorrespondencePath(
+            path=translation_path,
+            from_col_name=trans_data.zone_correspondence.from_col_name,
+            to_col_name=trans_data.zone_correspondence.to_col_name,
+            factors_col_name=trans_data.zone_correspondence.factors_col_name,
+        ),
         expected=pd_multi_vector_multiindex.expected_result,
     )
 
@@ -1601,7 +1646,7 @@ def fix_matrix_file_translation(
 ) -> PandasFileMatrixResults:
     """Write matrix translation test files to temp directory."""
     # Convert square to long format
-    data = pd_matrix_split.mat.stack().to_frame()  # noqa: PD013
+    data = pd_matrix_split.mat.stack().to_frame()
     data.index.names = ["origin", "destination"]
     data.columns = ["value"]
     trans_data = pd_matrix_split.translation
@@ -1617,17 +1662,19 @@ def fix_matrix_file_translation(
 
     translation_path = tmp_path / "test_translation.csv"
     assert not translation_path.is_file(), "test translation file already exists"
-    trans_data.df.to_csv(translation_path, index=False)
+    trans_data.zone_correspondence.translation_vector.to_csv(translation_path)
     assert translation_path.is_file(), "test translation not created"
 
     return PandasFileMatrixResults(
         matrix_path=data_path,
         matrix_zone_columns=data.index.names,
         matrix_value_column=data.columns[0],
-        translation_path=translation_path,
-        translation_from_column=trans_data.translation_from_col,
-        translation_to_column=trans_data.translation_to_col,
-        translation_factors_column=trans_data.translation_factors_col,
+        translation_path=translation.ZoneCorrespondencePath(
+            path=translation_path,
+            from_col_name=trans_data.zone_correspondence.from_col_name,
+            to_col_name=trans_data.zone_correspondence.to_col_name,
+            factors_col_name=trans_data.zone_correspondence.factors_col_name,
+        ),
         expected=expected,
     )
 
@@ -1635,22 +1682,38 @@ def fix_matrix_file_translation(
 class TestVectorTranslationFromFile:
     """Tests for the `vector_translation_from_file` function."""
 
-    def test_simple(self, vector_file_translation: PandasFileVectorResults) -> None:
+    @pytest.mark.parametrize("use_correspondence_class", [True, False])
+    def test_simple(
+        self,
+        vector_file_translation: PandasFileVectorResults,
+        use_correspondence_class: bool,
+    ) -> None:
         """Test standard translation of vector file with all arguments."""
         output_path = vector_file_translation.vector_path.parent / "test_result.csv"
-        translation.vector_translation_from_file(
-            vector_path=vector_file_translation.vector_path,
-            translation_path=vector_file_translation.translation_path,
-            output_path=output_path,
-            vector_zone_column=vector_file_translation.vector_zone_column,
-            translation_from_column=vector_file_translation.translation_from_column,
-            translation_to_column=vector_file_translation.translation_to_column,
-            translation_factors_column=vector_file_translation.translation_factors_column,
-        )
+        if use_correspondence_class:
+            translation.vector_translation_from_file(
+                vector_path=vector_file_translation.vector_path,
+                zone_correspondence_path=vector_file_translation.translation_path,
+                output_path=output_path,
+                vector_zone_column=vector_file_translation.vector_zone_column,
+            )
+        else:
+            msg = "Zone translations from file in caf.toolkit"
+            with pytest.warns(DeprecationWarning, match=msg):
+                correspondence = vector_file_translation.translation_path
+                translation.vector_translation_from_file(
+                    vector_path=vector_file_translation.vector_path,
+                    translation_from_column=correspondence.from_col_name,
+                    translation_to_column=correspondence.to_col_name,
+                    translation_factors_column=correspondence.factors_col_name,
+                    zone_correspondence_path=correspondence.path,
+                    output_path=output_path,
+                    vector_zone_column=vector_file_translation.vector_zone_column,
+                )
 
         assert output_path.is_file(), "translated vector not created"
         result = io.read_csv(
-            output_path, index_col=vector_file_translation.translation_to_column
+            output_path, index_col=vector_file_translation.translation_path.to_col_name
         )
         result.index = pd.to_numeric(result.index, downcast="unsigned")
         result.columns = pd.to_numeric(result.columns, downcast="unsigned")
@@ -1666,19 +1729,37 @@ class TestVectorTranslationFromFile:
 class TestMatrixTranslationFromFile:
     """Tests for `matrix_translation_from_file` function."""
 
-    def test_long_matrix(self, matrix_file_translation: PandasFileMatrixResults) -> None:
+    @pytest.mark.parametrize("use_correspondence_class", [True, False])
+    def test_long_matrix(
+        self,
+        matrix_file_translation: PandasFileMatrixResults,
+        use_correspondence_class: bool,
+    ) -> None:
         """Test translation of matrix file in long format."""
         output_path = matrix_file_translation.matrix_path.parent / "test_result.csv"
-        translation.matrix_translation_from_file(
-            matrix_path=matrix_file_translation.matrix_path,
-            translation_path=matrix_file_translation.translation_path,
-            output_path=output_path,
-            matrix_zone_columns=matrix_file_translation.matrix_zone_columns,
-            matrix_values_column=matrix_file_translation.matrix_value_column,
-            translation_from_column=matrix_file_translation.translation_from_column,
-            translation_to_column=matrix_file_translation.translation_to_column,
-            translation_factors_column=matrix_file_translation.translation_factors_column,
-        )
+        if use_correspondence_class:
+            output_path = matrix_file_translation.matrix_path.parent / "test_result.csv"
+            translation.matrix_translation_from_file(
+                matrix_path=matrix_file_translation.matrix_path,
+                zone_correspondence_path=matrix_file_translation.translation_path,
+                output_path=output_path,
+                matrix_zone_columns=matrix_file_translation.matrix_zone_columns,
+                matrix_values_column=matrix_file_translation.matrix_value_column,
+            )
+        else:
+            msg = "Zone translations from file in caf.toolkit"
+            with pytest.warns(DeprecationWarning, match=msg):
+                correspondence = matrix_file_translation.translation_path
+                translation.matrix_translation_from_file(
+                    matrix_path=matrix_file_translation.matrix_path,
+                    zone_correspondence_path=correspondence.path,
+                    translation_from_column=correspondence.from_col_name,
+                    translation_to_column=correspondence.to_col_name,
+                    translation_factors_column=correspondence.factors_col_name,
+                    output_path=output_path,
+                    matrix_zone_columns=matrix_file_translation.matrix_zone_columns,
+                    matrix_values_column=matrix_file_translation.matrix_value_column,
+                )
 
         assert output_path.is_file(), "translated matrix not created"
         result = io.read_csv_matrix(output_path, format_="long")
@@ -1691,6 +1772,54 @@ class TestMatrixTranslationFromFile:
             check_column_type=False,
             check_index_type=False,
         )
+
+
+class TestZoneCorrespondence:
+    """Tests for the `ZoneCorrespondencePath` function."""
+
+    @pytest.mark.parametrize("filter_on", ["from", "to"])
+    def test_get_correspondence(
+        self,
+        simple_pd_int_translation: PandasTranslation,
+        filter_on: Literal["from", "to"],
+    ) -> None:
+        """Test the get_correspondence function with one zone."""
+        test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
+            1, filter_on=filter_on
+        )
+
+        df = simple_pd_int_translation.zone_correspondence.vector
+
+        if filter_on == "from":
+            control = df[df[simple_pd_int_translation.zone_correspondence.from_col_name] == 1]
+        if filter_on == "to":
+            control = df[df[simple_pd_int_translation.zone_correspondence.to_col_name] == 1]
+
+        pd.testing.assert_frame_equal(test_result, control)
+
+    @pytest.mark.parametrize("filter_on", ["from", "to"])
+    def test_get_correspondence_multi_value(
+        self,
+        simple_pd_int_translation: PandasTranslation,
+        filter_on: Literal["from", "to"],
+    ) -> None:
+        """Test the get_correspondence function with all zones."""
+        if filter_on == "from":
+            filter_values = list(
+                simple_pd_int_translation.zone_correspondence.from_column.unique()
+            )
+        elif filter_on == "to":
+            filter_values = list(
+                simple_pd_int_translation.zone_correspondence.to_column.unique()
+            )
+
+        test_result = simple_pd_int_translation.zone_correspondence.get_correspondence(
+            filter_values, filter_on=filter_on
+        )
+
+        control = simple_pd_int_translation.zone_correspondence.vector
+
+        pd.testing.assert_frame_equal(test_result, control)
 
 
 class TestZoneCorrespondencePath:
@@ -1714,18 +1843,25 @@ class TestZoneCorrespondencePath:
         )
 
         if generic_columns:
-            expected = simple_pd_int_translation.df.rename(
-                columns={
-                    simple_pd_int_translation.translation_from_col: "from",
-                    simple_pd_int_translation.translation_to_col: "to",
-                    simple_pd_int_translation.translation_factors_col: "factors",
-                }
+            expected = (
+                simple_pd_int_translation.zone_correspondence.translation_vector.reset_index()
+                .rename(
+                    columns={
+                        simple_pd_int_translation.zone_correspondence.from_col_name: "from",
+                        simple_pd_int_translation.zone_correspondence.to_col_name: "to",
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",  # noqa: E501
+                    }
+                )
+                .set_index(["from", "to"], drop=True)
             )
         else:
-            expected = simple_pd_int_translation.df
+            expected = simple_pd_int_translation.zone_correspondence.translation_vector
+
+        if not factors_mandatory:
+            expected["factors"] = 1
 
         pd.testing.assert_frame_equal(
-            read_translation,
+            read_translation.translation_vector,
             expected,
             check_dtype=False,
         )
@@ -1746,22 +1882,24 @@ class TestZoneCorrespondencePath:
         )
 
         if generic_columns:
-            expected = simple_pd_int_translation.df.rename(
-                columns={
-                    simple_pd_int_translation.translation_from_col: "from",
-                    simple_pd_int_translation.translation_to_col: "to",
-                }
-            )[["from", "to"]]
+            expected = (
+                simple_pd_int_translation.zone_correspondence.translation_vector.reset_index()
+                .rename(
+                    columns={
+                        simple_pd_int_translation.zone_correspondence.from_col_name: "from",
+                        simple_pd_int_translation.zone_correspondence.to_col_name: "to",
+                        simple_pd_int_translation.zone_correspondence.factors_col_name: "factors",  # noqa: E501
+                    }
+                )
+                .set_index(["from", "to"])
+            )
+            expected["factors"] = 1
         else:
-            expected = simple_pd_int_translation.df[
-                [
-                    simple_pd_int_translation.translation_from_col,
-                    simple_pd_int_translation.translation_to_col,
-                ]
-            ]
+            expected = simple_pd_int_translation.zone_correspondence.translation_vector
+            expected[simple_pd_int_translation.zone_correspondence.factors_col_name] = 1
 
         pd.testing.assert_frame_equal(
-            read_translation,
+            read_translation.translation_vector,
             expected,
             check_dtype=False,
         )
