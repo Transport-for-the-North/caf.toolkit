@@ -80,17 +80,30 @@ def git_describe() -> str | None:
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
     try:
         comp = subprocess.run(  # noqa: S602
-            cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
+            cmd, shell=True, timeout=1, check=False, capture_output=True
         )
     except subprocess.TimeoutExpired:
         LOG.debug("git describe command timed out")
         return None
 
+    if comp.stdout is not None:
+        stdout = comp.stdout.decode().strip()
+    else:
+        stdout = None
+
     if comp.returncode != 0:
-        LOG.debug("git describe command failed: %s", comp.stderr.decode().strip())
+        stderr = None
+        if comp.stderr is not None:
+            stderr = comp.stderr.decode().strip()
+        if stderr is None or stderr == "":
+            stderr = stdout
+
+        LOG.debug("git describe command failed: %s", stderr)
         return None
 
-    return comp.stdout.decode().strip()
+    if stdout is None:
+        raise ValueError("unexpected error in git describe command")
+    return stdout
 
 
 @dataclasses.dataclass
