@@ -435,7 +435,10 @@ class TestLogHelper:
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
 
-    def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
+    @pytest.mark.parametrize("msg", ["no emojis", "emojis 👍😀"])
+    def test_basic_file(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails, msg: str
+    ) -> None:
         """Test logging to file within `with` statement.
 
         Tests all log calls within `with` statement are logged to file
@@ -452,11 +455,13 @@ class TestLogHelper:
             log_file=log_file,
             warning_capture=False,
         ):
-            messages = _log_messages(log, "testing level {level} - test basic file")
+            messages = _log_messages(log, f"testing level {{level}} - test basic file - {msg}")
 
         # Messages logged after the log helper class has
         # cleaned up so shouldn't be saved to file
-        unlogged_messages = _log_messages(log, "not logging this message for level {level}")
+        unlogged_messages = _log_messages(
+            log, f"not logging this message for level {{level}} - {msg}"
+        )
 
         text = _load_log(log_file)
 

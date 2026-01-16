@@ -808,7 +808,7 @@ def get_file_handler(
     fh_format: str = DEFAULT_FILE_FORMAT,
     datetime_format: str = DEFAULT_FILE_DATETIME,
     log_level: int = logging.DEBUG,
-) -> logging.StreamHandler:
+) -> logging.FileHandler:
     """Create a console handles for a logger.
 
     Parameters
@@ -827,11 +827,6 @@ def get_file_handler(
 
     log_level:
         The logging level to give to the FileHandler.
-
-    Returns
-    -------
-    console_handler:
-        A logging.StreamHandler object using the format in ch_format.
     """
     handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setLevel(log_level)
