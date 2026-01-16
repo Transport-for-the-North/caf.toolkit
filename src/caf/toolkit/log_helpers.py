@@ -833,7 +833,7 @@ def get_file_handler(
     console_handler:
         A logging.StreamHandler object using the format in ch_format.
     """
-    handler = logging.FileHandler(log_file)
+    handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
     return handler
