@@ -757,7 +757,7 @@ def get_logger(
     `get_file_handler()`
     `get_console_handler()`
     """
-    log_handlers = list()
+    log_handlers: list[logging.Handler] = list()
     if log_file_path is not None:
         log_handlers.append(get_file_handler(log_file_path))
 
