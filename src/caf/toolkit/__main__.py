@@ -87,12 +87,15 @@ class TranslationArgs(_BaseTranslationArgs):
         """Run vector zone translation with the given arguments."""
         translation.vector_translation_from_file(
             vector_path=self.data_file,
-            translation_path=self.translation_file,
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
+                self.translation_file,
+                from_col_name=self.from_column,
+                to_col_name=self.to_column,
+                factors_col_name=self.factor_column,
+            ),
             output_path=self.output_file,
             vector_zone_column=self.zone_column,
-            translation_from_column=self.from_column,
-            translation_to_column=self.to_column,
-            translation_factors_column=self.factor_column,
         )
 
 
@@ -114,13 +117,16 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         """Run matrix zone translation with the given arguments."""
         translation.matrix_translation_from_file(
             matrix_path=self.data_file,
-            translation_path=self.translation_file,
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
+                self.translation_file,
+                from_col_name=self.from_column,
+                to_col_name=self.to_column,
+                factors_col_name=self.factor_column,
+            ),
             output_path=self.output_file,
             matrix_zone_columns=self.zone_column,
             matrix_values_column=self.value_column,
-            translation_from_column=self.from_column,
-            translation_to_column=self.to_column,
-            translation_factors_column=self.factor_column,
         )
 
     @pydantic.model_validator(mode="after")
