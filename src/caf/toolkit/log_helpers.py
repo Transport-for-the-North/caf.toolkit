@@ -569,9 +569,12 @@ class LogHelper:
         )
         self._stack.enter_context(tqdm_log.logging_redirect_tqdm(self.loggers))
 
+        # Accessing tqdm internals to fix tqdm bug https://github.com/tqdm/tqdm/issues/1272
+        class_ = tqdm_log._TqdmLoggingHandler  # pylint: disable=protected-access
+
         for logger in self.loggers:
             for handler in logger.handlers:
-                if isinstance(handler, tqdm_log._TqdmLoggingHandler):
+                if isinstance(handler, class_):
                     handler.setLevel(original.level)
                     for filter_ in original.filters:
                         handler.addFilter(filter_)
@@ -719,7 +722,9 @@ class PackageFilter(logging.Filter):
 
         LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102 parent has docstring
+    def filter(
+        self, record: logging.LogRecord
+    ) -> bool:  # noqa: D102 parent has docstring
         matched = self._pattern.match(record.name.strip())
         return matched is not None
 
