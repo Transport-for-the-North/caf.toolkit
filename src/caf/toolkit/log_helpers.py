@@ -722,9 +722,7 @@ class PackageFilter(logging.Filter):
 
         LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
 
-    def filter(
-        self, record: logging.LogRecord
-    ) -> bool:  # noqa: D102 parent has docstring
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102 parent has docstring
         matched = self._pattern.match(record.name.strip())
         return matched is not None
 
