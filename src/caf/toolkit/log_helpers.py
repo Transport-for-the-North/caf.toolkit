@@ -573,6 +573,8 @@ class LogHelper:
             for handler in logger.handlers:
                 if isinstance(handler, tqdm_log._TqdmLoggingHandler):
                     handler.setLevel(original.level)
+                    for filter_ in original.filters:
+                        handler.addFilter(filter_)
 
     def __exit__(
         self,
