@@ -442,6 +442,7 @@ class TestLogHelper:
 
     @pytest.mark.parametrize("console", [True, False])
     def test_tqdm_redirect(self, log_init: LogInitDetails, console: bool) -> None:
+        """Test redirecting logging to tqdm adds the correct handler."""
         root = "test_tqdm_redirect"
         filter_handlers = functools.partial(
             filter, lambda x: isinstance(x, tqdm.contrib.logging._TqdmLoggingHandler)
