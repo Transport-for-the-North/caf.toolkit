@@ -14,6 +14,7 @@ import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
 # Third Party
+import _pytest.logging
 import psutil
 import pydantic
 import pytest
@@ -27,7 +28,9 @@ from caf.toolkit import (
     log_helpers,
 )
 from caf.toolkit.log_helpers import (
+    _WARNINGS_LOGGER_NAME,
     LoggingWarning,
+    PackageFilter,
     capture_warnings,
     get_logger,
     git_describe,
@@ -578,6 +581,32 @@ class TestLogHelper:
                 else:
                     assert warnings_logger.handlers == [], "handlers added to warnings logger"
 
+    def test_package_filters(self, log_init: LogInitDetails) -> None:
+        """Test PackageFilter is added to handlers correctly."""
+        root = ""
+        allowed = ["test"]
+        filter_ = PackageFilter(allowed)
+        # Handlers added for testing purposes can be ignored
+        pytest_handlers = (
+            # pylint: disable=protected-access
+            _pytest.logging._LiveLoggingNullHandler,
+            _pytest.logging._FileHandler,
+            _pytest.logging.LogCaptureHandler,
+        )
+
+        with LogHelper(root, log_init.details, allowed_packages=allowed):
+            warn_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
+            root_logger = logging.getLogger(root)
+
+            for logger in (root_logger, warn_logger):
+                assert len(logger.handlers) > len(pytest_handlers)
+                for handler in logger.handlers:
+                    if isinstance(handler, pytest_handlers):
+                        continue
+
+                    msg = f"missing on {logger.name} logger {type(handler)}"
+                    assert handler.filters == [filter_], msg
+
 
 class TestTemporaryLogFile:
     # pylint: disable=too-few-public-methods
@@ -715,3 +744,54 @@ class TestCaptureWarnings:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestPackageFilter:
+    """Tests for PackageFilter class."""
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test1", "test2"]])
+    def test_eq(self, allowed: list[str]) -> None:
+        """Test `__eq__` method works when equal."""
+        filter_ = PackageFilter(allowed)
+        assert filter_ == filter_  # noqa: PLR0124 pylint: disable=comparison-with-itself
+        assert filter_ == PackageFilter(allowed)
+
+    def test_not_eq(self) -> None:
+        """Test `__eq__` method works when not equal."""
+        assert PackageFilter(["test"]) != PackageFilter(["test2"])
+        assert PackageFilter(["test"]) != "test"
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test.test2", "test3.test"]])
+    @pytest.mark.parametrize("level", [logging.DEBUG, logging.CRITICAL])
+    def test_filter(self, allowed: list[str], level: int) -> None:
+        """Test filter method correctly returns true."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        for name in allowed:
+            assert filter_.filter(logging.LogRecord(name=name, level=level, **kwargs))
+            # Check sub-modules work
+            assert filter_.filter(
+                logging.LogRecord(name=f"{name}.extra", level=level, **kwargs)
+            )
+
+    @pytest.mark.parametrize("allowed", [["test", "invalid"], ["invalid"]])
+    def test_filter_false(self, allowed: list[str]) -> None:
+        """Test `filter` method correctly returns false."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "level": logging.info,
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        assert not filter_.filter(logging.LogRecord("test1.invalid", **kwargs))
