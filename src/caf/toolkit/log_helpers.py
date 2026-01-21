@@ -331,8 +331,8 @@ class LogHelper:
     be done using :func:`tqdm.contrib.logging.logging_redirect_tqdm` after initialisation.
 
     >>> import tqdm.contrib.logging
-    ...
-    ... with LogHelper(__package__, details, console=False) as log_helper:
+
+    >>> with LogHelper(__package__, details, console=False) as log_helper:
     ...     # Console handler with custom message format
     ...     log_helper.add_console_handler(ch_format="[%(levelname)-8.8s] %(message)s")
     ...
