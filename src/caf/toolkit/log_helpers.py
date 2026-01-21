@@ -14,9 +14,11 @@ TemporaryLogFile
     Context manager for adding a log file handler to a logger and
     removing it when done.
 """
+
 from __future__ import annotations
 
 # Built-Ins
+import contextlib
 import functools
 import getpass
 import logging
@@ -249,6 +251,16 @@ class LogHelper:
         settings.
     warning_capture
         If True (default) capture, and log, Python warnings.
+    redirect
+        If False disable redirecting console handler to :mod:`tqdm`,
+        redirects when entering context manager.
+
+    .. attention::
+        :mod:`tqdm` redirection happens upon entering context manager.
+        If using :meth:`add_console_handler` or :meth:`capture_warnings`,
+        and :mod:`tqdm` then the redirect should be done manually using
+        :func:`tqdm.contrib.logging.logging_redirect_tqdm`.
+
 
     Examples
     --------
@@ -302,6 +314,25 @@ class LogHelper:
     ...
     ...     # Write initialisation log message with system and tool information
     ...     log_helper.write_instantiate_message()
+
+    **Tqdm**
+
+    `tqdm <https://tqdm.github.io/>`_ is a third-party package used in caf.toolkit for handling
+    console progress bars, :class:`LogHelper` will redirect to :class:`tqdm` during
+    initialisation. If additional handlers are added after initialisation, through
+    :meth:`add_console_handler` or :meth:`capture_warnings` then the redirecting will need to
+    be done using :func:`tqdm.contrib.logging.logging_redirect_tqdm` after initialisation.
+
+    >>> import tqdm.contrib.logging
+    ...
+    ... with LogHelper(__package__, details, console=False) as log_helper:
+    ...     # Console handler with custom message format
+    ...     log_helper.add_console_handler(ch_format="[%(levelname)-8.8s] %(message)s")
+    ...
+    ...     # Setup tqdm redirect
+    ...     with tqdm.contrib.logging.logging_redirect_tqdm(log_helper.loggers):
+    ...         # Write initialisation log message with system and tool information
+    ...         log_helper.write_instantiate_message()
     """
 
     def __init__(
@@ -312,6 +343,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
+        redirect: bool = True,
     ):
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
@@ -320,9 +352,10 @@ class LogHelper:
 
         self.tool_details = tool_details
         self._warning_logger: logging.Logger | None = None
+        self._stack: contextlib.ExitStack | None = None
+        self._redirect = redirect
 
         if console:
-            tqdm_log.logging_redirect_tqdm([self.logger, self._warning_logger])
             level = _CAF_LOG_LEVEL.upper().strip()
             if level in _LEVEL_LOOKUP:
                 self.add_console_handler(log_level=_LEVEL_LOOKUP[level])
@@ -332,6 +365,9 @@ class LogHelper:
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
                     " set to 'debug', 'info', 'warning', 'error', 'critical'."
                 )
+        else:
+            # Cannot redirect if not using a console handler
+            self._redirect = False
 
         if log_file is not None:
             self.add_file_handler(log_file)
@@ -472,7 +508,32 @@ class LogHelper:
 
     def __enter__(self):
         """Initialise class with 'with' statement."""
+        if self._redirect:
+            self._redirect_console()
         return self
+
+    def _redirect_console(self) -> None:
+        """Add tqdm's logging redirect to context stack.
+
+        Sets correct log level for tqdm handlers to fix
+        `tqdm issue 1272 <https://github.com/tqdm/tqdm/issues/1272>`_.
+        """
+        if self._stack is None:
+            self._stack = contextlib.ExitStack()
+
+        stdout = {sys.stdout, sys.stderr}
+        original = next(
+            filter(
+                lambda x: isinstance(x, logging.StreamHandler) and x.stream in stdout,
+                self.logger.handlers,
+            )
+        )
+        self._stack.enter_context(tqdm_log.logging_redirect_tqdm(self.loggers))
+
+        for logger in self.loggers:
+            for handler in logger.handlers:
+                if isinstance(handler, tqdm_log._TqdmLoggingHandler):
+                    handler.setLevel(original.level)
 
     def __exit__(self, exc_type, exc, exc_tb):
         """Write any error to the logger and closes the file."""
@@ -482,8 +543,19 @@ class LogHelper:
             self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
+        if self._stack is not None:
+            self._stack.__exit__(exc_type, exc, exc_tb)
+
         self.cleanup_handlers()
         logging.shutdown()
+
+    @property
+    def loggers(self) -> tuple[logging.Logger, ...]:
+        """Loggers managed by :class:`LogHelper`."""
+        loggers = [self.logger]
+        if self._warning_logger is not None:
+            loggers.append(self._warning_logger)
+        return tuple(loggers)
 
 
 class TemporaryLogFile:

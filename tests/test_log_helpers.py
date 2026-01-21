@@ -2,11 +2,13 @@
 """
 Tests for the `log_helpers` module in caf.toolkit
 """
+
 from __future__ import annotations
 
 # Built-Ins
 import collections
 import dataclasses
+import functools
 import getpass
 import logging
 import os
@@ -15,7 +17,6 @@ import platform
 import subprocess
 import warnings
 from typing import NamedTuple
-from unittest.mock import patch
 
 # Third Party
 import psutil
@@ -424,12 +425,17 @@ class TestLogHelper:
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
 
-    def test_tqdm_redirect(self, log_init: LogInitDetails) -> None:
-        """Tests tqdm.contrib.logging.logging_redirect_tqdm() function is called."""
-        root = "tqdm_test"
-        with patch("tqdm.contrib.logging.logging_redirect_tqdm") as mock_helper:
-            LogHelper(root, log_init.details)
-            mock_helper.assert_called_once()
+    @pytest.mark.parametrize("console", [True, False])
+    def test_tqdm_redirect(self, log_init: LogInitDetails, console: bool) -> None:
+        root = "test_tqdm_redirect"
+        filter_handlers = functools.partial(
+            filter, lambda x: isinstance(x, tqdm.contrib.logging._TqdmLoggingHandler)
+        )
+
+        expected = 1 if console else 0
+        with LogHelper(root, log_init.details, console=console) as log:
+            assert len(list(filter_handlers(log.logger.handlers))) == expected
+            assert len(list(filter_handlers(log._warning_logger.handlers))) == expected
 
     def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
         """Test logging to file within `with` statement.
@@ -460,7 +466,7 @@ class TestLogHelper:
 
     def test_handler_cleanup(self, log_init: LogInitDetails) -> None:
         """Test handlers are added to logger and removed upon exiting with statement."""
-        root = "test"
+        root = "test.test_handler_cleanup"
         logger = logging.getLogger(root)
         assert logger.handlers == [], "logger already has handlers"
 
@@ -477,7 +483,7 @@ class TestLogHelper:
         self, log_init: LogInitDetails, warnings_logger: logging.Logger
     ) -> None:
         """Test file handler is added to warnings logger."""
-        with LogHelper("test", log_init.details):
+        with LogHelper("test.warnings", log_init.details):
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
