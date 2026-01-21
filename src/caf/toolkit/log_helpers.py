@@ -23,6 +23,7 @@ import getpass
 import logging
 import os
 import platform
+import re
 import subprocess
 import sys
 import warnings
@@ -36,7 +37,7 @@ from psutil import _common
 from pydantic import dataclasses, types
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
     from types import TracebackType
     from typing import Any, Self
 
@@ -45,6 +46,8 @@ DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+LOG = logging.getLogger(__name__)
+_WARNINGS_LOGGER_NAME = "py.warnings"
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
@@ -77,14 +80,32 @@ class LoggingWarning(Warning):
 def git_describe() -> str | None:
     """Run git describe command and return string if successful."""
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
-    comp = subprocess.run(  # noqa: S602
-        cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE
-    )
-
-    if comp.returncode != 0:
+    try:
+        comp = subprocess.run(  # noqa: S602
+            cmd, shell=True, timeout=1, check=False, capture_output=True
+        )
+    except subprocess.TimeoutExpired:
+        LOG.debug("git describe command timed out")
         return None
 
-    return comp.stdout.decode().strip()
+    if comp.stdout is not None:
+        stdout = comp.stdout.decode().strip()
+    else:
+        stdout = None
+
+    if comp.returncode != 0:
+        stderr = None
+        if comp.stderr is not None:
+            stderr = comp.stderr.decode().strip()
+        if stderr is None or stderr == "":
+            stderr = stdout
+
+        LOG.debug("git describe command failed: %s", stderr)
+        return None
+
+    if stdout is None:
+        raise ValueError("unexpected error in git describe command")
+    return stdout
 
 
 @dataclasses.dataclass
@@ -350,6 +371,7 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
+        allowed_packages: Sequence[str] | None = None,
         redirect: bool = True,
     ) -> None:
         self.logger_name = str(root_logger)
@@ -361,6 +383,11 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
         self._stack: contextlib.ExitStack | None = None
         self._redirect = redirect
+
+        if allowed_packages is None:
+            self.package_filter = None
+        else:
+            self.package_filter = PackageFilter(allowed_packages)
 
         if console:
             level = _CAF_LOG_LEVEL.upper().strip()
@@ -405,6 +432,9 @@ class LogHelper:
         handler : logging.Handler
             Handler to add.
         """
+        if self.package_filter is not None:
+            handler.addFilter(self.package_filter)
+
         self.logger.addHandler(handler)
 
         if self._warning_logger is not None:
@@ -483,7 +513,7 @@ class LogHelper:
         """
         logging.captureWarnings(True)
 
-        self._warning_logger = logging.getLogger("py.warnings")
+        self._warning_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
 
         for handler in self.logger.handlers:
             if handler in self._warning_logger.handlers:
@@ -671,6 +701,40 @@ class TemporaryLogFile:
             )
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)
+
+
+class PackageFilter(logging.Filter):
+    """Logging filter which only allows given packages (and sub-packages)."""
+
+    def __init__(self, allowed_pkgs: Sequence[str]) -> None:
+        super().__init__()
+
+        pkgs = set(str(i).lower().strip() for i in allowed_pkgs)
+
+        # Build package match pattern
+        pkg_str = "|".join(re.escape(i) for i in pkgs)
+        self._pattern = re.compile(rf"^({pkg_str})(\..*)*$", re.IGNORECASE)
+
+        LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102 parent has docstring
+        matched = self._pattern.match(record.name.strip())
+        return matched is not None
+
+    def __eq__(
+        self,
+        value: Any,  # noqa: ANN401
+    ) -> bool:
+        """Check if filter pattern is the same."""
+        if value is self:
+            return True
+        if not isinstance(value, self.__class__):
+            return False
+        return self._pattern == value._pattern
+
+    def __hash__(self) -> int:
+        """Hash of package constraint RegEx."""
+        return hash(self._pattern)
 
 
 # # # FUNCTIONS # # #
