@@ -19,13 +19,13 @@ class DataGenerator(abc.ABC):
     length: int
     """ Number of rows to create."""
 
-    def __init__(self, name: str, length: int):
+    def __init__(self, name: str, length: int) -> None:
         self.name = name
         self.length = length
 
     @abc.abstractmethod
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -50,7 +50,7 @@ class ChoiceGenerator(DataGenerator):
 
     def __init__(
         self, name: str, length: int, values: set[int | str], all_values: bool = False
-    ):
+    ) -> None:
         super().__init__(name, length)
         self.values = values
 
@@ -62,7 +62,7 @@ class ChoiceGenerator(DataGenerator):
         self.all_values = all_values
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -76,7 +76,8 @@ class ChoiceGenerator(DataGenerator):
 
         """
         if self.all_values:
-            # check is made on init whether length < length(value) so we don't worry about this here
+            # check is made on init whether length < length(value)
+            # so we don't worry about this here
             if self.length == len(self.values):
                 return pd.Series(list(self.values), name=self.name)
 
@@ -100,19 +101,22 @@ class FloatGenerator(DataGenerator):
     upper_range: float
     """Upper range of data."""
 
-    def __init__(self, name: str, length: int, upper_range: float, lower_range: float = 0):
+    def __init__(
+        self, name: str, length: int, upper_range: float, lower_range: float = 0
+    ) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:
             raise ValueError(
-                f"upper_range ({upper_range}) should be greater than lower_range ({lower_range})"
+                f"upper_range ({upper_range}) should be"
+                f" greater than lower_range ({lower_range})"
             )
 
         self.lower_range = lower_range
         self.upper_range = upper_range
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications define in the attributes.
 
         Parameters
         ----------
@@ -142,14 +146,14 @@ class UniqueIdGenerator(DataGenerator):
     starting_val: int
     """Starting value for ID."""
 
-    def __init__(self, name: str, length: int, starting_val: int = 0):
+    def __init__(self, name: str, length: int, starting_val: int = 0) -> None:
         super().__init__(name, length)
         self.starting_val = starting_val
         if length <= 0 or not isinstance(length, int):
             raise ValueError("length must be positive, non zero, integer")
 
-    def generate(self, generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+    def generate(self, generator: np.random.Generator) -> pd.Series:
+        """Generate data using the specifications defined in the attributes.
 
         Parameters
         ----------
@@ -163,7 +167,7 @@ class UniqueIdGenerator(DataGenerator):
             Generated data.
         """
         del generator
-        values = np.arange(start=self.starting_val, stop=self.starting_val + self.length)
+        values = np.arange(start=self.starting_val, stop=self.starting_val + self.length)  # type: ignore[call-overload]
         return pd.Series(values, name=self.name)
 
 
@@ -176,19 +180,22 @@ class IntGenerator(DataGenerator):
     upper_range: int
     """Upper range of data, maximum in generated data will be one less."""
 
-    def __init__(self, name: str, length: int, upper_range: int = 0, lower_range: int = 0):
+    def __init__(
+        self, name: str, length: int, upper_range: int = 0, lower_range: int = 0
+    ) -> None:
         super().__init__(name, length)
 
         if lower_range >= upper_range:
             raise ValueError(
-                f"upper_range ({upper_range}) should be greater than lower_range ({lower_range})"
+                f"upper_range ({upper_range}) should be "
+                f"greater than lower_range ({lower_range})"
             )
 
         self.lower_range = lower_range
         self.upper_range = upper_range
 
     def generate(self, generator: np.random.Generator) -> pd.Series:
-        """Generate data using the generator provided and specifications define in the attributes.
+        """Generate data using the specifications defined in the attributes.
 
         Parameters
         ----------

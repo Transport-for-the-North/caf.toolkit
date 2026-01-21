@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
-"""Tests for the io module"""
+"""Tests for the io module."""
+
 from __future__ import annotations
 
 # Built-Ins
 import dataclasses
 import pathlib
 import re
-from typing import Iterator, Literal
+from typing import TYPE_CHECKING, Literal
 
 # Third Party
 import numpy as np
@@ -16,6 +16,9 @@ import pytest
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 from caf.toolkit import io
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -50,7 +53,7 @@ class MatrixResults:
 class _FakeGlobPath:
     """Mock class replacing `pathlib.Path`."""
 
-    def __init__(self, suffixes: list[str]):
+    def __init__(self, suffixes: list[str]) -> None:
         self._suffixes = suffixes
 
     def glob(self, name: str) -> Iterator[pathlib.Path]:
@@ -87,13 +90,72 @@ def fix_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
     )
 
 
+@pytest.fixture(name="normalise_data", scope="module")
+def fix_normalise_data(tmp_path_factory: pytest.TempPathFactory) -> DataFrameResults:
+    """Create test DataFrame for normalise columns tests and save to CSV."""
+    data = pd.DataFrame(
+        {
+            "String WORDS": [f"test_{i}" for i in range(10)],
+            " integer - NUMBER   ": list(range(10)),
+            "Float    NUM (km)": [i * 0.75 for i in range(10)],
+        }
+    )
+
+    path = tmp_path_factory.mktemp("csv_data") / "test_data-afkljsh.csv"
+    data.to_csv(path, index=False)
+    assert path.is_file(), "error creating CSV file"
+
+    return DataFrameResults(
+        data=data.rename(
+            columns={
+                "String WORDS": "string_words",
+                " integer - NUMBER   ": "integer-number",
+                "Float    NUM (km)": "float_num_(km)",
+            }
+        ),
+        columns=["string_words", "integer-number", "float_num_(km)"],
+        dtypes={"string_words": str, "integer-number": int, "float_num_(km)": float},
+        path=path,
+        incorrect_columns=["missing_ZO3yM", "missing_9GISV"],
+        incorrect_dtypes={
+            "string_words": int,
+            "integer-number": str,
+            "float_num_(km)": int,
+        },
+    )
+
+
+@pytest.fixture(name="normalise_duplicates", scope="module")
+def fix_normalise_duplicates(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> DataFrameResults:
+    """Create test DataFrame for normalise columns tests with duplicates."""
+    data = pd.DataFrame(
+        {
+            "String WORDS": [f"test_{i}" for i in range(10)],
+            "string_words": [f"test_{i}" for i in range(10, 20)],
+        }
+    )
+
+    path = tmp_path_factory.mktemp("csv_data") / "test_data-afkljsh.csv"
+    data.to_csv(path, index=False)
+    assert path.is_file(), "error creating CSV file"
+
+    return DataFrameResults(
+        data=data,
+        columns=["string_words"],
+        dtypes={"string_words": str},
+        path=path,
+        incorrect_columns=[],
+        incorrect_dtypes={"string_words": int},
+    )
+
+
 @pytest.fixture(name="matrix")
 def fix_matrix() -> pd.DataFrame:
     """Create matrix DataFrame for tests."""
     index = ["zone1", "zone2", "zone3"]
-    matrix = pd.DataFrame(np.arange(9).reshape((3, 3)), index=index, columns=index)
-
-    return matrix
+    return pd.DataFrame(np.arange(9).reshape((3, 3)), index=index, columns=index)
 
 
 @pytest.fixture(name="square_matrix")
@@ -121,8 +183,8 @@ def fix_long_matrix(matrix: pd.DataFrame, tmp_path: pathlib.Path) -> MatrixResul
 
 
 # # # TESTS # # #
-def test_safe_dataframe_to_csv(tmp_path: pathlib.Path):
-    """Test that this function correctly passes arguments to df.to_csv()"""
+def test_safe_dataframe_to_csv(tmp_path: pathlib.Path) -> None:
+    """Test that this function correctly passes arguments to df.to_csv()."""
     df = pd.DataFrame(
         {
             "name": ["Raphael", "Donatello"],
@@ -139,46 +201,53 @@ class TestReadCSV:
     """Tests for `read_csv` function."""
 
     @pytest.mark.parametrize("name", [None, "missing-dEg0N"])
-    def test_missing(self, tmp_path_factory: pytest.TempPathFactory, name: str | None):
+    def test_missing(self, tmp_path_factory: pytest.TempPathFactory, name: str | None) -> None:
         """Test file not found error, with and without name."""
         path = tmp_path_factory.mktemp("empty")
         filename = "missing_file-bqiPI.csv"
 
         if name is None:
             name = filename
-        error_pattern = re.compile(f"{name} file does not exist: '.*{filename}'", re.I)
+        error_pattern = re.compile(
+            f"{name} file does not exist: '.*{filename}'", re.IGNORECASE
+        )
 
         with pytest.raises(FileNotFoundError, match=error_pattern):
             io.read_csv(path / filename, name=name)
 
-    def test_simple(self, data: DataFrameResults):
+    def test_simple(self, data: DataFrameResults) -> None:
         """Test loading CSV with default parameters."""
         read = io.read_csv(data.path)
 
         pd.testing.assert_frame_equal(data.data, read, check_dtype=False)
 
-    def test_full(self, data: DataFrameResults):
+    @pytest.mark.parametrize("normalise_column_names", [True, False])
+    def test_full(self, data: DataFrameResults, normalise_column_names: bool) -> None:
         """Test loading CSV with usecols, dtype and index_col parameters."""
         read = io.read_csv(
-            data.path, usecols=data.columns, dtype=data.dtypes, index_col=data.columns[0]
+            data.path,
+            usecols=data.columns,
+            dtype=data.dtypes,
+            normalise_column_names=normalise_column_names,
+            index_col=data.columns[0],
         )
 
         correct = data.data.set_index(data.columns[0])
         # check_dtype set to False because this is very strict i.e. int32 != int64
         pd.testing.assert_frame_equal(read, correct, check_dtype=False)
 
-    def test_missing_columns(self, data: DataFrameResults):
+    def test_missing_columns(self, data: DataFrameResults) -> None:
         """Test missing columns error is raised."""
         name = "missing_columns"
-        pattern = re.compile(f"columns missing from {name}", re.I)
+        pattern = re.compile(f"columns missing from {name}", re.IGNORECASE)
         with pytest.raises(io.MissingColumnsError, match=pattern) as excinfo:
             io.read_csv(data.path, name=name, usecols=data.incorrect_columns)
 
-            assert set(excinfo.value.columns) == set(
-                data.incorrect_columns
-            ), "incorrect columns in exception"
+            assert set(excinfo.value.columns) == set(data.incorrect_columns), (
+                "incorrect columns in exception"
+            )
 
-    def test_incorrect_dtypes(self, data: DataFrameResults):
+    def test_incorrect_dtypes(self, data: DataFrameResults) -> None:
         """Test correct error is raised for incorrect dtypes."""
         # Find first column as error is raised for first column found
         column_name = None
@@ -192,10 +261,72 @@ class TestReadCSV:
         pattern = re.compile(
             f"column '{column_name}' in {name} has values which cannot be "
             f"converted to {data.incorrect_dtypes[column_name]}",
-            re.I,
+            re.IGNORECASE,
         )
         with pytest.raises(ValueError, match=pattern):
             io.read_csv(data.path, name=name, dtype=data.incorrect_dtypes)
+
+    @pytest.mark.parametrize("index", ["single", "list", False])
+    def test_normalise_columns(
+        self, normalise_data: DataFrameResults, index: Literal["single", "list", False]
+    ) -> None:
+        """Test loading CSV and normalising columns."""
+        if not index:
+            index_col = None
+        elif index == "single":
+            index_col = normalise_data.columns[0]
+        elif index == "list":
+            index_col = [normalise_data.columns[0]]
+        else:
+            raise ValueError(f"invalid {index=}")
+
+        read = io.read_csv(
+            normalise_data.path,
+            usecols=normalise_data.columns,
+            dtype=normalise_data.dtypes,
+            normalise_column_names=True,
+            index_col=index_col,
+        )
+
+        if index is False:
+            correct = normalise_data.data
+        else:
+            correct = normalise_data.data.set_index(normalise_data.columns[0])
+        # check_dtype set to False because this is very strict i.e. int32 != int64
+        pd.testing.assert_frame_equal(read, correct, check_dtype=False)
+
+    @pytest.mark.parametrize("parameter, value", [("names", ["a"]), ("header", None)])
+    def test_normalise_invalid(
+        self,
+        normalise_data: DataFrameResults,
+        parameter: str,
+        value: list[str] | Literal[0],
+    ) -> None:
+        """Test normalising column raises excepted errors with disallowed parameters."""
+        with pytest.raises(ValueError, match=r"cannot normalise columns when .*"):
+            io.read_csv(
+                normalise_data.path,
+                usecols=normalise_data.columns,
+                dtype=normalise_data.dtypes,
+                normalise_column_names=True,
+                index_col=normalise_data.columns[0],
+                **{parameter: value},
+            )
+
+    def test_duplicate_normalised_columns(
+        self, normalise_duplicates: DataFrameResults
+    ) -> None:
+        """Test normalising columns raises an error when duplicates are found."""
+        with pytest.raises(
+            ValueError,
+            match=r"multiple columns have the same name after normalisation:.*",
+        ):
+            io.read_csv(
+                normalise_duplicates.path,
+                usecols=normalise_duplicates.columns,
+                dtype=normalise_duplicates.dtypes,
+                normalise_column_names=True,
+            )
 
 
 class TestReadCSVMatrix:
@@ -205,10 +336,13 @@ class TestReadCSVMatrix:
     @pytest.mark.parametrize("guess_format", [False, True])
     @pytest.mark.parametrize("data_name", ["long_matrix", "square_matrix"])
     def test_read_matrix(
-        self, request, data_name: str, define_index: bool, guess_format: bool
-    ):
-        """Test reading matrix for square and long formats,
-        with and without defined index columns."""
+        self,
+        request: pytest.FixtureRequest,
+        data_name: str,
+        define_index: bool,
+        guess_format: bool,
+    ) -> None:
+        """Test reading matrix for square and long formats, with and without index columns."""
         data: MatrixResults = request.getfixturevalue(data_name)
 
         if define_index:
@@ -225,7 +359,7 @@ class TestReadCSVMatrix:
         pd.testing.assert_frame_equal(read, data.matrix, check_dtype=False)
 
     @pytest.mark.parametrize("columns", [True, False])
-    def test_reindexing(self, tmp_path: pathlib.Path, columns: bool):
+    def test_reindexing(self, tmp_path: pathlib.Path, columns: bool) -> None:
         """Test adjusting the index if the matrix has missing columns or indices."""
         zones = [f"zone{i}" for i in range(1, 7)]
         matrix = pd.DataFrame(np.arange(9).reshape((3, 3)), index=zones[:3], columns=zones[:3])
@@ -243,7 +377,7 @@ class TestReadCSVMatrix:
             "matrix file (.*) doesn't contain the same "
             "index and columns, these are reindexed so all unique "
             "values from both are included",
-            re.I,
+            re.IGNORECASE,
         )
         with pytest.warns(RuntimeWarning, match=pattern):
             read = io.read_csv_matrix(path, "square")
@@ -256,22 +390,22 @@ class TestReadCSVMatrix:
         matrix = pd.concat([matrix, new_zones], axis=0 if columns else 1)
         pd.testing.assert_frame_equal(read, matrix, check_dtype=False)
 
-    def test_unknown_format_guess(self, tmp_path: pathlib.Path):
+    def test_unknown_format_guess(self, tmp_path: pathlib.Path) -> None:
         """Test that ValueError is raised when format can't be determined from file."""
         data = pd.DataFrame({"col1": [1, 2, 3], "col2": [1, 2, 3]})
         path = tmp_path / "test_matrix_incorrect.csv"
         data.to_csv(path, index=False)
-        pattern = re.compile("cannot determine format of matrix .*", re.I)
+        pattern = re.compile("cannot determine format of matrix .*", re.IGNORECASE)
         with pytest.raises(ValueError, match=pattern):
             io.read_csv_matrix(path)
 
-    def test_invalid_format(self, tmp_path: pathlib.Path):
+    def test_invalid_format(self, tmp_path: pathlib.Path) -> None:
         """Test ValueError is raised when invalid format parameter is given."""
         path = tmp_path / "incorrect.csv"
         path.touch()
 
         format_ = "incorrect_17hSl"
-        pattern = re.compile(f"unknown format {format_}", re.I)
+        pattern = re.compile(f"unknown format {format_}", re.IGNORECASE)
         with pytest.raises(ValueError, match=pattern):
             io.read_csv_matrix(path, format_)
 
@@ -280,7 +414,7 @@ class TestFindFile:
     """Tests for the `find_file` function."""
 
     @pytest.mark.filterwarnings('ignore:Found 2 files named "test_file"*:RuntimeWarning')
-    def test_correct(self):
+    def test_correct(self) -> None:
         """Test single correct file exists and is found."""
         suffixes = [".csv.bz2"]
         expected = "test_file.csv.bz2"
@@ -290,7 +424,7 @@ class TestFindFile:
 
         assert found.name == expected, "incorrect file found"
 
-    def test_correct_extras(self):
+    def test_correct_extras(self) -> None:
         """Test multiple file exists, highest priority is found and warning raised."""
         suffixes = [".csv.bz2", ".csv", ".txt"]
         expected = "test_file.csv.bz2"
@@ -306,7 +440,7 @@ class TestFindFile:
 
         assert found.name == expected, "incorrect file found"
 
-    def test_unexpected(self):
+    def test_unexpected(self) -> None:
         """Test unexpected warning when additional files with different suffixes are found."""
         suffixes = [".csv.bz2"]
         extras = [".xlsx", ".test"]
@@ -316,7 +450,7 @@ class TestFindFile:
 
         warn_msg = (
             f'Found {len(extras)} files named "test_file" with unexpected'
-            rf' suffixes \({", ".join(re.escape(i) for i in extras)}\),'
+            rf" suffixes \({', '.join(re.escape(i) for i in extras)}\),"
             r" these are ignored\."
         )
         with pytest.warns(RuntimeWarning, match=warn_msg):
@@ -324,7 +458,7 @@ class TestFindFile:
 
         assert found.name == expected, "incorrect file found"
 
-    def test_not_found(self):
+    def test_not_found(self) -> None:
         """Test `FileNotFoundError` is raised when no files are found."""
         with pytest.raises(FileNotFoundError):
             io.find_file_with_name(_FakeGlobPath([]), "test_file", [".csv"])
