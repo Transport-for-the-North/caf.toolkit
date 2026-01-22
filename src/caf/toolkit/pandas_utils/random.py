@@ -207,5 +207,7 @@ class IntGenerator(DataGenerator):
         pd.Series
             Generated data.
         """
-        values = generator.integers(self.lower_range, self.upper_range, size=self.length)
+        values = generator.integers(
+            self.lower_range, self.upper_range, size=self.length
+        )
         return pd.Series(values, name=self.name)

@@ -24,6 +24,7 @@ from pydantic import ConfigDict, Field, FilePath, dataclasses, model_validator
 # Local Imports
 from caf.toolkit import io, math_utils
 from caf.toolkit import pandas_utils as pd_utils
+from caf.toolkit import validators
 
 if TYPE_CHECKING:
     from collections.abc import Hashable
@@ -714,7 +715,9 @@ def pandas_matrix_zone_translation(
     if not check_totals:
         return translated
 
-    if not math_utils.is_almost_equal(matrix.to_numpy().sum(), translated.to_numpy().sum()):
+    if not math_utils.is_almost_equal(
+        matrix.to_numpy().sum(), translated.to_numpy().sum()
+    ):
         warnings.warn(
             f"Some values seem to have been dropped during the translation. "
             f"Check the given translation matrix isn't unintentionally "
@@ -842,7 +845,9 @@ def pandas_vector_zone_translation(
     if isinstance(vector, pd.Series):
         vector = pd.Series(index=vector.index, name=vector.name, data=new_values)
     else:
-        vector = pd.DataFrame(index=vector.index, columns=vector.columns, data=new_values)
+        vector = pd.DataFrame(
+            index=vector.index, columns=vector.columns, data=new_values
+        )
 
     zone_correspondence.factors_column = _convert_dtypes(
         arr=zone_correspondence.factors_column.to_numpy(),
@@ -894,7 +899,9 @@ def pandas_vector_zone_translation(
     return translated
 
 
-def _vector_missing_warning(vector: pd.DataFrame | pd.Series, missing_rows: list) -> None:
+def _vector_missing_warning(
+    vector: pd.DataFrame | pd.Series, missing_rows: list
+) -> None:
     """Warn when zones are missing from vector.
 
     Produces RuntimeWarning detailing the number of missing rows and
@@ -946,11 +953,13 @@ def _multi_vector_trans_index(
             vector = vector.set_index(ind_names)
             # this will be used for final grouping
             ind_names.remove(translation_from_col)
-            missing_rows = set(vector.index.get_level_values(translation_from_col)) - set(
-                translation_from
-            )
+            missing_rows = set(
+                vector.index.get_level_values(translation_from_col)
+            ) - set(translation_from)
             if len(missing_rows) > 0:
-                _vector_missing_warning(vector, list(missing_rows))
+                _vector_missing_warning(
+                    vector.groupby(translation_from_col).sum(), list(missing_rows)
+                )
 
         else:
             raise ValueError(
@@ -1327,7 +1336,9 @@ class ZoneCorrespondencePath:
 
         if factors_mandatory:
             if not pd.api.types.is_numeric_dtype(translation[self.factors_col_name]):
-                raise ValueError(f"{self.factors_col_name} must contain numeric values only.")
+                raise ValueError(
+                    f"{self.factors_col_name} must contain numeric values only."
+                )
             if (translation[self.factors_col_name] > 1).any():
                 warnings.warn(
                     "%s contains values greater than one,"
