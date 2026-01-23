@@ -138,18 +138,48 @@ def fixture_monkeypatch_total_ram(
     return ram, readable
 
 
+@pytest.fixture(name="total_hardcoded_ram")
+def fixture_monkeypatch_total_hardcoded_ram(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[int, str]:
+    """Monkeypatch `psutil.virtual_memory()` to return constant."""
+    memory = collections.namedtuple("memory", ["total"])
+
+    ram = 30_000
+    value = memory(ram)
+    readable = "29.3K"
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: value)
+    return ram, readable
+
+
 @pytest.fixture(name="log_init")
-def fixture_log_init() -> LogInitDetails:
+def fixture_log_init(
+    username: str,
+    python_version: str,
+    uname: UnameResult,
+    total_hardcoded_ram: tuple[int, str],
+    cpu_count: int,
+) -> LogInitDetails:
     """Initialise details for `LogHelper` tests."""
     name = "test tool"
 
     details = ToolDetails(name, "1.2.3")
-    info = SystemInformation.load()
+    uname = SystemInformation(
+        user=username,
+        pc_name=uname.node,
+        python_version=python_version,
+        operating_system=f"{uname.system} {uname.release} ({uname.version})",
+        architecture=uname.machine,
+        processor=uname.processor,
+        cpu_count=cpu_count,
+        total_ram=total_hardcoded_ram[0],
+    )
 
     msg = f"***  {name}  ***"
     init_message = ["", "*" * len(msg), msg, "*" * len(msg)]
 
-    return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
+    return LogInitDetails(details, f"\n{details}", uname, f"\n{uname}", init_message)
 
 
 @pytest.fixture(name="warnings_logger")
@@ -821,6 +851,30 @@ class TestPackageFilter:
         assert not filter_.filter(logging.LogRecord("test1.invalid", **kwargs))
 
 
+@pytest.fixture(name="system_metadata")
+def fix_system_metadata(log_init: LogInitDetails) -> tuple[str, LogInitDetails]:
+    """YAML for the tool details and system information sections."""
+    details = log_init.details
+    system = log_init.system
+    expected = f"""
+    tool_details:
+      name: {details.name}
+      version: {details.version}
+      full_version: {details.full_version}
+    system_information:
+      user: {system.user}
+      pc_name: {system.pc_name}
+      python_version: {system.python_version}
+      operating_system: {system.operating_system}
+      architecture: {system.architecture}
+      processor: {system.processor}
+      cpu_count: {system.cpu_count}
+      total_ram: {system.total_ram}
+    """
+
+    return textwrap.dedent(expected).strip(), log_init
+
+
 class TestWriteMetadata:
     """Test :func:`write_metadata` function."""
 
@@ -831,57 +885,122 @@ class TestWriteMetadata:
         with pytest.raises(NotADirectoryError):
             write_metadata(path, details=log_init)
 
-    def test_basic(self, log_init: LogInitDetails, tmp_path: pathlib.Path) -> None:
-        """Test main functionality of `write_metadata`."""
-        details = log_init.details
-        system = log_init.system
+    def test_basic(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test `write_metadata` with basic Python types."""
+        initial_expected, details = system_metadata
         path = tmp_path / "meta.yml"
         returned = write_metadata(
             path,
-            details=details,
+            details=details.details,
             datetime_comment=False,
             meta=1,
-            meta1=[1, 2],
-            meta2={"a": 1, "B": 2},
+            meta1=[{"a": 1, "B": "test"}, 1, 2],
+            meta2={"a": 1, "B": {"C": 3, "d": 4}},
             meta3="string",
             meta4=2.0,
         )
         assert path == returned
         assert path.is_file()
 
-        # None values will be excluded from the output metadata file
-        details_dict = {"name": details.name, "version": details.version}
-        for attr in ("homepage", "source_url", "full_version"):
-            value = getattr(details, attr)
-            if value is not None:
-                details_dict[attr] = value
-
-        expected = f"""
-        tool_details:
-          name: {details.name}
-          version: {details.version}
-          full_version: {details.full_version}
-        system_information:
-          user: {system.user}
-          pc_name: {system.pc_name}
-          python_version: {system.python_version}
-          operating_system: {system.operating_system}
-          architecture: {system.architecture}
-          processor: {system.processor}
-          cpu_count: {system.cpu_count}
-          total_ram: {system.total_ram}
+        expected = """
         metadata:
           meta: 1
           meta1:
+          - a: 1
+            B: test
           - 1
           - 2
           meta2:
             a: 1
-            B: 2
+            B:
+              C: 3
+              d: 4
           meta3: string
           meta4: 2.0
         """
         expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
+
+        with path.open() as file:
+            text = file.read().strip()
+
+        assert text == expected
+
+    def test_dataclass(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test writing dataclasses to metadata."""
+
+        @dataclasses.dataclass
+        class _Dataclass:
+            data_1: int
+            data_2: str
+            data_3: float
+
+        initial_expected, details = system_metadata
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
+            details=details.details,
+            datetime_comment=False,
+            dataclass=_Dataclass(data_1=10, data_2="testing", data_3=2.5),
+            basic={"A": "test"},
+        )
+        assert path == returned
+        assert path.is_file()
+
+        expected = """
+        metadata:
+          dataclass:
+            data_1: 10
+            data_2: testing
+            data_3: 2.5
+          basic:
+            A: test
+        """
+        expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
+
+        with path.open() as file:
+            text = file.read().strip()
+
+        assert text == expected
+
+    def test_base_model(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test writing subclasses of :class:`pydantic.BaseModel`."""
+
+        class _Model(pydantic.BaseModel):
+            data_1: int
+            data_2: str
+            data_3: float
+
+        initial_expected, details = system_metadata
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
+            details=details.details,
+            datetime_comment=False,
+            model=_Model(data_1=10, data_2="testing", data_3=2.5),
+            basic={"A": "test"},
+        )
+        assert path == returned
+        assert path.is_file()
+
+        expected = """
+        metadata:
+          model:
+            data_1: 10
+            data_2: testing
+            data_3: 2.5
+          basic:
+            A: test
+        """
+        expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
 
         with path.open() as file:
             text = file.read().strip()
