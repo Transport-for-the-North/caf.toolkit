@@ -164,7 +164,7 @@ def fixture_log_init(
     """Initialise details for `LogHelper` tests."""
     name = "test tool"
 
-    details = ToolDetails(name, "1.2.3")
+    details = ToolDetails(name, "1.2.3", full_version="v0.12.0-79-gb30266b-dirty")
     uname = SystemInformation(
         user=username,
         pc_name=uname.node,
