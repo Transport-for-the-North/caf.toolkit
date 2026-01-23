@@ -809,7 +809,7 @@ def get_file_handler(
     datetime_format: str = DEFAULT_FILE_DATETIME,
     log_level: int = logging.DEBUG,
 ) -> logging.FileHandler:
-    """Create a console handles for a logger.
+    """Create a file handler for a logger.
 
     Parameters
     ----------
