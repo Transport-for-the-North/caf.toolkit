@@ -16,18 +16,21 @@ TemporaryLogFile
 
 from __future__ import annotations
 
-# Built-Ins
 import contextlib
 import functools
 import getpass
 import logging
 import os
+import pathlib
 import platform
 import re
 import subprocess
 import sys
 import warnings
-from typing import TYPE_CHECKING, Annotated
+
+# Built-Ins
+from collections.abc import Collection, Hashable, Mapping
+from typing import TYPE_CHECKING, Annotated, ClassVar, Protocol
 
 # Third Party
 import psutil
@@ -36,8 +39,11 @@ import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
 
+from caf.toolkit import config_base
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from dataclasses import Field
     from types import TracebackType
     from typing import Any, Self
 
@@ -1010,3 +1016,130 @@ def capture_warnings(
 
     if file_handler_args is not None:
         warning_logger.addHandler(get_file_handler(**file_handler_args))
+
+
+class _Dataclass(Protocol):  # pylint: disable=too-few-public-methods
+    """Type annotation for an instance of any dataclass."""
+
+    __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
+
+
+_MetadataTypes = (
+    str
+    | int
+    | float
+    | bool
+    | pydantic.BaseModel
+    | _Dataclass
+    | Collection["_MetadataTypes"]
+    | Mapping[Hashable, "_MetadataTypes"]
+)
+
+
+def write_metadata(
+    output_path: pathlib.Path,
+    details: ToolDetails,
+    *,
+    datetime_comment: bool = True,
+    other_comment: str | None = None,
+    format_comment: bool = False,
+    **metadata: _MetadataTypes,
+) -> pathlib.Path:
+    """Write metadata YAML to specified path.
+
+    Parameters
+    ----------
+    output_path
+        Path to output location, if a folder is given
+        filename will be "metadata.yml".
+    details
+        Information about the current tool.
+    datetime_comment
+        Whether to include a comment at the top of the config
+        file with the current date and time (default True).
+    other_comment
+        Additional comments to add to the top of the config file,
+        "#" will be added to the start of each new line if it
+        isn't already there.
+    format_comment
+        Whether to remove newlines from `other_comment` and
+        format lines to a specific character length (default False).
+    **metadata
+        Any additional keyword arguments are used to define specific
+        items to include in the output metadata file. These can be
+        single values (str, int, etc.), collections of values or
+        dataclasses.
+
+    See Also
+    --------
+    :meth:`~caf.toolkit.BaseConfig.save_yaml`
+        for details on how the metadata is written to YAML.
+
+    Examples
+    --------
+    A basic example to write a simple metadata YAML file, with
+    an example of the text written.
+
+    >>> write_metadata(  # doctest: +SKIP
+    ...     path,
+    ...     ToolDetails("name", "0.1.0"),
+    ...     year=2026,
+    ...     project="Test Project",
+    ...     scenario="Test",
+    ...     parameters={"a": 1, "b": 2},
+    ... )
+
+    .. code-block:: yaml
+        :caption: Example of the metadata file created
+
+        # Metadata config written on 2026-01-23 at 14:44
+        tool_details:
+          name: test tool
+          version: 1.2.3
+          full_version: v1.2.3
+        system_information:
+          user: Test User
+          pc_name: Test PC
+          python_version: 3.0.0
+          operating_system: Test System 10 (10.0.1)
+          architecture: AMD64
+          processor: Intel64 Family 6 Model 85 Stepping 7, GenuineIntel
+          cpu_count: 10
+          total_ram: 30000
+        metadata:
+          year: 2026
+          project: Test Project
+          scenario: Test
+          parameters:
+            a: 1
+            b: 2
+    """
+
+    class Metadata(config_base.BaseConfig):
+        """Config class for saving the metadata."""
+
+        model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+        tool_details: ToolDetails
+        system_information: SystemInformation
+        metadata: dict
+
+    output_path = pathlib.Path(output_path)
+    if output_path.is_dir() or output_path.suffix == "":
+        path = output_path / "metadata.yml"
+    else:
+        path = output_path
+
+    if not path.parent.is_dir():
+        raise NotADirectoryError(f"missing parent directory for metadata: {path}")
+
+    meta = Metadata(
+        tool_details=details, system_information=SystemInformation.load(), metadata=metadata
+    )
+    meta.save_yaml(
+        path,
+        datetime_comment=datetime_comment,
+        other_comment=other_comment,
+        format_comment=format_comment,
+    )
+    return path
