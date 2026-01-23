@@ -16,19 +16,21 @@ TemporaryLogFile
 
 from __future__ import annotations
 
-# Built-Ins
 import contextlib
 import functools
 import getpass
 import logging
 import os
+import pathlib
 import platform
 import re
 import subprocess
 import sys
 import warnings
-from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+
+# Built-Ins
+from collections.abc import Collection, Hashable, Mapping
+from typing import TYPE_CHECKING, Annotated, ClassVar, Protocol
 
 # Third Party
 import psutil
@@ -41,6 +43,7 @@ from caf.toolkit.config_base import BaseConfig
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from dataclasses import Field
     from types import TracebackType
     from typing import Any, Self
 
@@ -1015,31 +1018,88 @@ def capture_warnings(
         warning_logger.addHandler(get_file_handler(**file_handler_args))
 
 
-def write_metadata(output_path: Path, details: ToolDetails, **metadata: Any) -> None:
-    """
-    Write metadata (tool details, system information and any user specified
-    metadata) out to a user specified path.
+class _Dataclass(Protocol):  # pylint: disable=too-few-public-methods
+    """Type annotation for an instance of any dataclass."""
+
+    __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
+
+
+_MetadataTypes = (
+    str
+    | int
+    | float
+    | bool
+    | pydantic.BaseModel
+    | _Dataclass
+    | Collection["_MetadataTypes"]
+    | Mapping[Hashable, "_MetadataTypes"]
+)
+
+
+def write_metadata(
+    output_path: pathlib.Path,
+    details: ToolDetails,
+    *,
+    datetime_comment: bool = True,
+    other_comment: str | None = None,
+    format_comment: bool = False,
+    **metadata: _MetadataTypes,
+) -> pathlib.Path:
+    """Write metadata YAML to specified path.
 
     Parameters
     ----------
-    output_path: Path to output location
-    details: Information about the current tool based on the ToolDetails
-             dataclass.
-    metadata: Keyword arguments passed, in any form, that create user specific
-              metadata e.g. dictionary with key value paris of date, project,
-              owner, stakeholders etc.
+    output_path
+        Path to output location, if a folder is given
+        filename will be "metadata.yml".
+    details
+        Information about the current tool.
+    datetime_comment
+        Whether to include a comment at the top of the config
+        file with the current date and time (default True).
+    other_comment
+        Additional comments to add to the top of the config file,
+        "#" will be added to the start of each new line if it
+        isn't already there.
+    format_comment
+        Whether to remove newlines from `other_comment` and
+        format lines to a specific character length (default False).
+    metadata
+        Keyword arguments passed that create user specific metadata
+        e.g. dictionary with key value paris of date, project,
+        owner, stakeholders etc.
+
+    See Also
+    --------
+    :meth:`~caf.toolkit.BaseConfig.save_yaml`
+        for details on how the metadata is written to YAML.
     """
 
-    class _Metadata(BaseConfig):
+    class Metadata(BaseConfig):
+        """Config class for saving the metadata."""
+
+        model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
         tool_details: ToolDetails
         system_information: SystemInformation
         metadata: dict
 
-    if not output_path:
-        raise ValueError("Path required to write metadata.")
-    sys_info = SystemInformation.load()
+    output_path = pathlib.Path(output_path)
+    if output_path.is_dir() or output_path.suffix == "":
+        path = output_path / "metadata.yml"
+    else:
+        path = output_path
 
-    yaml_file_path = os.path.join(output_path, "metadata.yaml")
-    _Metadata(system_information=sys_info, tool_details=details, metadata=metadata).save_yaml(
-        yaml_file_path
+    if not path.parent.is_dir():
+        raise NotADirectoryError(f"missing parent directory for metadata: {path}")
+
+    meta = Metadata(
+        tool_details=details, system_information=SystemInformation.load(), metadata=metadata
     )
+    meta.save_yaml(
+        path,
+        datetime_comment=datetime_comment,
+        other_comment=other_comment,
+        format_comment=format_comment,
+    )
+    return path

@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import subprocess
+import textwrap
 import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -23,7 +24,6 @@ import tqdm.contrib.logging
 
 # Local Imports
 from caf.toolkit import (
-    BaseConfig,
     LogHelper,
     SystemInformation,
     TemporaryLogFile,
@@ -822,89 +822,68 @@ class TestPackageFilter:
 
 
 class TestWriteMetadata:
-    """Test write metadata function"""
+    """Test :func:`write_metadata` function."""
 
-    def test_path_error(self):
-        """Testing if no path is provided, the correct error is raised"""
-        details = ToolDetails(
-            name="fake_tool",
-            version="1.0.0",
-            homepage="https://example.com",
-            source_url="https://github.com/example/repo",
-            full_version="v1.0.0",
-        )
-        with pytest.raises(ValueError, match="Path required to write metadata."):
-            write_metadata(output_path=None, details=details)
+    def test_missing_directory(self, log_init: LogInitDetails, tmp_path: pathlib.Path) -> None:
+        """Test an error is raised if the path points to a non-existing directory."""
+        path = tmp_path / "not a directory"
+        assert not path.is_dir(), "directory exists"
+        with pytest.raises(NotADirectoryError):
+            write_metadata(path, details=log_init)
 
-    def test_write_metadata_functionality(self, monkeypatch, tmp_path):
-        """Testing main functionality of write_metadata"""
-        info = SystemInformation(
-            user="test_user",
-            pc_name="test_pc",
-            python_version="3.2",
-            operating_system="Windows",
-            architecture="fake_architecture",
-            processor="fake_processor",
-            cpu_count=4,
-            total_ram=64,
-        )
-        monkeypatch.setattr(SystemInformation, "load", lambda: info)
-
-        details = ToolDetails(
-            name="fake_tool",
-            version="1.0.0",
-            homepage="https://example.com",
-            source_url="https://github.com/example/repo",
-            full_version="v1.0.0",
-        )
-
-        write_metadata(
-            output_path=tmp_path,
+    def test_basic(self, log_init: LogInitDetails, tmp_path: pathlib.Path) -> None:
+        """Test main functionality of `write_metadata`."""
+        details = log_init.details
+        system = log_init.system
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
             details=details,
+            datetime_comment=False,
             meta=1,
             meta1=[1, 2],
             meta2={"a": 1, "B": 2},
             meta3="string",
             meta4=2.0,
         )
+        assert path == returned
+        assert path.is_file()
 
-        expected = {
-            "tool_details": {
-                "name": "fake_tool",
-                "version": "1.0.0",
-                "homepage": "https://example.com",
-                "source_url": "https://github.com/example/repo",
-                "full_version": "v1.0.0",
-            },
-            "system_information": {
-                "user": "test_user",
-                "pc_name": "test_pc",
-                "python_version": "3.2",
-                "operating_system": "Windows",
-                "architecture": "fake_architecture",
-                "processor": "fake_processor",
-                "cpu_count": 4,
-                "total_ram": 64,
-            },
-            "metadata": {
-                "meta": 1,
-                "meta1": [1, 2],
-                "meta2": {"a": 1, "B": 2},
-                "meta3": "string",
-                "meta4": 2.0,
-            },
-        }
+        # None values will be excluded from the output metadata file
+        details_dict = {"name": details.name, "version": details.version}
+        for attr in ("homepage", "source_url", "full_version"):
+            value = getattr(details, attr)
+            if value is not None:
+                details_dict[attr] = value
 
-        class _Metadata(BaseConfig):
-            tool_details: ToolDetails
-            system_information: SystemInformation
-            metadata: dict
+        expected = f"""
+        tool_details:
+          name: {details.name}
+          version: {details.version}
+          full_version: {details.full_version}
+        system_information:
+          user: {system.user}
+          pc_name: {system.pc_name}
+          python_version: {system.python_version}
+          operating_system: {system.operating_system}
+          architecture: {system.architecture}
+          processor: {system.processor}
+          cpu_count: {system.cpu_count}
+          total_ram: {system.total_ram}
+        metadata:
+          meta: 1
+          meta1:
+          - 1
+          - 2
+          meta2:
+            a: 1
+            B: 2
+          meta3: string
+          meta4: 2.0
+        """
+        expected = textwrap.dedent(expected).strip()
 
-        meta_out = os.path.join(tmp_path, "metadata.yaml")
-        assert os.path.isfile(meta_out)
+        with path.open() as file:
+            text = file.read().strip()
 
-        text = _Metadata.load_yaml(meta_out)
-        if hasattr(text, "dict"):
-            # text = text.dict()
-            text = text.model_dump(mode="json")
         assert text == expected
