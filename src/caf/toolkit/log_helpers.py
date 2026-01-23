@@ -899,7 +899,7 @@ def get_logger(
     `get_file_handler()`
     `get_console_handler()`
     """
-    log_handlers = list()
+    log_handlers: list[logging.Handler] = list()
     if log_file_path is not None:
         log_handlers.append(get_file_handler(log_file_path))
 
@@ -950,8 +950,8 @@ def get_file_handler(
     fh_format: str = DEFAULT_FILE_FORMAT,
     datetime_format: str = DEFAULT_FILE_DATETIME,
     log_level: int = logging.DEBUG,
-) -> logging.StreamHandler:
-    """Create a console handles for a logger.
+) -> logging.FileHandler:
+    """Create a file handler for a logger.
 
     Parameters
     ----------
@@ -969,13 +969,8 @@ def get_file_handler(
 
     log_level:
         The logging level to give to the FileHandler.
-
-    Returns
-    -------
-    console_handler:
-        A logging.StreamHandler object using the format in ch_format.
     """
-    handler = logging.FileHandler(log_file)
+    handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
     return handler
