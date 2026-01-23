@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Front-end module for running toolkit functionality from command-line."""
 
 ##### IMPORTS #####
@@ -11,7 +10,6 @@ import logging
 import pathlib
 import sys
 import warnings
-from typing import Union
 
 # Third Party
 import pydantic
@@ -41,17 +39,17 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         default=pathlib.Path("translated.csv"),
         description="Location to save the translated output",
     )
-    from_column: Union[int, str] = pydantic.Field(
+    from_column: int | str = pydantic.Field(
         default=0,
         description="The column (name or position) in the translation"
         " file containing the zone ids to translate from",
     )
-    to_column: Union[int, str] = pydantic.Field(
+    to_column: int | str = pydantic.Field(
         default=1,
         description="The column (name or position) in the translation"
         " file containing the zone ids to translate to",
     )
-    factor_column: Union[int, str] = pydantic.Field(
+    factor_column: int | str = pydantic.Field(
         default=2,
         description="The column (name or position) in the translation"
         " file containing the weightings between from and to zones",
@@ -65,8 +63,7 @@ class _BaseTranslationArgs(config_base.BaseConfig):
         """
         columns = [self.from_column, self.to_column, self.factor_column]
 
-        # pylint: disable=unidiomatic-typecheck
-        if any(type(i) != type(columns[0]) for i in columns):
+        if any(type(i) is not type(columns[0]) for i in columns):
             raise TypeError(
                 "from_column, to_column and factor_column should all be either"
                 " a name or position, there cannot be a mix of names and"
@@ -81,49 +78,55 @@ class _BaseTranslationArgs(config_base.BaseConfig):
 class TranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for vector zone translation."""
 
-    zone_column: Union[int, str] = pydantic.Field(
+    zone_column: int | str = pydantic.Field(
         default=0,
         description="The column (name or position) in the data file containing the zone ids",
     )
 
-    def run(self):
+    def run(self) -> None:
         """Run vector zone translation with the given arguments."""
         translation.vector_translation_from_file(
             vector_path=self.data_file,
-            translation_path=self.translation_file,
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
+                self.translation_file,
+                from_col_name=self.from_column,
+                to_col_name=self.to_column,
+                factors_col_name=self.factor_column,
+            ),
             output_path=self.output_file,
             vector_zone_column=self.zone_column,
-            translation_from_column=self.from_column,
-            translation_to_column=self.to_column,
-            translation_factors_column=self.factor_column,
         )
 
 
 class MatrixTranslationArgs(_BaseTranslationArgs):
     """Command-line arguments for matrix zone translation."""
 
-    zone_column: tuple[Union[int, str], Union[int, str]] = pydantic.Field(
+    zone_column: tuple[int | str, int | str] = pydantic.Field(
         default=(0, 1),
         description="The 2 columns (name or position) in"
         " the matrix file containing the zone ids",
     )
-    value_column: Union[int, str] = pydantic.Field(
+    value_column: int | str = pydantic.Field(
         default=2,
         description="The column (name or position) in the"
         " CSV file containing the matrix values",
     )
 
-    def run(self):
+    def run(self) -> None:
         """Run matrix zone translation with the given arguments."""
         translation.matrix_translation_from_file(
             matrix_path=self.data_file,
-            translation_path=self.translation_file,
+            # PyLint doesn't recognise pydantic Field aliases
+            zone_correspondence_path=translation.ZoneCorrespondencePath(  # pylint: disable=unexpected-keyword-arg
+                self.translation_file,
+                from_col_name=self.from_column,
+                to_col_name=self.to_column,
+                factors_col_name=self.factor_column,
+            ),
             output_path=self.output_file,
             matrix_zone_columns=self.zone_column,
             matrix_values_column=self.value_column,
-            translation_from_column=self.from_column,
-            translation_to_column=self.to_column,
-            translation_factors_column=self.factor_column,
         )
 
     @pydantic.model_validator(mode="after")
@@ -134,8 +137,7 @@ class MatrixTranslationArgs(_BaseTranslationArgs):
         """
         columns = [*self.zone_column, self.value_column]
 
-        # pylint: disable=unidiomatic-typecheck
-        if any(type(i) != type(columns[0]) for i in columns):
+        if any(type(i) is not type(columns[0]) for i in columns):
             raise TypeError(
                 "zone_columns and value_column should all be either"
                 " a name or position, there cannot be a mix of names and"
@@ -165,7 +167,7 @@ def parse_args() -> TranslationArgs | MatrixTranslationArgs:
     return params
 
 
-def _create_arg_parser():
+def _create_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         __package__,
         description=ctk.__doc__,
@@ -208,7 +210,7 @@ def _create_arg_parser():
     return parser
 
 
-def main():
+def main() -> None:
     """Parser command-line arguments and run CAF.toolkit functionality."""
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=arguments.TypeAnnotationWarning)
@@ -216,24 +218,29 @@ def main():
 
     log_file = parameters.output_file.parent / "caf_toolkit.log"
     details = log_helpers.ToolDetails(
-        __package__, ctk.__version__, homepage=ctk.__homepage__, source_url=ctk.__source_url__
+        __package__,
+        ctk.__version__,
+        homepage=ctk.__homepage__,
+        source_url=ctk.__source_url__,
     )
 
-    with log_helpers.LogHelper(__package__, details, log_file=log_file):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "once",
-                message=r".*column positions are given instead of names.*",
-                category=UserWarning,
-            )
+    with (
+        log_helpers.LogHelper(__package__, details, log_file=log_file),
+        warnings.catch_warnings(),
+    ):
+        warnings.filterwarnings(
+            "once",
+            message=r".*column positions are given instead of names.*",
+            category=UserWarning,
+        )
 
-            try:
-                parameters.run()
-            except Exception as exc:
-                if _TRACEBACK:
-                    raise
-                # Switch to raising SystemExit as this doesn't include traceback
-                raise SystemExit(str(exc)) from exc
+        try:
+            parameters.run()
+        except Exception as exc:
+            if _TRACEBACK:
+                raise
+            # Switch to raising SystemExit as this doesn't include traceback
+            raise SystemExit(str(exc)) from exc
 
 
 if __name__ == "__main__":

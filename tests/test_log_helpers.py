@@ -1,42 +1,47 @@
-# -*- coding: utf-8 -*-
-"""
-Tests for the `log_helpers` module in caf.toolkit
-"""
+"""Tests for the `log_helpers` module in caf.toolkit."""
+
 from __future__ import annotations
 
 # Built-Ins
 import collections
 import dataclasses
+import functools
 import getpass
 import logging
 import os
-import pathlib
 import platform
 import subprocess
 import warnings
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 # Third Party
+import _pytest.logging
 import psutil
 import pydantic
 import pytest
+import tqdm.contrib.logging
 
 # Local Imports
 from caf.toolkit import (
+    BaseConfig,
     LogHelper,
     SystemInformation,
     TemporaryLogFile,
     ToolDetails,
     log_helpers,
-    BaseConfig
 )
 from caf.toolkit.log_helpers import (
+    _WARNINGS_LOGGER_NAME,
     LoggingWarning,
+    PackageFilter,
     capture_warnings,
     get_logger,
     git_describe,
-    write_metadata
+    write_metadata,
 )
+
+if TYPE_CHECKING:
+    import pathlib
 
 # # # Constants # # #
 _LOG_WARNINGS = [
@@ -170,22 +175,20 @@ def _log_messages(
         logger.log(i, msg)
         messages.append(msg)
 
-    return list(zip(levels, messages))
+    return list(zip(levels, messages, strict=True))
 
 
 def _load_log(log_file: pathlib.Path) -> str:
     """Assert log file exists and load the text."""
     assert log_file.is_file(), "log file not created"
-    with open(log_file, "rt", encoding="utf-8") as file:
-        text = file.read()
-
-    return text
+    with log_file.open("rt", encoding="utf-8") as file:
+        return file.read()
 
 
 def _run_warnings() -> None:
     """Run all warnings."""
     for msg, warn in _LOG_WARNINGS:
-        warnings.warn(msg, warn)
+        warnings.warn(msg, warn, stacklevel=2)
 
 
 def _check_warnings(text: str) -> None:
@@ -200,7 +203,7 @@ def _check_warnings(text: str) -> None:
 class TestGitDescribe:
     """Tests for `git_describe` function."""
 
-    def test_valid(self, monkeypatch: pytest.MonkeyPatch):
+    def test_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test function correctly returns the string result if command is successful."""
         describe = "v1.0-1-abc123"
 
@@ -211,7 +214,7 @@ class TestGitDescribe:
 
         assert git_describe() == describe
 
-    def test_invalid(self, monkeypatch: pytest.MonkeyPatch):
+    def test_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test None is returned whenever the subprocess returns a non-zero code."""
 
         def dummy_run(*_, **_kw) -> subprocess.CompletedProcess:
@@ -226,17 +229,28 @@ class TestToolDetails:
 
     @pytest.mark.parametrize(
         "version",
-        ["0.0.4", "1.2.3", "10.20.30", "1.1.2-prerelease+meta", "1.1.2+meta", "1.0.0-alpha"],
+        [
+            "0.0.4",
+            "1.2.3",
+            "10.20.30",
+            "1.1.2-prerelease+meta",
+            "1.1.2+meta",
+            "1.0.0-alpha",
+        ],
     )
     @pytest.mark.parametrize(
         "url",
-        ["https://www.github.com/", "http://www.github.com/", "http://github.com/", None],
+        [
+            "https://www.github.com/",
+            "http://www.github.com/",
+            "http://github.com/",
+            None,
+        ],
     )
     def test_valid(self, version: str, url: str | None) -> None:
         """Test valid values of version and homepage / source URLs."""
         # Not testing different values for name because there's no validation on it
-        # Ignoring mypy type stating str is incorrect type
-        ToolDetails("test_name", version, url, url)  # type: ignore
+        ToolDetails("test_name", version, url, url)
 
     @pytest.mark.parametrize("url", [None, "http://github.com"])
     def test_str(self, url: str | None) -> None:
@@ -267,20 +281,20 @@ class TestToolDetails:
                 f"full_version : {describe}"
             )
 
-        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct  # type: ignore
+        assert str(ToolDetails(name, version, url, url, full_version=describe)) == correct
 
     @pytest.mark.parametrize("version", ["1", "1.2", "1.1.2+.123", "alpha"])
     def test_invalid_versions(self, version: str) -> None:
         """Test correctly raise ValidationError for invalid versions."""
         url = "https://github.com"
         with pytest.raises(pydantic.ValidationError):
-            ToolDetails("test_name", version, url, url)  # type: ignore
+            ToolDetails("test_name", version, url, url)
 
     @pytest.mark.parametrize("url", ["github.com", "github", "www.github.com"])
     def test_invalid_urls(self, url: str) -> None:
         """Test correctly raise ValidationError for invalid homepage / source URLs."""
         with pytest.raises(pydantic.ValidationError):
-            ToolDetails("test_name", "1.2.3", url, url)  # type: ignore
+            ToolDetails("test_name", "1.2.3", url, url)
 
 
 class TestSystemInformation:
@@ -380,7 +394,11 @@ class TestLogHelper:
         assert not log_file.is_file(), "log file already exists"
 
         LogHelper(
-            "test", log_init.details, console=False, log_file=log_file, warning_capture=False
+            "test",
+            log_init.details,
+            console=False,
+            log_file=log_file,
+            warning_capture=False,
         )
 
         text = _load_log(log_file)
@@ -408,7 +426,7 @@ class TestLogHelper:
         level: str,
         answer: int,
     ) -> None:
-        """Test initialising the logger without a file."""
+        """Test logging messages and number of handlers correspond to correct level."""
         root = "log_level_test"
         logger = logging.getLogger(root)
         assert len(logger.handlers) == 0, "Too many loggers"
@@ -417,14 +435,30 @@ class TestLogHelper:
 
         with LogHelper(root, log_init.details) as log:
             assert len(log.logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(
-                log.logger.handlers[0], logging.StreamHandler
-            ), "incorrect stream handler"
+            assert isinstance(log.logger.handlers[0], logging.StreamHandler), (
+                "incorrect stream handler"
+            )
             assert log.logger.handlers[0].level == answer
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
 
-    def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
+    @pytest.mark.parametrize("console", [True, False])
+    def test_tqdm_redirect(self, log_init: LogInitDetails, console: bool) -> None:
+        """Test redirecting logging to tqdm adds the correct handler."""
+        root = "test_tqdm_redirect"
+        filter_handlers = functools.partial(
+            filter, lambda x: isinstance(x, tqdm.contrib.logging._TqdmLoggingHandler)
+        )
+
+        expected = 1 if console else 0
+        with LogHelper(root, log_init.details, console=console) as log:
+            assert len(list(filter_handlers(log.logger.handlers))) == expected
+            assert len(list(filter_handlers(log._warning_logger.handlers))) == expected
+
+    @pytest.mark.parametrize("message", ["no emojis", "emojis 👍😀"])
+    def test_basic_file(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails, message: str
+    ) -> None:
         """Test logging to file within `with` statement.
 
         Tests all log calls within `with` statement are logged to file
@@ -435,13 +469,21 @@ class TestLogHelper:
         log_file = tmp_path / "test.log"
 
         with LogHelper(
-            root, log_init.details, console=False, log_file=log_file, warning_capture=False
+            root,
+            log_init.details,
+            console=False,
+            log_file=log_file,
+            warning_capture=False,
         ):
-            messages = _log_messages(log, "testing level {level} - test basic file")
+            messages = _log_messages(
+                log, f"testing level {{level}} - test basic file - {message}"
+            )
 
         # Messages logged after the log helper class has
         # cleaned up so shouldn't be saved to file
-        unlogged_messages = _log_messages(log, "not logging this message for level {level}")
+        unlogged_messages = _log_messages(
+            log, f"not logging this message for level {{level}} - {message}"
+        )
 
         text = _load_log(log_file)
 
@@ -453,15 +495,15 @@ class TestLogHelper:
 
     def test_handler_cleanup(self, log_init: LogInitDetails) -> None:
         """Test handlers are added to logger and removed upon exiting with statement."""
-        root = "test"
+        root = "test.test_handler_cleanup"
         logger = logging.getLogger(root)
         assert logger.handlers == [], "logger already has handlers"
 
         with LogHelper(root, log_init.details):
             assert len(logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(
-                logger.handlers[0], logging.StreamHandler
-            ), "incorrect stream handler"
+            assert isinstance(logger.handlers[0], logging.StreamHandler), (
+                "incorrect stream handler"
+            )
 
         assert len(logger.handlers) == 0, "handlers not cleaned up"
 
@@ -470,19 +512,22 @@ class TestLogHelper:
         self, log_init: LogInitDetails, warnings_logger: logging.Logger
     ) -> None:
         """Test file handler is added to warnings logger."""
-        with LogHelper("test", log_init.details):
+        with LogHelper("test.warnings", log_init.details):
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(
-                warnings_logger.handlers[0], logging.StreamHandler
-            ), "error with stream handler"
+            assert isinstance(warnings_logger.handlers[0], logging.StreamHandler), (
+                "error with stream handler"
+            )
 
         assert len(warnings_logger.handlers) == 0, "incorrect handler cleanup"
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     def test_setup_warnings_file_handler(
-        self, tmp_path: pathlib.Path, log_init: LogInitDetails, warnings_logger: logging.Logger
+        self,
+        tmp_path: pathlib.Path,
+        log_init: LogInitDetails,
+        warnings_logger: logging.Logger,
     ) -> None:
         """Test file handler is added to warnings logger and log file is created."""
         log_file = tmp_path / "test.log"
@@ -493,9 +538,9 @@ class TestLogHelper:
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-            assert isinstance(
-                warnings_logger.handlers[0], logging.FileHandler
-            ), "error with file handler"
+            assert isinstance(warnings_logger.handlers[0], logging.FileHandler), (
+                "error with file handler"
+            )
 
         assert log_file.is_file(), "log file not created"
 
@@ -518,17 +563,23 @@ class TestLogHelper:
 
     def test_no_handlers_warning(self, log_init: LogInitDetails) -> None:
         """Test LogHelper warns when no handlers are defined."""
-        with pytest.warns(
-            LoggingWarning, match="LogHelper initialised without any logging handlers"
-        ):
-            with LogHelper(
+        with (
+            pytest.warns(
+                LoggingWarning,
+                match="LogHelper initialised without any logging handlers",
+            ),
+            LogHelper(
                 "test", log_init.details, console=False, warning_capture=False
-            ) as helper:
-                assert helper.logger.handlers == [], "incorrect handlers"
+            ) as helper,
+        ):
+            assert helper.logger.handlers == [], "incorrect handlers"
 
     @pytest.mark.parametrize("warning_capture", [False, True])
     def test_add_handler(
-        self, log_init: LogInitDetails, warning_capture: bool, warnings_logger: logging.Logger
+        self,
+        log_init: LogInitDetails,
+        warning_capture: bool,
+        warnings_logger: logging.Logger,
     ) -> None:
         """Test creating LogHelper without loggers and adding StreamHandler after."""
         # pylint: disable=protected-access
@@ -548,11 +599,37 @@ class TestLogHelper:
                 assert helper.logger.handlers == [stream], "list of handlers is incorrect"
 
                 if warning_capture:
-                    assert warnings_logger.handlers == [
-                        stream
-                    ], "handler not added to warnings logger"
+                    assert warnings_logger.handlers == [stream], (
+                        "handler not added to warnings logger"
+                    )
                 else:
                     assert warnings_logger.handlers == [], "handlers added to warnings logger"
+
+    def test_package_filters(self, log_init: LogInitDetails) -> None:
+        """Test PackageFilter is added to handlers correctly."""
+        root = ""
+        allowed = ["test"]
+        filter_ = PackageFilter(allowed)
+        # Handlers added for testing purposes can be ignored
+        pytest_handlers = (
+            # pylint: disable=protected-access
+            _pytest.logging._LiveLoggingNullHandler,
+            _pytest.logging._FileHandler,
+            _pytest.logging.LogCaptureHandler,
+        )
+
+        with LogHelper(root, log_init.details, allowed_packages=allowed):
+            warn_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
+            root_logger = logging.getLogger(root)
+
+            for logger in (root_logger, warn_logger):
+                assert len(logger.handlers) > len(pytest_handlers)
+                for handler in logger.handlers:
+                    if isinstance(handler, pytest_handlers):
+                        continue
+
+                    msg = f"missing on {logger.name} logger {type(handler)}"
+                    assert handler.filters == [filter_], msg
 
 
 class TestTemporaryLogFile:
@@ -593,9 +670,9 @@ class TestGetLogger:
         logger = get_logger(logger_name, "1.2.3")
 
         assert logger.name == logger_name, "incorrect logger name"
-        assert isinstance(
-            logger.handlers[0], logging.StreamHandler
-        ), "incorrect stream handler"
+        assert isinstance(logger.handlers[0], logging.StreamHandler), (
+            "incorrect stream handler"
+        )
 
     def test_file_handler(self, tmp_path: pathlib.Path) -> None:
         """Test file handler is added and log file is created."""
@@ -632,9 +709,9 @@ class TestCaptureWarnings:
         capture_warnings()
 
         assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-        assert isinstance(
-            warnings_logger.handlers[0], logging.StreamHandler
-        ), "error with stream handler"
+        assert isinstance(warnings_logger.handlers[0], logging.StreamHandler), (
+            "error with stream handler"
+        )
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     def test_file_handler_logger(
@@ -651,9 +728,9 @@ class TestCaptureWarnings:
         assert log_file.is_file(), "log file not created"
 
         assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
-        assert isinstance(
-            warnings_logger.handlers[0], logging.FileHandler
-        ), "error with file handler"
+        assert isinstance(warnings_logger.handlers[0], logging.FileHandler), (
+            "error with file handler"
+        )
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     @pytest.mark.skip(
@@ -687,10 +764,61 @@ class TestCaptureWarnings:
 
         assert log_file.is_file(), "log file not created"
 
-        with open(log_file, "rt", encoding="utf-8") as file:
+        with log_file.open("rt", encoding="utf-8") as file:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestPackageFilter:
+    """Tests for PackageFilter class."""
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test1", "test2"]])
+    def test_eq(self, allowed: list[str]) -> None:
+        """Test `__eq__` method works when equal."""
+        filter_ = PackageFilter(allowed)
+        assert filter_ == filter_  # noqa: PLR0124 pylint: disable=comparison-with-itself
+        assert filter_ == PackageFilter(allowed)
+
+    def test_not_eq(self) -> None:
+        """Test `__eq__` method works when not equal."""
+        assert PackageFilter(["test"]) != PackageFilter(["test2"])
+        assert PackageFilter(["test"]) != "test"
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test.test2", "test3.test"]])
+    @pytest.mark.parametrize("level", [logging.DEBUG, logging.CRITICAL])
+    def test_filter(self, allowed: list[str], level: int) -> None:
+        """Test filter method correctly returns true."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        for name in allowed:
+            assert filter_.filter(logging.LogRecord(name=name, level=level, **kwargs))
+            # Check sub-modules work
+            assert filter_.filter(
+                logging.LogRecord(name=f"{name}.extra", level=level, **kwargs)
+            )
+
+    @pytest.mark.parametrize("allowed", [["test", "invalid"], ["invalid"]])
+    def test_filter_false(self, allowed: list[str]) -> None:
+        """Test `filter` method correctly returns false."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "level": logging.info,
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        assert not filter_.filter(logging.LogRecord("test1.invalid", **kwargs))
 
 
 class TestWriteMetadata:
@@ -703,21 +831,23 @@ class TestWriteMetadata:
             version="1.0.0",
             homepage="https://example.com",
             source_url="https://github.com/example/repo",
-            full_version="v1.0.0"
+            full_version="v1.0.0",
         )
         with pytest.raises(ValueError, match="Path required to write metadata."):
             write_metadata(output_path=None, details=details)
 
     def test_write_metadata_functionality(self, monkeypatch, tmp_path):
         """Testing main functionality of write_metadata"""
-        info = SystemInformation(user="test_user",
+        info = SystemInformation(
+            user="test_user",
             pc_name="test_pc",
             python_version="3.2",
             operating_system="Windows",
             architecture="fake_architecture",
             processor="fake_processor",
             cpu_count=4,
-            total_ram=64)
+            total_ram=64,
+        )
         monkeypatch.setattr(SystemInformation, "load", lambda: info)
 
         details = ToolDetails(
@@ -725,35 +855,45 @@ class TestWriteMetadata:
             version="1.0.0",
             homepage="https://example.com",
             source_url="https://github.com/example/repo",
-            full_version="v1.0.0"
+            full_version="v1.0.0",
         )
 
-        write_metadata(output_path=tmp_path,
-                       details=details,
-                       meta=1,
-                       meta1=[1, 2],
-                       meta2={"a": 1, "B": 2},
-                       meta3="string",
-                       meta4=2.0)
+        write_metadata(
+            output_path=tmp_path,
+            details=details,
+            meta=1,
+            meta1=[1, 2],
+            meta2={"a": 1, "B": 2},
+            meta3="string",
+            meta4=2.0,
+        )
 
-        expected = {"tool_details": {"name": "fake_tool",
-                                     "version": "1.0.0",
-                                     "homepage": "https://example.com",
-                                     "source_url": "https://github.com/example/repo",
-                                     "full_version": "v1.0.0"},
-                    "system_information": {"user": "test_user",
-                                           "pc_name": "test_pc",
-                                           "python_version": "3.2",
-                                           "operating_system": "Windows",
-                                           "architecture": "fake_architecture",
-                                           "processor": "fake_processor",
-                                           "cpu_count": 4,
-                                           "total_ram": 64},
-                    "metadata": {"meta": 1,
-                                 "meta1": [1, 2],
-                                 "meta2": {"a": 1, "B": 2},
-                                 "meta3": "string",
-                                 "meta4": 2.0}}
+        expected = {
+            "tool_details": {
+                "name": "fake_tool",
+                "version": "1.0.0",
+                "homepage": "https://example.com",
+                "source_url": "https://github.com/example/repo",
+                "full_version": "v1.0.0",
+            },
+            "system_information": {
+                "user": "test_user",
+                "pc_name": "test_pc",
+                "python_version": "3.2",
+                "operating_system": "Windows",
+                "architecture": "fake_architecture",
+                "processor": "fake_processor",
+                "cpu_count": 4,
+                "total_ram": 64,
+            },
+            "metadata": {
+                "meta": 1,
+                "meta1": [1, 2],
+                "meta2": {"a": 1, "B": 2},
+                "meta3": "string",
+                "meta4": 2.0,
+            },
+        }
 
         class _Metadata(BaseConfig):
             tool_details: ToolDetails

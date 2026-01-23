@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for creating and managing a logger.
 
@@ -14,41 +13,53 @@ TemporaryLogFile
     Context manager for adding a log file handler to a logger and
     removing it when done.
 """
+
 from __future__ import annotations
 
 # Built-Ins
+import contextlib
 import functools
 import getpass
 import logging
 import os
 import platform
+import re
 import subprocess
 import sys
 import warnings
-from typing import Annotated, Any, Iterable, Optional
 from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 
 # Third Party
 import psutil
 import pydantic
+import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
+
 from caf.toolkit.config_base import BaseConfig
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+    from types import TracebackType
+    from typing import Any, Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
 DEFAULT_CONSOLE_DATETIME = "%H:%M:%S"
 DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s"
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
+LOG = logging.getLogger(__name__)
+_WARNINGS_LOGGER_NAME = "py.warnings"
 
 # Get lookup between name of level and integer value
-# pylint: disable=no-member,protected-access
-if sys.version_info.minor <= 10:
-    _LEVEL_LOOKUP: dict[str, int] = logging._nameToLevel.copy()
+_LEVEL_LOOKUP: dict[str, int]
+if sys.version_info.minor <= 10:  # noqa: PLR2004
+    # pylint: disable=protected-access
+    _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
     # getLevelNamesMapping added to logging in v3.11
-    _LEVEL_LOOKUP: dict[str, int] = logging.getLevelNamesMapping()  # type: ignore
-# pylint: enable=no-member,protected-access
+    _LEVEL_LOOKUP = logging.getLevelNamesMapping()  # pylint: disable=no-member
 
 # # # ENVIRONMENT VARIABLE # # #
 _CAF_LOG_LEVEL = os.getenv("CAF_LOG_LEVEL", "INFO")
@@ -72,12 +83,32 @@ class LoggingWarning(Warning):
 def git_describe() -> str | None:
     """Run git describe command and return string if successful."""
     cmd = ["git", "describe", "--tags", "--always", "--dirty", "--broken", "--long"]
-    comp = subprocess.run(cmd, shell=True, timeout=1, check=False, stdout=subprocess.PIPE)
-
-    if comp.returncode != 0:
+    try:
+        comp = subprocess.run(  # noqa: S602
+            cmd, shell=True, timeout=1, check=False, capture_output=True
+        )
+    except subprocess.TimeoutExpired:
+        LOG.debug("git describe command timed out")
         return None
 
-    return comp.stdout.decode().strip()
+    if comp.stdout is not None:
+        stdout = comp.stdout.decode().strip()
+    else:
+        stdout = None
+
+    if comp.returncode != 0:
+        stderr = None
+        if comp.stderr is not None:
+            stderr = comp.stderr.decode().strip()
+        if stderr is None or stderr == "":
+            stderr = stdout
+
+        LOG.debug("git describe command failed: %s", stderr)
+        return None
+
+    if stdout is None:
+        raise ValueError("unexpected error in git describe command")
+    return stdout
 
 
 @dataclasses.dataclass
@@ -106,9 +137,9 @@ class ToolDetails:
     ]
     """Version of the tool, should be in semantic versioning
     format https://semver.org/."""
-    homepage: Optional[pydantic.HttpUrl] = None
+    homepage: Annotated[str, pydantic.AfterValidator(pydantic.HttpUrl)] | None = None
     """URL of the homepage for the tool."""
-    source_url: Optional[pydantic.HttpUrl] = None
+    source_url: Annotated[str, pydantic.AfterValidator(pydantic.HttpUrl)] | None = None
     """URL of the source code repository for the tool."""
     full_version: str | None = pydantic.Field(default_factory=git_describe)
     """Full version from git describe output, None if git command fails.
@@ -129,7 +160,8 @@ class ToolDetails:
         # pylint false positive for __dataclass_fields__ no-member
         # pylint: disable=no-member
         length = functools.reduce(
-            max, (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None)
+            max,
+            (len(i) for i in self.__dataclass_fields__ if getattr(self, i) is not None),
         )
 
         for name in self.__dataclass_fields__:
@@ -178,9 +210,9 @@ class SystemInformation:
     """Name of the machine architecture e.g. "AMD64"."""
     processor: str
     """Name of the processor e.g. "Intel64 Family 6 Model 85 Stepping 7, GenuineIntel"."""
-    cpu_count: Optional[int]
+    cpu_count: int | None
     """Number of logical CPU cores on the machine."""
-    total_ram: Optional[int]
+    total_ram: int | None
     """Total virtual memory (bytes) on the machine."""
 
     @classmethod
@@ -250,6 +282,16 @@ class LogHelper:
         settings.
     warning_capture
         If True (default) capture, and log, Python warnings.
+    redirect
+        If False disable redirecting console handler to :mod:`tqdm`,
+        redirects when entering context manager.
+
+    .. attention::
+        :mod:`tqdm` redirection happens upon entering context manager.
+        If using :meth:`add_console_handler` or :meth:`capture_warnings`,
+        and :mod:`tqdm` then the redirect should be done manually using
+        :func:`tqdm.contrib.logging.logging_redirect_tqdm`.
+
 
     Examples
     --------
@@ -279,7 +321,7 @@ class LogHelper:
     and tool information to it automatically.
 
     >>> # Temp directory for testing purposes
-    >>> tmp_path = getfixture('tmp_path')
+    >>> tmp_path = getfixture("tmp_path")
     >>> path = tmp_path / "test.log"
     >>> details = ToolDetails("test", "1.2.3")
     >>>
@@ -303,6 +345,25 @@ class LogHelper:
     ...
     ...     # Write initialisation log message with system and tool information
     ...     log_helper.write_instantiate_message()
+
+    **Tqdm**
+
+    `tqdm <https://tqdm.github.io/>`_ is a third-party package used in caf.toolkit for handling
+    console progress bars, :class:`LogHelper` will redirect to :class:`tqdm` during
+    initialisation. If additional handlers are added after initialisation, through
+    :meth:`add_console_handler` or :meth:`capture_warnings` then the redirecting will need to
+    be done using :func:`tqdm.contrib.logging.logging_redirect_tqdm` after initialisation.
+
+    >>> import tqdm.contrib.logging
+
+    >>> with LogHelper(__package__, details, console=False) as log_helper:
+    ...     # Console handler with custom message format
+    ...     log_helper.add_console_handler(ch_format="[%(levelname)-8.8s] %(message)s")
+    ...
+    ...     # Setup tqdm redirect
+    ...     with tqdm.contrib.logging.logging_redirect_tqdm(log_helper.loggers):
+    ...         # Write initialisation log message with system and tool information
+    ...         log_helper.write_instantiate_message()
     """
 
     def __init__(
@@ -313,7 +374,9 @@ class LogHelper:
         console: bool = True,
         log_file: os.PathLike | None = None,
         warning_capture: bool = True,
-    ):
+        allowed_packages: Sequence[str] | None = None,
+        redirect: bool = True,
+    ) -> None:
         self.logger_name = str(root_logger)
         self.logger = logging.getLogger(self.logger_name)
 
@@ -321,6 +384,13 @@ class LogHelper:
 
         self.tool_details = tool_details
         self._warning_logger: logging.Logger | None = None
+        self._stack: contextlib.ExitStack | None = None
+        self._redirect = redirect
+
+        if allowed_packages is None:
+            self.package_filter = None
+        else:
+            self.package_filter = PackageFilter(allowed_packages)
 
         if console:
             level = _CAF_LOG_LEVEL.upper().strip()
@@ -330,8 +400,12 @@ class LogHelper:
                 self.add_console_handler(log_level=logging.INFO)
                 warnings.warn(
                     "The Environment constant 'CAF_LOG_LEVEL' should either be"
-                    " set to 'debug', 'info', 'warning', 'error', 'critical'."
+                    " set to 'debug', 'info', 'warning', 'error', 'critical'.",
+                    stacklevel=2,
                 )
+        else:
+            # Cannot redirect if not using a console handler
+            self._redirect = False
 
         if log_file is not None:
             self.add_file_handler(log_file)
@@ -344,6 +418,7 @@ class LogHelper:
                 "`logging.basicConfig` will be called with default parameters "
                 "at first log attempt if no handlers are added before that.",
                 LoggingWarning,
+                stacklevel=2,
             )
 
         if warning_capture:
@@ -360,6 +435,9 @@ class LogHelper:
         handler : logging.Handler
             Handler to add.
         """
+        if self.package_filter is not None:
+            handler.addFilter(self.package_filter)
+
         self.logger.addHandler(handler)
 
         if self._warning_logger is not None:
@@ -438,7 +516,7 @@ class LogHelper:
         """
         logging.captureWarnings(True)
 
-        self._warning_logger = logging.getLogger("py.warnings")
+        self._warning_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
 
         for handler in self.logger.handlers:
             if handler in self._warning_logger.handlers:
@@ -470,20 +548,69 @@ class LogHelper:
         if self._warning_logger is not None:
             self._cleanup_handlers(self._warning_logger)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Initialise class with 'with' statement."""
+        if self._redirect:
+            self._redirect_console()
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb):
+    def _redirect_console(self) -> None:
+        """Add tqdm's logging redirect to context stack.
+
+        Sets correct log level for tqdm handlers to fix
+        `tqdm issue 1272 <https://github.com/tqdm/tqdm/issues/1272>`_.
+        """
+        if self._stack is None:
+            self._stack = contextlib.ExitStack()
+
+        stdout = {sys.stdout, sys.stderr}
+        original = next(
+            filter(
+                lambda x: isinstance(x, logging.StreamHandler) and x.stream in stdout,
+                self.logger.handlers,
+            )
+        )
+        self._stack.enter_context(tqdm_log.logging_redirect_tqdm(self.loggers))
+
+        # Accessing tqdm internals to fix tqdm bug https://github.com/tqdm/tqdm/issues/1272
+        class_ = tqdm_log._TqdmLoggingHandler  # pylint: disable=protected-access
+
+        for logger in self.loggers:
+            for handler in logger.handlers:
+                if isinstance(handler, class_):
+                    handler.setLevel(original.level)
+                    for filter_ in original.filters:
+                        handler.addFilter(filter_)
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Write any error to the logger and closes the file."""
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         else:
             self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
+        if self._stack is not None:
+            self._stack.__exit__(exc_type, exc, exc_tb)
+
         self.cleanup_handlers()
         logging.shutdown()
+
+    @property
+    def loggers(self) -> tuple[logging.Logger, ...]:
+        """Loggers managed by :class:`LogHelper`."""
+        loggers = [self.logger]
+        if self._warning_logger is not None:
+            loggers.append(self._warning_logger)
+        return tuple(loggers)
 
 
 class TemporaryLogFile:
@@ -525,7 +652,7 @@ class TemporaryLogFile:
 
     The code below is defining the log file path for testing purposes.
 
-    >>> log_file = getfixture('tmp_path') / "test.log"
+    >>> log_file = getfixture("tmp_path") / "test.log"
 
     Setting up a new temporary log file for a single module can be done
     using the following:
@@ -567,19 +694,62 @@ class TemporaryLogFile:
         """Initialise TemporaryLogFile."""
         return self
 
-    def __exit__(self, exc_type, exc, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Close temporary log file."""
         # pylint: disable=invalid-name
         if exc_type is not None or exc is not None or exc_tb is not None:
-            self.logger.critical("Oh no a critical error occurred", exc_info=True)
-
+            self.logger.critical(
+                "Oh no a critical error occurred",
+                exc_info=True,  # noqa: LOG014
+            )
         self.logger.removeHandler(self.handler)
         self.logger.debug('Closed temporary log file: "%s"', self.log_file)
 
 
+class PackageFilter(logging.Filter):
+    """Logging filter which only allows given packages (and sub-packages)."""
+
+    def __init__(self, allowed_pkgs: Sequence[str]) -> None:
+        super().__init__()
+
+        pkgs = set(str(i).lower().strip() for i in allowed_pkgs)
+
+        # Build package match pattern
+        pkg_str = "|".join(re.escape(i) for i in pkgs)
+        self._pattern = re.compile(rf"^({pkg_str})(\..*)*$", re.IGNORECASE)
+
+        LOG.debug("Setup logging package filter with regex: %r", self._pattern.pattern)
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D102 parent has docstring
+        matched = self._pattern.match(record.name.strip())
+        return matched is not None
+
+    def __eq__(
+        self,
+        value: Any,  # noqa: ANN401
+    ) -> bool:
+        """Check if filter pattern is the same."""
+        if value is self:
+            return True
+        if not isinstance(value, self.__class__):
+            return False
+        return self._pattern == value._pattern
+
+    def __hash__(self) -> int:
+        """Hash of package constraint RegEx."""
+        return hash(self._pattern)
+
+
 # # # FUNCTIONS # # #
 def write_information(
-    logger: logging.Logger, tool_details: ToolDetails | None = None, system_info: bool = True
+    logger: logging.Logger,
+    tool_details: ToolDetails | None = None,
+    system_info: bool = True,
 ) -> None:
     """Write tool and system information to `logger`.
 
@@ -634,8 +804,8 @@ def write_instantiate_message(
 def get_custom_logger(
     logger_name: str,
     code_version: str,
-    instantiate_msg: Optional[str] = None,
-    log_handlers: Optional[Iterable[logging.Handler]] = None,
+    instantiate_msg: str | None = None,
+    log_handlers: Iterable[logging.Handler] | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -690,8 +860,8 @@ def get_logger(
     logger_name: str,
     code_version: str,
     console_handler: bool = True,
-    instantiate_msg: Optional[str] = None,
-    log_file_path: Optional[os.PathLike] = None,
+    instantiate_msg: str | None = None,
+    log_file_path: os.PathLike | None = None,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -732,7 +902,7 @@ def get_logger(
     `get_file_handler()`
     `get_console_handler()`
     """
-    log_handlers = list()
+    log_handlers: list[logging.Handler] = list()
     if log_file_path is not None:
         log_handlers.append(get_file_handler(log_file_path))
 
@@ -783,8 +953,8 @@ def get_file_handler(
     fh_format: str = DEFAULT_FILE_FORMAT,
     datetime_format: str = DEFAULT_FILE_DATETIME,
     log_level: int = logging.DEBUG,
-) -> logging.StreamHandler:
-    """Create a console handles for a logger.
+) -> logging.FileHandler:
+    """Create a file handler for a logger.
 
     Parameters
     ----------
@@ -802,13 +972,8 @@ def get_file_handler(
 
     log_level:
         The logging level to give to the FileHandler.
-
-    Returns
-    -------
-    console_handler:
-        A logging.StreamHandler object using the format in ch_format.
     """
-    handler = logging.FileHandler(log_file)
+    handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setLevel(log_level)
     handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
     return handler
@@ -816,8 +981,8 @@ def get_file_handler(
 
 def capture_warnings(
     stream_handler: bool = True,
-    stream_handler_args: Optional[dict[str, Any]] = None,
-    file_handler_args: Optional[dict[str, Any]] = None,
+    stream_handler_args: dict[str, Any] | None = None,
+    file_handler_args: dict[str, Any] | None = None,
 ) -> None:
     """Capture warnings using logging.
 
@@ -875,6 +1040,6 @@ def write_metadata(output_path: Path, details: ToolDetails, **metadata: Any) -> 
     sys_info = SystemInformation.load()
 
     yaml_file_path = os.path.join(output_path, "metadata.yaml")
-    _Metadata(system_information=sys_info,
-              tool_details=details,
-              metadata=metadata).save_yaml(yaml_file_path)
+    _Metadata(system_information=sys_info, tool_details=details, metadata=metadata).save_yaml(
+        yaml_file_path
+    )
