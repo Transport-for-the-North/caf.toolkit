@@ -39,7 +39,7 @@ import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
 
-from caf.toolkit.config_base import BaseConfig
+from caf.toolkit import config_base
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -1064,18 +1064,58 @@ def write_metadata(
     format_comment
         Whether to remove newlines from `other_comment` and
         format lines to a specific character length (default False).
-    metadata
-        Keyword arguments passed that create user specific metadata
-        e.g. dictionary with key value paris of date, project,
-        owner, stakeholders etc.
+    **metadata
+        Any additional keyword arguments are used to define specific
+        items to include in the output metadata file. These can be
+        single values (str, int, etc.), collections of values or
+        dataclasses.
 
     See Also
     --------
     :meth:`~caf.toolkit.BaseConfig.save_yaml`
         for details on how the metadata is written to YAML.
+
+    Examples
+    --------
+    A basic example to write a simple metadata YAML file, with
+    an example of the text written.
+
+    >>> write_metadata(  # doctest: +SKIP
+    ...     path,
+    ...     ToolDetails("name", "0.1.0"),
+    ...     year=2026,
+    ...     project="Test Project",
+    ...     scenario="Test",
+    ...     parameters={"a": 1, "b": 2},
+    ... )
+
+    .. code-block:: yaml
+        :caption: Example of the metadata file created
+
+        # Metadata config written on 2026-01-23 at 14:44
+        tool_details:
+          name: test tool
+          version: 1.2.3
+          full_version: v1.2.3
+        system_information:
+          user: Test User
+          pc_name: Test PC
+          python_version: 3.0.0
+          operating_system: Test System 10 (10.0.1)
+          architecture: AMD64
+          processor: Intel64 Family 6 Model 85 Stepping 7, GenuineIntel
+          cpu_count: 10
+          total_ram: 30000
+        metadata:
+          year: 2026
+          project: Test Project
+          scenario: Test
+          parameters:
+            a: 1
+            b: 2
     """
 
-    class Metadata(BaseConfig):
+    class Metadata(config_base.BaseConfig):
         """Config class for saving the metadata."""
 
         model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
