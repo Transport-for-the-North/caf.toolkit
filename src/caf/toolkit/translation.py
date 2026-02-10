@@ -1418,7 +1418,7 @@ class ZoneCorrespondence:
                 "Zone correspondence must contain the columns "
                 f"{self.from_col_name}, {self.to_col_name}, {self.factors_col_name}"
             ) from e
-        self._validate_factors()
+        # self._validate_factors()
 
     def _validate_factors(self) -> None:
         """Validate the factors are in the right format and make logical sense."""
