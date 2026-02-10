@@ -5,18 +5,22 @@ from __future__ import annotations
 # Built-Ins
 import collections
 import dataclasses
+import functools
 import getpass
 import logging
 import os
 import platform
 import subprocess
+import textwrap
 import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
 # Third Party
+import _pytest.logging
 import psutil
 import pydantic
 import pytest
+import tqdm.contrib.logging
 
 # Local Imports
 from caf.toolkit import (
@@ -27,10 +31,13 @@ from caf.toolkit import (
     log_helpers,
 )
 from caf.toolkit.log_helpers import (
+    _WARNINGS_LOGGER_NAME,
     LoggingWarning,
+    PackageFilter,
     capture_warnings,
     get_logger,
     git_describe,
+    write_metadata,
 )
 
 if TYPE_CHECKING:
@@ -131,18 +138,48 @@ def fixture_monkeypatch_total_ram(
     return ram, readable
 
 
+@pytest.fixture(name="total_hardcoded_ram")
+def fixture_monkeypatch_total_hardcoded_ram(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[int, str]:
+    """Monkeypatch `psutil.virtual_memory()` to return constant."""
+    memory = collections.namedtuple("memory", ["total"])
+
+    ram = 30_000
+    value = memory(ram)
+    readable = "29.3K"
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: value)
+    return ram, readable
+
+
 @pytest.fixture(name="log_init")
-def fixture_log_init() -> LogInitDetails:
+def fixture_log_init(
+    username: str,
+    python_version: str,
+    uname: UnameResult,
+    total_hardcoded_ram: tuple[int, str],
+    cpu_count: int,
+) -> LogInitDetails:
     """Initialise details for `LogHelper` tests."""
     name = "test tool"
 
-    details = ToolDetails(name, "1.2.3")
-    info = SystemInformation.load()
+    details = ToolDetails(name, "1.2.3", full_version="v0.12.0-79-gb30266b-dirty")
+    uname = SystemInformation(
+        user=username,
+        pc_name=uname.node,
+        python_version=python_version,
+        operating_system=f"{uname.system} {uname.release} ({uname.version})",
+        architecture=uname.machine,
+        processor=uname.processor,
+        cpu_count=cpu_count,
+        total_ram=total_hardcoded_ram[0],
+    )
 
     msg = f"***  {name}  ***"
     init_message = ["", "*" * len(msg), msg, "*" * len(msg)]
 
-    return LogInitDetails(details, f"\n{details}", info, f"\n{info}", init_message)
+    return LogInitDetails(details, f"\n{details}", uname, f"\n{uname}", init_message)
 
 
 @pytest.fixture(name="warnings_logger")
@@ -419,7 +456,7 @@ class TestLogHelper:
         level: str,
         answer: int,
     ) -> None:
-        """Test initialising the logger without a file."""
+        """Test logging messages and number of handlers correspond to correct level."""
         root = "log_level_test"
         logger = logging.getLogger(root)
         assert len(logger.handlers) == 0, "Too many loggers"
@@ -435,7 +472,23 @@ class TestLogHelper:
 
         assert len(log.logger.handlers) == 0, "handlers not cleaned up"
 
-    def test_basic_file(self, tmp_path: pathlib.Path, log_init: LogInitDetails) -> None:
+    @pytest.mark.parametrize("console", [True, False])
+    def test_tqdm_redirect(self, log_init: LogInitDetails, console: bool) -> None:
+        """Test redirecting logging to tqdm adds the correct handler."""
+        root = "test_tqdm_redirect"
+        filter_handlers = functools.partial(
+            filter, lambda x: isinstance(x, tqdm.contrib.logging._TqdmLoggingHandler)
+        )
+
+        expected = 1 if console else 0
+        with LogHelper(root, log_init.details, console=console) as log:
+            assert len(list(filter_handlers(log.logger.handlers))) == expected
+            assert len(list(filter_handlers(log._warning_logger.handlers))) == expected
+
+    @pytest.mark.parametrize("message", ["no emojis", "emojis 👍😀"])
+    def test_basic_file(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails, message: str
+    ) -> None:
         """Test logging to file within `with` statement.
 
         Tests all log calls within `with` statement are logged to file
@@ -452,11 +505,15 @@ class TestLogHelper:
             log_file=log_file,
             warning_capture=False,
         ):
-            messages = _log_messages(log, "testing level {level} - test basic file")
+            messages = _log_messages(
+                log, f"testing level {{level}} - test basic file - {message}"
+            )
 
         # Messages logged after the log helper class has
         # cleaned up so shouldn't be saved to file
-        unlogged_messages = _log_messages(log, "not logging this message for level {level}")
+        unlogged_messages = _log_messages(
+            log, f"not logging this message for level {{level}} - {message}"
+        )
 
         text = _load_log(log_file)
 
@@ -468,7 +525,7 @@ class TestLogHelper:
 
     def test_handler_cleanup(self, log_init: LogInitDetails) -> None:
         """Test handlers are added to logger and removed upon exiting with statement."""
-        root = "test"
+        root = "test.test_handler_cleanup"
         logger = logging.getLogger(root)
         assert logger.handlers == [], "logger already has handlers"
 
@@ -485,7 +542,7 @@ class TestLogHelper:
         self, log_init: LogInitDetails, warnings_logger: logging.Logger
     ) -> None:
         """Test file handler is added to warnings logger."""
-        with LogHelper("test", log_init.details):
+        with LogHelper("test.warnings", log_init.details):
             _run_warnings()
 
             assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
@@ -577,6 +634,32 @@ class TestLogHelper:
                     )
                 else:
                     assert warnings_logger.handlers == [], "handlers added to warnings logger"
+
+    def test_package_filters(self, log_init: LogInitDetails) -> None:
+        """Test PackageFilter is added to handlers correctly."""
+        root = ""
+        allowed = ["test"]
+        filter_ = PackageFilter(allowed)
+        # Handlers added for testing purposes can be ignored
+        pytest_handlers = (
+            # pylint: disable=protected-access
+            _pytest.logging._LiveLoggingNullHandler,
+            _pytest.logging._FileHandler,
+            _pytest.logging.LogCaptureHandler,
+        )
+
+        with LogHelper(root, log_init.details, allowed_packages=allowed):
+            warn_logger = logging.getLogger(_WARNINGS_LOGGER_NAME)
+            root_logger = logging.getLogger(root)
+
+            for logger in (root_logger, warn_logger):
+                assert len(logger.handlers) > len(pytest_handlers)
+                for handler in logger.handlers:
+                    if isinstance(handler, pytest_handlers):
+                        continue
+
+                    msg = f"missing on {logger.name} logger {type(handler)}"
+                    assert handler.filters == [filter_], msg
 
 
 class TestTemporaryLogFile:
@@ -715,3 +798,211 @@ class TestCaptureWarnings:
             text = file.read()
 
         _check_warnings(text)
+
+
+class TestPackageFilter:
+    """Tests for PackageFilter class."""
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test1", "test2"]])
+    def test_eq(self, allowed: list[str]) -> None:
+        """Test `__eq__` method works when equal."""
+        filter_ = PackageFilter(allowed)
+        assert filter_ == filter_  # noqa: PLR0124 pylint: disable=comparison-with-itself
+        assert filter_ == PackageFilter(allowed)
+
+    def test_not_eq(self) -> None:
+        """Test `__eq__` method works when not equal."""
+        assert PackageFilter(["test"]) != PackageFilter(["test2"])
+        assert PackageFilter(["test"]) != "test"
+
+    @pytest.mark.parametrize("allowed", [["test"], ["test.test2", "test3.test"]])
+    @pytest.mark.parametrize("level", [logging.DEBUG, logging.CRITICAL])
+    def test_filter(self, allowed: list[str], level: int) -> None:
+        """Test filter method correctly returns true."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        for name in allowed:
+            assert filter_.filter(logging.LogRecord(name=name, level=level, **kwargs))
+            # Check sub-modules work
+            assert filter_.filter(
+                logging.LogRecord(name=f"{name}.extra", level=level, **kwargs)
+            )
+
+    @pytest.mark.parametrize("allowed", [["test", "invalid"], ["invalid"]])
+    def test_filter_false(self, allowed: list[str]) -> None:
+        """Test `filter` method correctly returns false."""
+        filter_ = PackageFilter(allowed)
+        kwargs = {
+            "level": logging.info,
+            "pathname": "test.py",
+            "lineno": 100,
+            "msg": "testing",
+            "args": None,
+            "exc_info": None,
+        }
+
+        assert not filter_.filter(logging.LogRecord("test1.invalid", **kwargs))
+
+
+@pytest.fixture(name="system_metadata")
+def fix_system_metadata(log_init: LogInitDetails) -> tuple[str, LogInitDetails]:
+    """YAML for the tool details and system information sections."""
+    details = log_init.details
+    system = log_init.system
+    expected = f"""
+    tool_details:
+      name: {details.name}
+      version: {details.version}
+      full_version: {details.full_version}
+    system_information:
+      user: {system.user}
+      pc_name: {system.pc_name}
+      python_version: {system.python_version}
+      operating_system: {system.operating_system}
+      architecture: {system.architecture}
+      processor: {system.processor}
+      cpu_count: {system.cpu_count}
+      total_ram: {system.total_ram}
+    """
+
+    return textwrap.dedent(expected).strip(), log_init
+
+
+class TestWriteMetadata:
+    """Test :func:`write_metadata` function."""
+
+    def test_missing_directory(self, log_init: LogInitDetails, tmp_path: pathlib.Path) -> None:
+        """Test an error is raised if the path points to a non-existing directory."""
+        path = tmp_path / "not a directory"
+        assert not path.is_dir(), "directory exists"
+        with pytest.raises(NotADirectoryError):
+            write_metadata(path, details=log_init)
+
+    def test_basic(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test `write_metadata` with basic Python types."""
+        initial_expected, details = system_metadata
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
+            details=details.details,
+            datetime_comment=False,
+            meta=1,
+            meta1=[{"a": 1, "B": "test"}, 1, 2],
+            meta2={"a": 1, "B": {"C": 3, "d": 4}},
+            meta3="string",
+            meta4=2.0,
+        )
+        assert path == returned
+        assert path.is_file()
+
+        expected = """
+        metadata:
+          meta: 1
+          meta1:
+          - a: 1
+            B: test
+          - 1
+          - 2
+          meta2:
+            a: 1
+            B:
+              C: 3
+              d: 4
+          meta3: string
+          meta4: 2.0
+        """
+        expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
+
+        with path.open() as file:
+            text = file.read().strip()
+
+        assert text == expected
+
+    def test_dataclass(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test writing dataclasses to metadata."""
+
+        @dataclasses.dataclass
+        class _Dataclass:
+            data_1: int
+            data_2: str
+            data_3: float
+
+        initial_expected, details = system_metadata
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
+            details=details.details,
+            datetime_comment=False,
+            dataclass=_Dataclass(data_1=10, data_2="testing", data_3=2.5),
+            basic={"A": "test"},
+        )
+        assert path == returned
+        assert path.is_file()
+
+        expected = """
+        metadata:
+          dataclass:
+            data_1: 10
+            data_2: testing
+            data_3: 2.5
+          basic:
+            A: test
+        """
+        expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
+
+        with path.open() as file:
+            text = file.read().strip()
+
+        assert text == expected
+
+    def test_base_model(
+        self, system_metadata: tuple[str, LogInitDetails], tmp_path: pathlib.Path
+    ) -> None:
+        """Test writing subclasses of :class:`pydantic.BaseModel`."""
+
+        class _Model(pydantic.BaseModel):
+            data_1: int
+            data_2: str
+            data_3: float
+
+        initial_expected, details = system_metadata
+        path = tmp_path / "meta.yml"
+        returned = write_metadata(
+            path,
+            details=details.details,
+            datetime_comment=False,
+            model=_Model(data_1=10, data_2="testing", data_3=2.5),
+            basic={"A": "test"},
+        )
+        assert path == returned
+        assert path.is_file()
+
+        expected = """
+        metadata:
+          model:
+            data_1: 10
+            data_2: testing
+            data_3: 2.5
+          basic:
+            A: test
+        """
+        expected = textwrap.dedent(expected).strip()
+        expected = "\n".join((initial_expected, expected))
+
+        with path.open() as file:
+            text = file.read().strip()
+
+        assert text == expected
