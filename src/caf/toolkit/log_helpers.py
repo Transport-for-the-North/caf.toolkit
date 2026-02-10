@@ -1134,7 +1134,9 @@ def write_metadata(
         raise NotADirectoryError(f"missing parent directory for metadata: {path}")
 
     meta = Metadata(
-        tool_details=details, system_information=SystemInformation.load(), metadata=metadata
+        tool_details=details,
+        system_information=SystemInformation.load(),
+        metadata=metadata,
     )
     meta.save_yaml(
         path,
