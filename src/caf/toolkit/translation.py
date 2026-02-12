@@ -1448,7 +1448,9 @@ class ZoneCorrespondence:
         factor_col_sums = self.vector.groupby(self.from_col_name)[self.factors_col_name].sum()
 
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
-            raise ValueError("Factors cannot be greater than one.")
+            warnings.warn(
+                "Factors usually should not be greater than one. If disaggregating intensive variables, ignore this warning."
+            )
 
         if any(self.vector[self.factors_col_name] < 0):
             raise ValueError("Factors cannot be negative.")
