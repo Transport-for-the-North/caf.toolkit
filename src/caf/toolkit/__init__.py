@@ -27,4 +27,5 @@ from caf.toolkit.log_helpers import (
     SystemInformation,
     TemporaryLogFile,
     ToolDetails,
+    write_metadata,
 )
