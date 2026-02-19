@@ -586,8 +586,8 @@ def mark_internal_external(
         )
 
     marked_matrix = matrix.copy()
-    origin_in = marked_matrix["origin"].isin(internal_zones)
-    dest_in = marked_matrix["destination"].isin(internal_zones)
+    origin_in = marked_matrix[origin_col].isin(internal_zones)
+    dest_in = marked_matrix[destination_col].isin(internal_zones)
 
     # Everything should be marked, but default to NA if anything weird happens
     marked_matrix[zone_class_col] = "NA"

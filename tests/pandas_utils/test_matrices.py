@@ -618,9 +618,9 @@ class TestMarkInternalExternal:
         """Matrix to test mark_internal_external functionality."""
         return pd.DataFrame(
             {
-                "origin": [1, 1, 2, 2, 3, 3, 4, 4],
-                "destination": [1, 3, 1, 2, 3, 4, 3, 4],
-                "trips": [100, 50, 75, 120, 60, 90, 80, 110],
+                "origin": [1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4],
+                "destination": [1, 3, 1, 2, 3, 1, 2, 3, 4, 3, 4],
+                "trips": [100, 50, 75, 120, 35, 40, 60, 60, 90, 80, 110],
             }
         )
 
@@ -656,13 +656,13 @@ class TestMarkInternalExternal:
         assert (
             result.loc[
                 (result["origin"] == 1) & (result["destination"] == 3), "zone_class"
-            ].iloc[0]
+            ].squeeze()
             == "IE"
         )
         assert (
             result.loc[
                 (result["origin"] == 2) & (result["destination"] == 3), "zone_class"
-            ].iloc[0]
+            ].squeeze()
             == "IE"
         )
 
