@@ -581,7 +581,9 @@ def mark_internal_external(
         Matrix with internal and external trips marked.
     """
     if not {origin_col, destination_col}.issubset(matrix.columns):
-        raise ValueError(f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}")
+        raise ValueError(
+            f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}"
+        )
 
     marked_matrix = matrix.copy()
     origin_in = marked_matrix["origin"].isin(internal_zones)
