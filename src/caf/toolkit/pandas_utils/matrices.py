@@ -547,6 +547,7 @@ def mark_internal_external(
     keep_ee: bool = True,
     origin_col: str = "origin",
     destination_col: str = "destination",
+    zone_class_col: str = "zone_class",
 ) -> pd.DataFrame:
     """Mark internal and external trips in a matrix.
 
@@ -567,6 +568,12 @@ def mark_internal_external(
         List of zones to be considered internal.
     keep_ee : bool, optional
         Whether to keep external-external trips, by default True.
+    origin_col : str, optional
+        Name of the column containing origin zones, by default "origin".
+    destination_col : str, optional
+        Name of the column containing destination zones, by default "destination".
+    zone_class_col : str, optional
+        Name of the column to create for the zone class data, by default "zone_class".
 
     Returns
     -------
@@ -581,13 +588,13 @@ def mark_internal_external(
     dest_in = marked_matrix["destination"].isin(internal_zones)
 
     # Everything should be marked, but default to NA if anything weird happens
-    marked_matrix["zone_class"] = "NA"  # default to NA
-    marked_matrix.loc[origin_in & dest_in, "zone_class"] = "II"
-    marked_matrix.loc[origin_in & ~dest_in, "zone_class"] = "IE"
-    marked_matrix.loc[~origin_in & dest_in, "zone_class"] = "EI"
-    marked_matrix.loc[~origin_in & ~dest_in, "zone_class"] = "EE"
+    marked_matrix[zone_class_col] = "NA"
+    marked_matrix.loc[origin_in & dest_in, zone_class_col] = "II"
+    marked_matrix.loc[origin_in & ~dest_in, zone_class_col] = "IE"
+    marked_matrix.loc[~origin_in & dest_in, zone_class_col] = "EI"
+    marked_matrix.loc[~origin_in & ~dest_in, zone_class_col] = "EE"
 
     if not keep_ee:
-        marked_matrix = marked_matrix[marked_matrix["zone_class"] != "EE"]
+        marked_matrix = marked_matrix[marked_matrix[zone_class_col] != "EE"]
 
     return marked_matrix

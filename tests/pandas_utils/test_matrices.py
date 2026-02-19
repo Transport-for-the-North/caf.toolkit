@@ -608,3 +608,175 @@ class TestMatrixComparison:
         )
 
         assert len(comparison["TLD comparison"].columns) == 6  # noqa: PLR2004
+
+
+class TestMarkInternalExternal:
+    """Test the mark_internal_external function."""
+
+    @pytest.fixture(name="matrix", scope="session")
+    def fixture_matrix(self) -> pd.DataFrame:
+        """Matrix to test mark_internal_external functionality."""
+        return pd.DataFrame({
+            "origin": [1, 1, 2, 2, 3, 3, 4, 4],
+            "destination": [1, 3, 1, 2, 3, 4, 3, 4],
+            "trips": [100, 50, 75, 120, 60, 90, 80, 110],
+        })
+
+    def test_mark_internal_internal(self, matrix: pd.DataFrame) -> None:
+        """Test that internal-internal trips are correctly marked."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # Trips from zone 1 to 1, and 2 to 2 should be "II"
+        assert result.loc[(result["origin"] == 1) & (result["destination"] == 1), "zone_class"].iloc[0] == "II"
+        assert result.loc[(result["origin"] == 2) & (result["destination"] == 2), "zone_class"].iloc[0] == "II"
+
+    def test_mark_internal_external(self, matrix: pd.DataFrame) -> None:
+        """Test that internal-external trips are correctly marked."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # Trips from internal to external should be "IE"
+        assert result.loc[(result["origin"] == 1) & (result["destination"] == 3), "zone_class"].iloc[0] == "IE"
+        assert result.loc[(result["origin"] == 2) & (result["destination"] == 3), "zone_class"].iloc[0] == "IE"
+
+    def test_mark_external_internal(self, matrix: pd.DataFrame) -> None:
+        """Test that external-internal trips are correctly marked."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # Trips from external to internal should be "EI"
+        assert result.loc[(result["origin"] == 3) & (result["destination"] == 1), "zone_class"].iloc[0] == "EI"
+        assert result.loc[(result["origin"] == 3) & (result["destination"] == 2), "zone_class"].iloc[0] == "EI"
+
+    def test_mark_external_external(self, matrix: pd.DataFrame) -> None:
+        """Test that external-external trips are correctly marked."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # Trips from external to external should be "EE"
+        assert result.loc[(result["origin"] == 3) & (result["destination"] == 4), "zone_class"].iloc[0] == "EE"
+        assert result.loc[(result["origin"] == 4) & (result["destination"] == 3), "zone_class"].iloc[0] == "EE"
+
+    def test_filter_external_external(self, matrix: pd.DataFrame) -> None:
+        """Test that external-external trips are filtered when keep_ee=False."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=False, zone_class_col="zone_class"
+        )
+        
+        # No external-external trips should exist
+        assert not (result["zone_class"] == "EE").any()
+        assert len(result) < len(matrix)
+
+    def test_all_categories_present(self, matrix: pd.DataFrame) -> None:
+        """Test that all zone classes are present when keep_ee=True."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        expected_categories = {"II", "IE", "EI", "EE"}
+        actual_categories = set(result["zone_class"].unique())
+        assert expected_categories == actual_categories
+
+    def test_custom_column_names(self) -> None:
+        """Test that custom origin and destination column names work."""
+        test_matrix = pd.DataFrame({
+            "from_zone": [1, 1, 2, 2],
+            "to_zone": [1, 3, 1, 2],
+            "trips": [100, 50, 75, 120],
+        })
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            test_matrix,
+            internal_zones,
+            keep_ee=True,
+            origin_col="from_zone",
+            destination_col="to_zone",
+            zone_class_col="zone_type",
+        )
+
+        assert "zone_type" in result.columns
+        assert result.loc[(result["from_zone"] == 1) & (result["to_zone"] == 1), "zone_type"].iloc[0] == "II"
+
+    def test_missing_columns_raises_error(self, matrix: pd.DataFrame) -> None:
+        """Test that missing origin/destination columns raise ValueError."""
+        incomplete_matrix = matrix[["origin", "trips"]]  # Missing destination column
+        internal_zones = [1, 2]
+        
+        with pytest.raises(ValueError, match="Given 'origin' and 'destination' but matrix has columns"):
+            pd_utils.matrices.mark_internal_external(
+                incomplete_matrix, internal_zones, zone_class_col="zone_class"
+            )
+
+    def test_missing_custom_columns_raises_error(self) -> None:
+        """Test that missing custom column names raise ValueError."""
+        test_matrix = pd.DataFrame({
+            "origin": [1, 1, 2],
+            "destination": [1, 3, 1],
+        })
+        internal_zones = [1, 2]
+        
+        with pytest.raises(ValueError, match="Given 'from_zone' and 'to_zone' but matrix has columns"):
+            pd_utils.matrices.mark_internal_external(
+                test_matrix, internal_zones,
+                origin_col="from_zone",
+                destination_col="to_zone"
+            )
+
+    def test_preserves_original_data(self, matrix: pd.DataFrame) -> None:
+        """Test that the function preserves original data columns."""
+        internal_zones = [1, 2]
+        result = pd_utils.matrices.mark_internal_external(
+            matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # All original columns should still exist
+        assert all(col in result.columns for col in matrix.columns)
+        # Original data should be unchanged
+        pd.testing.assert_series_equal(
+            result["trips"].reset_index(drop=True),
+            matrix["trips"].reset_index(drop=True)
+        )
+
+    def test_single_zone_internal(self) -> None:
+        """Test with a single internal zone."""
+        test_matrix = pd.DataFrame({
+            "origin": [1, 1, 2, 2],
+            "destination": [1, 2, 1, 2],
+            "trips": [100, 50, 75, 120],
+        })
+        internal_zones = [1]
+        result = pd_utils.matrices.mark_internal_external(
+            test_matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # Only zone 1 is internal
+        assert result.loc[(result["origin"] == 1) & (result["destination"] == 1), "zone_class"].iloc[0] == "II"
+        assert result.loc[(result["origin"] == 1) & (result["destination"] == 2), "zone_class"].iloc[0] == "IE"
+        assert result.loc[(result["origin"] == 2) & (result["destination"] == 1), "zone_class"].iloc[0] == "EI"
+        assert result.loc[(result["origin"] == 2) & (result["destination"] == 2), "zone_class"].iloc[0] == "EE"
+
+    def test_no_internal_zones(self) -> None:
+        """Test with no internal zones - all should be external."""
+        test_matrix = pd.DataFrame({
+            "origin": [1, 1],
+            "destination": [1, 2],
+            "trips": [100, 50],
+        })
+        internal_zones = []
+        result = pd_utils.matrices.mark_internal_external(
+            test_matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+        )
+        
+        # All trips should be external-external
+        assert (result["zone_class"] == "EE").all()
