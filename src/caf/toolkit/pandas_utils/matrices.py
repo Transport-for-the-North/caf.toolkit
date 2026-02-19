@@ -582,7 +582,7 @@ def mark_internal_external(
     """
     if not {origin_col, destination_col}.issubset(matrix.columns):
         raise ValueError(
-            f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}"
+            f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}"  # noqa: E501
         )
 
     marked_matrix = matrix.copy()

@@ -640,7 +640,7 @@ class TestMarkInternalExternal:
         )
         assert (
             result.loc[
-                (result["origin"] == 2) & (result["destination"] == 2), "zone_class"
+                (result["origin"] == 2) & (result["destination"] == 2), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "II"
         )
@@ -655,13 +655,13 @@ class TestMarkInternalExternal:
         # Trips from internal to external should be "IE"
         assert (
             result.loc[
-                (result["origin"] == 1) & (result["destination"] == 3), "zone_class"
+                (result["origin"] == 1) & (result["destination"] == 3), "zone_class"  # noqa: PLR2004
             ].squeeze()
             == "IE"
         )
         assert (
             result.loc[
-                (result["origin"] == 2) & (result["destination"] == 3), "zone_class"
+                (result["origin"] == 2) & (result["destination"] == 3), "zone_class"  # noqa: PLR2004
             ].squeeze()
             == "IE"
         )
@@ -676,13 +676,13 @@ class TestMarkInternalExternal:
         # Trips from external to internal should be "EI"
         assert (
             result.loc[
-                (result["origin"] == 3) & (result["destination"] == 1), "zone_class"
+                (result["origin"] == 3) & (result["destination"] == 1), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EI"
         )
         assert (
             result.loc[
-                (result["origin"] == 3) & (result["destination"] == 2), "zone_class"
+                (result["origin"] == 3) & (result["destination"] == 2), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EI"
         )
@@ -697,13 +697,13 @@ class TestMarkInternalExternal:
         # Trips from external to external should be "EE"
         assert (
             result.loc[
-                (result["origin"] == 3) & (result["destination"] == 4), "zone_class"
+                (result["origin"] == 3) & (result["destination"] == 4), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EE"
         )
         assert (
             result.loc[
-                (result["origin"] == 4) & (result["destination"] == 3), "zone_class"
+                (result["origin"] == 4) & (result["destination"] == 3), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EE"
         )
@@ -823,19 +823,19 @@ class TestMarkInternalExternal:
         )
         assert (
             result.loc[
-                (result["origin"] == 1) & (result["destination"] == 2), "zone_class"
+                (result["origin"] == 1) & (result["destination"] == 2), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "IE"
         )
         assert (
             result.loc[
-                (result["origin"] == 2) & (result["destination"] == 1), "zone_class"
+                (result["origin"] == 2) & (result["destination"] == 1), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EI"
         )
         assert (
             result.loc[
-                (result["origin"] == 2) & (result["destination"] == 2), "zone_class"
+                (result["origin"] == 2) & (result["destination"] == 2), "zone_class"  # noqa: PLR2004
             ].iloc[0]
             == "EE"
         )
