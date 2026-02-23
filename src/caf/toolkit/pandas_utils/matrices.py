@@ -4,7 +4,7 @@ from __future__ import annotations
 
 # Built-Ins
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # Third Party
 import pandas as pd
@@ -539,3 +539,65 @@ def compare_matrices_and_output(
                 stacklevel=2,
             )
         result.to_excel(excel_writer, sheet_name=sheet_name)
+
+
+def mark_internal_external(
+    matrix: pd.DataFrame,
+    internal_zones: list[Any],
+    keep_ee: bool = True,
+    *,
+    origin_col: str = "origin",
+    destination_col: str = "destination",
+    zone_class_col: str = "zone_class",
+) -> pd.DataFrame:
+    """Mark internal and external trips in a matrix.
+
+    Annotate a long-format matrix with zone membership categories and return
+    the full annotated frame.
+
+    Categories:
+      - "II": origin in zones_to_keep AND destination in zones_to_keep
+      - "IE": origin in zones_to_keep only
+      - "EI": destination in zones_to_keep only
+      - "EE": neither origin nor destination in zones_to_keep
+
+    Parameters
+    ----------
+    matrix : pd.DataFrame
+        Matrix to be marked.
+    internal_zones : list[Any]
+        List of zones to be considered internal.
+    keep_ee : bool, optional
+        Whether to keep external-external trips, by default True.
+    origin_col : str, optional
+        Name of the column containing origin zones, by default "origin".
+    destination_col : str, optional
+        Name of the column containing destination zones, by default "destination".
+    zone_class_col : str, optional
+        Name of the column to create for the zone class data, by default "zone_class".
+
+    Returns
+    -------
+    pd.DataFrame
+        Matrix with internal and external trips marked.
+    """
+    if not {origin_col, destination_col}.issubset(matrix.columns):
+        raise ValueError(
+            f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}"  # noqa: E501
+        )
+
+    marked_matrix = matrix.copy()
+    origin_in = marked_matrix[origin_col].isin(internal_zones)
+    dest_in = marked_matrix[destination_col].isin(internal_zones)
+
+    # Everything should be marked, but default to NA if anything weird happens
+    marked_matrix[zone_class_col] = pd.NA
+    marked_matrix.loc[origin_in & dest_in, zone_class_col] = "II"
+    marked_matrix.loc[origin_in & ~dest_in, zone_class_col] = "IE"
+    marked_matrix.loc[~origin_in & dest_in, zone_class_col] = "EI"
+    marked_matrix.loc[~origin_in & ~dest_in, zone_class_col] = "EE"
+
+    if not keep_ee:
+        marked_matrix = marked_matrix[marked_matrix[zone_class_col] != "EE"]
+
+    return marked_matrix
