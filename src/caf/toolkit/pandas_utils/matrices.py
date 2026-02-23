@@ -545,6 +545,7 @@ def mark_internal_external(
     matrix: pd.DataFrame,
     internal_zones: list[Any],
     keep_ee: bool = True,
+    *,
     origin_col: str = "origin",
     destination_col: str = "destination",
     zone_class_col: str = "zone_class",
@@ -590,7 +591,7 @@ def mark_internal_external(
     dest_in = marked_matrix[destination_col].isin(internal_zones)
 
     # Everything should be marked, but default to NA if anything weird happens
-    marked_matrix[zone_class_col] = "NA"
+    marked_matrix[zone_class_col] = pd.NA
     marked_matrix.loc[origin_in & dest_in, zone_class_col] = "II"
     marked_matrix.loc[origin_in & ~dest_in, zone_class_col] = "IE"
     marked_matrix.loc[~origin_in & dest_in, zone_class_col] = "EI"
