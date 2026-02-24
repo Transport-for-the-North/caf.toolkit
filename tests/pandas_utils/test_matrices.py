@@ -786,6 +786,16 @@ class TestMarkInternalExternal:
                 test_matrix, internal_zones, origin_col="from_zone", destination_col="to_zone"
             )
 
+    def test_dtype_mismatch_raises(self) -> None:
+        """Test that mismatched dtypes in origin/destination raise ValueError."""
+        test_matrix = pd.DataFrame({"origin": [1, 2], "destination": ["1", "2"]})
+        internal_zones = [1]
+
+        with pytest.raises(
+            ValueError, match="Origin and destination columns must have the same dtype"
+        ):
+            pd_utils.matrices.mark_internal_external(test_matrix, internal_zones)
+
     def test_preserves_original_data(self, matrix: pd.DataFrame) -> None:
         """Test that the function preserves original data columns."""
         internal_zones = [1, 2]
@@ -849,10 +859,12 @@ class TestMarkInternalExternal:
                 "trips": [100, 50],
             }
         )
-        internal_zones = []
-        result = pd_utils.matrices.mark_internal_external(
-            test_matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
-        )
+        internal_zones: list = []
 
-        # All trips should be external-external
-        assert (result["zone_class"] == "EE").all()
+        with pytest.raises(
+            ValueError,
+            match="No internal zones found in either origin or destination columns",
+        ):
+            pd_utils.matrices.mark_internal_external(
+                test_matrix, internal_zones, keep_ee=True, zone_class_col="zone_class"
+            )
