@@ -604,10 +604,21 @@ def mark_internal_external(
     origin_in = marked_matrix[origin_col].isin(internal_zones)
     dest_in = marked_matrix[destination_col].isin(internal_zones)
 
+    # Check for signs of deeper issues and raise
     if not origin_in.any() and not dest_in.any():
         raise ValueError(
             "No internal zones found in either origin or destination columns. "
             "Are the datatypes the same?"
+        )
+
+    if (not origin_in.any()) ^ (not dest_in.any()):
+        if origin_in.any():
+            columns = ("origin", "destination")
+        else:
+            columns = ("destination", "origin")
+        warnings.warn(
+            f"Internal zones only found in {columns[0]} column, not in {columns[1]} column",
+            stacklevel=2,
         )
 
     # Everything should be marked, but default to NA if anything weird happens

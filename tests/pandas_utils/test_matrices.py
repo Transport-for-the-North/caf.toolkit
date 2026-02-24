@@ -796,6 +796,19 @@ class TestMarkInternalExternal:
         ):
             pd_utils.matrices.mark_internal_external(test_matrix, internal_zones)
 
+    def test_single_side_internal_zones_warns(self) -> None:
+        """If internal zones are only present in origin OR destination, a warning is raised."""
+        test_matrix = pd.DataFrame(
+            {"origin": [1, 2], "destination": [3, 3], "trips": [10, 20]}
+        )
+        internal_zones = [1]
+
+        with pytest.warns(
+            UserWarning,
+            match="Internal zones only found in origin column, not in destination column",
+        ):
+            pd_utils.matrices.mark_internal_external(test_matrix, internal_zones)
+
     def test_preserves_original_data(self, matrix: pd.DataFrame) -> None:
         """Test that the function preserves original data columns."""
         internal_zones = [1, 2]
