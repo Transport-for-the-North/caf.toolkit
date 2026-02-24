@@ -580,15 +580,46 @@ def mark_internal_external(
     -------
     pd.DataFrame
         Matrix with internal and external trips marked.
+
+    Raises
+    ------
+    ValueError:
+        If the origin and destination columns are not in the matrix.
+        If the origin and destination columns have different dtypes.
+        If no internal zones are found in either the origin or destination columns.
     """
     if not {origin_col, destination_col}.issubset(matrix.columns):
         raise ValueError(
-            f"Given '{origin_col}' and '{destination_col}' but matrix has columns {list(matrix.columns)}"  # noqa: E501
+            f"Given '{origin_col}' and '{destination_col}' but matrix has "
+            f"columns {list(matrix.columns)}"
+        )
+
+    if matrix[origin_col].dtype != matrix[destination_col].dtype:
+        raise ValueError(
+            f"Origin and destination columns must have the same dtype, but got "
+            f"{matrix[origin_col].dtype} and {matrix[destination_col].dtype}"
         )
 
     marked_matrix = matrix.copy()
     origin_in = marked_matrix[origin_col].isin(internal_zones)
     dest_in = marked_matrix[destination_col].isin(internal_zones)
+
+    # Check for signs of deeper issues and raise
+    if not origin_in.any() and not dest_in.any():
+        raise ValueError(
+            "No internal zones found in either origin or destination columns. "
+            "Are the datatypes the same?"
+        )
+
+    if (not origin_in.any()) ^ (not dest_in.any()):
+        if origin_in.any():
+            columns = ("origin", "destination")
+        else:
+            columns = ("destination", "origin")
+        warnings.warn(
+            f"Internal zones only found in {columns[0]} column, not in {columns[1]} column",
+            stacklevel=2,
+        )
 
     # Everything should be marked, but default to NA if anything weird happens
     marked_matrix[zone_class_col] = pd.NA
