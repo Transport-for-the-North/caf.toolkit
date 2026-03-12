@@ -22,6 +22,20 @@ if TYPE_CHECKING:
 
 # # # CLASSES # # #
 
+class ConfigValidationError(Exception):
+    """Human-readable wrapper around pydantic ValidationError for config files."""
+
+    def __init__(self, validation_error: pydantic.ValidationError, path: Path | None = None):
+        source = f" in '{path}'" if path else ''
+        lines = [f"Invalid config file{source}. The following errors were found:"]
+        for err in validation_error.errors():
+            loc = ' -> '.join(str(l) for l in err['loc']) if err['loc'] else 'root'
+            lines.append(f"  - {loc}: {err['msg']}")
+        super().__init__('
+'.join(lines))
+
+
+
 
 class BaseConfig(pydantic.BaseModel):
     r"""Base class for storing model parameters.
@@ -99,7 +113,10 @@ class BaseConfig(pydantic.BaseModel):
             the YAML data.
         """
         data = strictyaml.load(text).data
-        return cls.model_validate(data)
+        try:
+            return cls.model_validate(data)
+        except pydantic.ValidationError as e:
+            raise ConfigValidationError(e) from None
 
     @classmethod
     def load_yaml(cls, path: Path) -> Self:
@@ -119,7 +136,10 @@ class BaseConfig(pydantic.BaseModel):
         path = Path(path)
         with path.open("rt", encoding="utf-8") as file:
             text = file.read()
-        return cls.from_yaml(text)
+        try:
+            return cls.from_yaml(text)
+        except pydantic.ValidationError as e:
+            raise ConfigValidationError(e, path=path) from None
 
     def to_yaml(self) -> str:
         """Convert attributes from self to YAML string.
