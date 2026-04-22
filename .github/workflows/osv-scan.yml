@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 env:
-  allowed_licenses: MIT,BSD-3-Clause,ISC,Apache-2.0,BSD-2-Clause,CC0-1.0,MPL-2.0,GPL-2.0-or-later,HPND,LGPL-2.1-or-later,Unlicense,0BSD,PSF-2.0,BlueOak-1.0.0,GPL-3.0,GPL-3.0-or-later,LGPL-3.0,MIT-CMU
+  ALLOWED_LICENSES: MIT,BSD-3-Clause,ISC,Apache-2.0,BSD-2-Clause,CC0-1.0,MPL-2.0,GPL-2.0-or-later,HPND,LGPL-2.1-or-later,Unlicense,0BSD,PSF-2.0,BlueOak-1.0.0,GPL-3.0,GPL-3.0-or-later,LGPL-3.0,MIT-CMU
 
 jobs:
   scan-pr:
@@ -31,7 +31,7 @@ jobs:
     with:
       scan-args: |
         -r
-        --licenses=${{ vars.allowed_licenses }}
+        --licenses=$ALLOWED_LICENSES
         --config=osv-scanner.toml
         .
 
@@ -42,6 +42,6 @@ jobs:
     with:
       scan-args: |
         -r
-        --licenses=${{ vars.allowed_licenses }}
+        --licenses=$ALLOWED_LICENSES
         --config=osv-scanner.toml
         .
