@@ -31,7 +31,7 @@ jobs:
     with:
       scan-args: |
         -r
-        --licenses=${{ env.ALLOWED_LICENSES }}
+        --licenses=${{ vars.ALLOWED_LICENSES }}
         --config=osv-scanner.toml
         .
 
@@ -42,6 +42,6 @@ jobs:
     with:
       scan-args: |
         -r
-        --licenses=${{ env.ALLOWED_LICENSES }}
+        --licenses=${{ vars.ALLOWED_LICENSES }}
         --config=osv-scanner.toml
         .
