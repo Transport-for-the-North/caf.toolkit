@@ -42,3 +42,16 @@ jobs:
         --licenses=MIT,BSD-3-Clause,ISC,Apache-2.0,BSD-2-Clause,CC0-1.0,MPL-2.0,GPL-2.0-or-later,HPND,LGPL-2.1-or-later,Unlicense,0BSD,PSF-2.0,BlueOak-1.0.0,GPL-3.0,GPL-3.0-or-later,LGPL-3.0,MIT-CMU
         --config=osv-scanner.toml
         .
+
+  cleanup:
+    name: Delete Artifacts
+    runs-on: ubuntu-latest
+    # Ensure this job always runs after both others, even if they fail
+    if: ${{ always() }}
+    needs: [scan-pr, scan-scheduled]
+    steps:
+    - uses: geekyeggo/delete-artifact@v6
+      with:
+        name: |
+          *OSV Scanner SARIF file
+          *-json-results
