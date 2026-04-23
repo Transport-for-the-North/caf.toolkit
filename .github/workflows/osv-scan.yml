@@ -1,0 +1,57 @@
+# Check that there's been no changes in dependant licences
+name: OSV-Scanner
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 1"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  # Required to upload SARIF file to CodeQL. See: https://github.com/github/codeql-action/issues/2117
+  actions: read
+  # Require writing security events to upload SARIF file to security tab
+  security-events: write
+  # Only need to read contents
+  contents: read
+
+jobs:
+  scan-pr:
+    name: PR Comparison
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@v2.3.5"
+    with:
+      scan-args: |
+        -r
+        --licenses=MIT,BSD-3-Clause,ISC,Apache-2.0,BSD-2-Clause,CC0-1.0,MPL-2.0,GPL-2.0-or-later,HPND,LGPL-2.1-or-later,Unlicense,0BSD,PSF-2.0,BlueOak-1.0.0,GPL-3.0,GPL-3.0-or-later,LGPL-3.0,MIT-CMU
+        --config=osv-scanner.toml
+        .
+
+  scan-scheduled:
+    name: Full Scan (Scheduled)
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'}}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.5"
+    with:
+      scan-args: |
+        -r
+        --licenses=MIT,BSD-3-Clause,ISC,Apache-2.0,BSD-2-Clause,CC0-1.0,MPL-2.0,GPL-2.0-or-later,HPND,LGPL-2.1-or-later,Unlicense,0BSD,PSF-2.0,BlueOak-1.0.0,GPL-3.0,GPL-3.0-or-later,LGPL-3.0,MIT-CMU
+        --config=osv-scanner.toml
+        .
+
+  cleanup:
+    name: Delete Artifacts
+    runs-on: ubuntu-latest
+    # Ensure this job always runs after both others, even if they fail
+    if: ${{ always() }}
+    needs: [scan-pr, scan-scheduled]
+    steps:
+    - uses: geekyeggo/delete-artifact@v6
+      with:
+        name: |
+          *OSV Scanner SARIF file
+          *-json-results
