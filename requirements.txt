@@ -5,6 +5,3 @@ tqdm>=4.50.2
 pydantic>=2.5.0
 strictyaml>=1.6
 psutil>=5.9.0
-
-# Avoid security warnings
-pillow>=10.3.0
