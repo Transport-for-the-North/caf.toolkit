@@ -1,7 +1,7 @@
 # Required libraries
 numpy>=1.19.0
 pandas>=2.0.0,<3
-tqdm>=4.50.2
+tqdm>=4.67.3
 pydantic>=2.5.0
 strictyaml>=1.6
 psutil>=5.9.0
