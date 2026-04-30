@@ -9,4 +9,17 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+
+    allow:
+      # Only allow major version updates to reduce noise from minor/patch updates
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+      # Allow minor versions for caf packages to ensure new versions are tested more often
+      - dependency-name: "caf.*"
+        update-types:
+          - "version-update:semver-minor"
+
+    # If you only want security update PRs, set this to 0
+    open-pull-requests-limit: 3
