@@ -485,9 +485,7 @@ def long_product_infill(  # noqa: C901, PLR0912
         full_ind = pd.MultiIndex.from_product(
             list(index_dict.values()), names=list(index_dict.keys())
         )
-    filler = pd.DataFrame(
-        data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"]
-    )
+    filler = pd.DataFrame(data=["dummy"] * len(full_ind), index=full_ind, columns=["dummy"])
 
     # check there's an overlap
     overlap = data.index.intersection(filler.index)

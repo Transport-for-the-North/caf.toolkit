@@ -268,9 +268,7 @@ def dataframe_to_n_dimensional_array(  # noqa: C901
     # Validate sparse_OK value
     valid_vals = SparseLiteral.__args__  # type: ignore[attr-defined]
     if sparse_ok not in valid_vals:
-        raise ValueError(
-            f"Invalid value given for 'sparse_ok' expected one of: {valid_vals}"
-        )
+        raise ValueError(f"Invalid value given for 'sparse_ok' expected one of: {valid_vals}")
 
     # Validate that only one value column exists
     value_cols = set(df.columns) - set(dimension_cols.keys())
@@ -313,9 +311,7 @@ def dataframe_to_n_dimensional_array(  # noqa: C901
     # Try make a dense matrix
     try:
         full_idx = df_handling.get_full_index(dimension_cols)
-        np_df = (
-            df.set_index(list(dimension_cols.keys())).reindex(full_idx).fillna(fill_val)
-        )
+        np_df = df.set_index(list(dimension_cols.keys())).reindex(full_idx).fillna(fill_val)
         array = np_df.to_numpy().reshape(final_shape)
         if sparse_value_maps is None:
             sparse_value_maps = _pd_to_np_value_maps(dimension_cols)

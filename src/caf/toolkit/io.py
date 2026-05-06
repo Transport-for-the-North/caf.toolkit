@@ -6,7 +6,6 @@ from __future__ import annotations
 import collections
 import itertools
 import logging
-import os
 import pathlib
 import re
 import string
@@ -28,7 +27,19 @@ NORMALISED_PUNTUATION = r"!#$%£&\-.<=>+^_~\(\)"
 NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNTUATION
 """Characted allowed in normalised column names."""
 
-PD_COMPRESSION = {".zip", ".gzip", ".bz2", ".zstd", ".csv.bz2"}
+PD_COMPRESSION = {
+    ".gz",
+    ".bz2",
+    ".zip",
+    ".xz",
+    ".zst",
+    ".tar",
+    ".tar.gz",
+    ".tar.xz",
+    ".tar.bz2",
+    ".csv.bz2",
+}
+LONG_MAT_COLS = 3
 # # # CLASSES # # #
 
 
@@ -88,7 +99,7 @@ def safe_dataframe_to_csv(
 
 
 def read_csv(
-    path: os.PathLike,
+    path: pathlib.Path,
     name: str | None = None,
     normalise_column_names: bool = False,
     **kwargs,
@@ -133,9 +144,7 @@ def read_csv(
     column_lookup = None
     if normalise_column_names:
         column_lookup, *parameters = _normalise_read_csv(path, **kwargs)
-        for nm, value in zip(
-            ("usecols", "dtype", "index_col"), parameters, strict=True
-        ):
+        for nm, value in zip(("usecols", "dtype", "index_col"), parameters, strict=True):
             if value is not None:
                 kwargs[nm] = value
 
@@ -305,13 +314,13 @@ def _normalise_name(col: str) -> str:
 
 
 def read_df(
-    path: os.PathLike,
+    path: pathlib.Path,
     index_col: list[int] | int | None = None,
     find_similar: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     """
-    Reads in the dataframe at path. Decompresses the df if needed.
+    Read in the dataframe at path. Decompresses the df if needed.
 
     Parameters
     ----------
@@ -333,12 +342,11 @@ def read_df(
     df:
         The read in df at path.
     """
-
     # Try and find similar files if we are allowed
-    if not os.path.exists(path):
+    if not path.exists():
         if not find_similar:
             raise FileNotFoundError(f"No such file or directory: '{path}'")
-        path = find_filename(path)
+        path = find_similar_filename(path)
 
     if pathlib.Path(path).suffix == ".csv":
         return pd.read_csv(path, index_col=index_col, **kwargs)
@@ -349,41 +357,8 @@ def read_df(
     raise ValueError("Cannot determine the filetype of the given path.")
 
 
-def write_df(df: pd.DataFrame, path: os.PathLike, **kwargs) -> None:
-    """
-    Writes the dataframe at path. Decompresses the df if needed.
-
-    Parameters
-    ----------
-    df:
-        The dataframe to write to disk
-
-    path:
-        The full path to the dataframe to read in
-
-    **kwargs:
-        Any arguments to pass to the underlying write function.
-
-    Returns
-    -------
-    df:
-        The read in df at path.
-    """
-    # Init
-    path = pathlib.Path(path)
-
-    if pathlib.Path(path).suffix == ".csv":
-        df.to_csv(path, **kwargs)
-
-    elif pathlib.Path(path).suffix in PD_COMPRESSION:
-        df.to_csv(path, **kwargs)
-
-    else:
-        raise ValueError("Cannot determine the filetype of the given path.")
-
-
 def read_csv_matrix(
-    path: os.PathLike,
+    path: pathlib.Path,
     format_: Literal["square", "long"] | None = None,
     **kwargs,
 ) -> pd.DataFrame:
@@ -448,9 +423,7 @@ def read_csv_matrix(
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers, which should work fine for pandas Index
-    matrix.columns = utility.to_numeric(
-        matrix.columns, errors="ignore", downcast="integer"
-    )
+    matrix.columns = utility.to_numeric(matrix.columns, errors="ignore", downcast="integer")
     matrix.index = utility.to_numeric(matrix.index, errors="ignore", downcast="integer")
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
@@ -594,9 +567,7 @@ def find_file_with_name(
         )
 
     if len(found) == 0:
-        raise FileNotFoundError(
-            f'cannot find any files named "{name}" inside "{folder}"'
-        )
+        raise FileNotFoundError(f'cannot find any files named "{name}" inside "{folder}"')
 
     # Order found based on expected_suffixes
     found = sorted(found, key=lambda x: suffixes.index("".join(x.suffixes)))
@@ -605,7 +576,7 @@ def find_file_with_name(
 
 
 def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
-    """Removes all suffixes from path
+    """Remove all suffixes from path.
 
     Parameters
     ----------
@@ -635,7 +606,7 @@ def remove_suffixes(path: pathlib.Path) -> pathlib.Path:
 
 
 def read_matrix(
-    path: os.PathLike,
+    path: pathlib.Path,
     format_: str | None = None,
     find_similar: bool = False,
 ) -> pd.DataFrame:
@@ -646,7 +617,7 @@ def read_matrix(
 
     Parameters
     ----------
-    path : os.PathLike
+    path : pathlib.Path
         Path to CSV file
     format_ : str, optional
         Expected format of the matrix 'square' or 'long', if
@@ -673,7 +644,7 @@ def read_matrix(
         # Determine format by reading top few lines of file
         matrix_peek = read_df(path, nrows=3, find_similar=find_similar)
 
-        if len(matrix_peek.columns) == 3:
+        if len(matrix_peek.columns) == LONG_MAT_COLS:
             format_ = "long"
 
             # Check if columns have a header
@@ -687,7 +658,7 @@ def read_matrix(
             else:
                 header = None
 
-        elif len(matrix_peek.columns) > 3:
+        elif len(matrix_peek.columns) > LONG_MAT_COLS:
             format_ = "square"
             header = 0
         else:
@@ -701,16 +672,19 @@ def read_matrix(
             path, index_col=[0, 1], find_similar=True, header=header
         ).squeeze()
         if not isinstance(long_matrix, pd.Series):
-            raise TypeError("There should be no way this isn't a series.")
+            raise TypeError(
+                "The read in matrix had more than 3 columns, so couldn't "
+                "be read as a long matrix."
+            )
 
-        matrix = long_matrix.unstack()
+        matrix = long_matrix.unstack()  # noqa: PD010
         matrix.columns = matrix.columns.droplevel(0)
     else:
         raise ValueError(f"unknown format {format_}")
 
     # Attempt to convert to integers
-    matrix.columns = pd.to_numeric(matrix.columns, errors="ignore", downcast="integer")
-    matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")
+    matrix.columns = pd.to_numeric(matrix.columns, errors="ignore", downcast="integer")  # type: ignore[call-overload]
+    matrix.index = pd.to_numeric(matrix.index, errors="ignore", downcast="integer")  # type: ignore[call-overload]
 
     matrix = matrix.sort_index(axis=0).sort_index(axis=1)
     if (matrix.index != matrix.columns).any():
@@ -742,13 +716,12 @@ def starts_with(s: str, x: str) -> bool:
     return re.search(search_string, s) is not None
 
 
-def find_filename(
-    path: os.PathLike,
+def find_similar_filename(
+    path: pathlib.Path,
     alt_types: list[str] | None = None,
-    return_full_path: bool = True,
 ) -> pathlib.Path:
     """
-    Checks if the file at path exists under a different file extension.
+    Check if the file at path exists under a different file extension.
 
     If path ends in a file extension, will try find that file first. If
     that doesn't exist, it will look for a compressed, or '.csv' version.
@@ -760,7 +733,7 @@ def find_filename(
 
     alt_types:
         A list of alternate filetypes to consider. By default, will be:
-        ['.pbz2', '.csv']
+        ['.bz2', '.csv']
 
     return_full_path:
         If False, will only return the name of the file, and not the full path
@@ -780,27 +753,21 @@ def find_filename(
     # Init
     path = pathlib.Path(path)
 
-    # Wrapper around return to deal with full path or not
-    def return_fn(ret_path):
-        if return_full_path:
-            return ret_path
-        return ret_path.name
-
     if alt_types is None:
-        alt_types = [".pbz2", ".csv"] + list(PD_COMPRESSION)
+        alt_types = [".bz2", ".csv", *list(PD_COMPRESSION)]
 
     # Make sure they all start with a dot
     temp_alt_types = list()
     for ftype in alt_types:
+        alt_ftype = ftype
         if not starts_with(ftype, "."):
-            ftype = "." + ftype
-        temp_alt_types.append(ftype)
+            alt_ftype = "." + alt_ftype
+        temp_alt_types.append(alt_ftype)
     alt_types = temp_alt_types.copy()
 
     # Try to find the path as is
-    if path.suffix != "":
-        if os.path.exists(path):
-            return return_fn(path)
+    if (path.suffix != "") & (path.exists()):
+        return path
 
     # Try to find similar paths
     attempted_paths = list()
@@ -808,19 +775,18 @@ def find_filename(
     for ftype in alt_types:
         i_path = base_path.with_suffix(ftype)
         attempted_paths.append(i_path)
-        if os.path.exists(i_path):
-            return return_fn(i_path)
+        if i_path.exists():
+            return i_path
 
     # If here, no paths were found!
     raise FileNotFoundError(
         "Cannot find any similar files. Tried all of the following paths: %s"
-        % str(attempted_paths)
     )
 
 
-def file_exists(file_path: os.PathLike) -> bool:
+def file_exists(file_path: pathlib.Path) -> bool:
     """
-    Checks if a file exists at the given path.
+    Check if a file exists at the given path.
 
     Parameters
     ----------
@@ -832,24 +798,21 @@ def file_exists(file_path: os.PathLike) -> bool:
     file_exists:
         True if a file exists, else False
     """
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         return False
 
-    if not os.path.isfile(file_path):
-        raise IOError(
-            "The given path exists, but does not point to a file. "
-            "Given path: %s" % str(file_path)
-        )
+    if not file_path.is_file():
+        raise OSError("The given path exists, but does not point to a file. Given path: %s")
 
     return True
 
 
 def check_file_exists(
-    file_path: os.PathLike,
+    file_path: pathlib.Path,
     find_similar: bool = False,
 ) -> None:
     """
-    Checks if a file exists at the given path. Throws an error if not.
+    Check if a file exists at the given path. Throws an error if not.
 
     Parameters
     ----------
@@ -866,8 +829,8 @@ def check_file_exists(
     None
     """
     if find_similar:
-        find_filename(file_path)
+        find_similar_filename(file_path)
         return
 
     if not file_exists(file_path):
-        raise IOError("Cannot find a path to: %s" % str(file_path))
+        raise OSError("Cannot find a path to: %s")

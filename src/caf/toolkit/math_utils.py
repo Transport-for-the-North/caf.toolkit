@@ -177,9 +177,7 @@ def root_mean_squared_error(
                     raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.")
 
             except (ModuleNotFoundError, ImportError) as error:
-                raise TypeError(
-                    f"Cannot handle arrays of type '{type(diffs)}'."
-                ) from error
+                raise TypeError(f"Cannot handle arrays of type '{type(diffs)}'.") from error
 
     return float(np.mean(squared_diffs) ** 0.5)
 
@@ -299,10 +297,7 @@ def check_numeric(check_dict: dict[str, Any]) -> None:
         includes the parameter name in the message.
     """
     for name, val in check_dict.items():
-        if not (
-            np.issubdtype(type(val), np.floating)
-            or np.issubdtype(type(val), np.integer)
-        ):
+        if not (np.issubdtype(type(val), np.floating) or np.issubdtype(type(val), np.integer)):
             raise ValueError(
                 f"{name} should be a scalar number (float or int) not {type(val)}"
             )
