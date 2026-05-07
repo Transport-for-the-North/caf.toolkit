@@ -342,10 +342,10 @@ def read_df(
     df:
         The read in df at path.
     """
-    alt_suffix = list(PD_COMPRESSION) + [".csv"]
+    alt_suffix = [*list(PD_COMPRESSION), ".csv"]
 
     # Try and find similar files if we are allowed
-    if not os.path.exists(path):
+    if not path.exists():
         if not find_similar:
             raise FileNotFoundError(f"No such file or directory: '{path}'")
         path = find_similar_filename(path, alt_types=alt_suffix)
