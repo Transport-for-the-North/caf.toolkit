@@ -950,7 +950,9 @@ def _multi_vector_trans_index(
                 translation_from
             )
             if len(missing_rows) > 0:
-                _vector_missing_warning(vector, list(missing_rows))
+                _vector_missing_warning(
+                    vector.groupby(translation_from_col).sum(), list(missing_rows)
+                )
 
         else:
             raise ValueError(
@@ -1437,7 +1439,11 @@ class ZoneCorrespondence:
         factor_col_sums = self.vector.groupby(self.from_col_name)[self.factors_col_name].sum()
 
         if any(factor_col_sums.round(DP_TOLERANCE) > 1):
-            raise ValueError("Factors cannot be greater than one.")
+            warnings.warn(
+                "Factors usually should not be greater than one. If disaggregating intensive"
+                " variables, ignore this warning.",
+                stacklevel=2,
+            )
 
         if any(self.vector[self.factors_col_name] < 0):
             raise ValueError("Factors cannot be negative.")
