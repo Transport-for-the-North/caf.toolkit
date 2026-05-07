@@ -27,6 +27,8 @@ NORMALISED_PUNTUATION = r"!#$%£&\-.<=>+^_~\(\)"
 NORMALISED_CHARACTERS = string.ascii_lowercase + string.digits + NORMALISED_PUNTUATION
 """Characted allowed in normalised column names."""
 
+# Acceptable compression methods taken from Pandas docs: 
+# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_csv.html
 PD_COMPRESSION = {
     ".gz",
     ".bz2",
