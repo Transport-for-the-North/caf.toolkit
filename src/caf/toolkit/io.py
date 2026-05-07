@@ -785,29 +785,6 @@ def find_similar_filename(
     )
 
 
-def file_exists(file_path: pathlib.Path) -> bool:
-    """
-    Check if a file exists at the given path.
-
-    Parameters
-    ----------
-    file_path:
-        path to the file to check.
-
-    Returns
-    -------
-    file_exists:
-        True if a file exists, else False
-    """
-    if not file_path.exists():
-        return False
-
-    if not file_path.is_file():
-        raise OSError("The given path exists, but does not point to a file. Given path: %s")
-
-    return True
-
-
 def check_file_exists(
     file_path: pathlib.Path,
     find_similar: bool = False,
@@ -833,5 +810,5 @@ def check_file_exists(
         find_similar_filename(file_path)
         return
 
-    if not file_exists(file_path):
+    if not file_path.exists():
         raise OSError("Cannot find a path to: %s")
