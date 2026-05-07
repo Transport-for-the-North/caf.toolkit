@@ -342,19 +342,18 @@ def read_df(
     df:
         The read in df at path.
     """
+    alt_suffix = list(PD_COMPRESSION) + [".csv"]
+
     # Try and find similar files if we are allowed
-    if not path.exists():
+    if not os.path.exists(path):
         if not find_similar:
             raise FileNotFoundError(f"No such file or directory: '{path}'")
-        path = find_similar_filename(path)
+        path = find_similar_filename(path, alt_types=alt_suffix)
 
-    if pathlib.Path(path).suffix == ".csv":
+    if pathlib.Path(path).suffix in alt_suffix:
         return pd.read_csv(path, index_col=index_col, **kwargs)
 
-    if pathlib.Path(path).suffix in PD_COMPRESSION:
-        return pd.read_csv(path, index_col=index_col, **kwargs)
-
-    raise ValueError("Cannot determine the filetype of the given path.")
+    raise RuntimeError("A valid file was found, but apparently we can't load it??")
 
 
 def read_csv_matrix(
@@ -621,7 +620,7 @@ def read_matrix(
         Path to CSV file
     format_ : str, optional
         Expected format of the matrix 'square' or 'long', if
-        not given attempts to figure out the format by reading
+        not given will attempt to figure out the format by reading
         the top few lines of the file.
     find_similar : bool, default False
         If True and the given file at path cannot be found, files with the
