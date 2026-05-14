@@ -59,7 +59,7 @@ class ChoiceGenerator(DataGenerator):
                 unique_values.append(i)
         self.values = unique_values
 
-        if all_values and (len(self.values) >= length):
+        if all_values and (len(self.values) > length):
             raise ValueError(
                 "all_values has been set to True when the number of choices "
                 "is greater than length"
