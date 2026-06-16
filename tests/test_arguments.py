@@ -139,7 +139,7 @@ class TestGetenvBool:
             arguments.getenv_bool(self._variable_name, False)
 
 
-if sys.version_info.minor <= 9:  # noqa: PLR2004
+if sys.version_info.minor <= 9:
     # Creating dummy class because the test is skipped
     class _ArgumentsConfigTest: ...  # pylint: disable=too-few-public-methods
 
@@ -167,7 +167,7 @@ class TestModelArguments:
     """Tests for the `ModelArguments` class."""
 
     @pytest.mark.skipif(
-        sys.version_info.minor <= 9,  # noqa: PLR2004
+        sys.version_info.minor <= 9,
         reason="uses | in type annotations which was added in 3.10",
     )
     @pytest.mark.filterwarnings("error")
