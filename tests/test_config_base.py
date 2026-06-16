@@ -18,7 +18,7 @@ from caf.toolkit import BaseConfig
 
 # pylint: enable=import-error
 
-if sys.version_info.minor == 10:  # noqa: PLR2004
+if sys.version_info.minor == 10:
     Self = TypeVar("Self")
 else:
     from typing import Self

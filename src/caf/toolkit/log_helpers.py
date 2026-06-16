@@ -57,7 +57,7 @@ _WARNINGS_LOGGER_NAME = "py.warnings"
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
-if sys.version_info.minor <= 10:  # noqa: PLR2004
+if sys.version_info.minor <= 10:
     # pylint: disable=protected-access
     _LEVEL_LOOKUP = logging._nameToLevel.copy()
 else:
