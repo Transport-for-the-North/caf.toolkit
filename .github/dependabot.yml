@@ -4,7 +4,7 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "cron"
-      cronjob: "0 0 18 * *"
+      cronjob: "0 0 19 * *"
     allow:
       # Only allow major version updates to reduce noise from minor/patch updates
       - dependency-name: "*"
