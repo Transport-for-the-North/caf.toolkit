@@ -43,18 +43,23 @@ class ChoiceGenerator(DataGenerator):
     """Generates data using a list of allowed values."""
 
     # pylint: disable=too-few-public-methods
-    values: set[int | str]  # we use a set so there can't be duplicates
+    # Using a list because sets are unordered
+    values: list[int | str]
     """Values to select for data values"""
     all_values: bool
     """Whether to ensure the resultant data contains all elements defined in values."""
 
     def __init__(
-        self, name: str, length: int, values: set[int | str], all_values: bool = False
+        self, name: str, length: int, values: list[int | str], all_values: bool = False
     ) -> None:
         super().__init__(name, length)
-        self.values = values
+        unique_values = []
+        for i in values:
+            if i not in unique_values:
+                unique_values.append(i)
+        self.values = unique_values
 
-        if all_values and (len(values) >= length):
+        if all_values and (len(self.values) > length):
             raise ValueError(
                 "all_values has been set to True when the number of choices "
                 "is greater than length"
