@@ -18,6 +18,6 @@ tox>=3.24.3
 openpyxl>=3.1.5
 
 # edit_install
-versioningit>=2.2.0
+versioningit>=3.3.0
 
 # For documentation requirements - see docs.requirements.txt
