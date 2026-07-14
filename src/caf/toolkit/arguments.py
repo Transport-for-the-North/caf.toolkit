@@ -180,7 +180,9 @@ def parse_arg_details(annotation: str) -> tuple[type, bool, int | str | None]:
     """
     annotation = _replace_union(annotation)
 
-    match = re.match(r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip())
+    match = re.match(
+        r"^(?:(\w+)?\[|<class ')?([\w \t,.|]+)(?:\]|'>)?$", annotation.strip()
+    )
     if match is None:
         warnings.warn(
             f"unexpected type annotation format: '{annotation}'",
@@ -240,7 +242,9 @@ class ModelArguments:
             a subclass of `pydantic.BaseModel`.
         """
         if not issubclass(model, pydantic.BaseModel):
-            raise TypeError(f"`dataclass` should be a pydantic BaseModel not {type(model)}")
+            raise TypeError(
+                f"`dataclass` should be a pydantic BaseModel not {type(model)}"
+            )
 
         self._model = model
         self._config = issubclass(model, config_base.BaseConfig)
@@ -314,7 +318,9 @@ class ModelArguments:
         parser.set_defaults(dataclass_parse_func=self._parse)
         return parser
 
-    def add_config_arguments(self, parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def add_config_arguments(
+        self, parser: argparse.ArgumentParser
+    ) -> argparse.ArgumentParser:
         """Add config argument to command-line `parser` and adds `dataclass_parse_func`.
 
         Adds argument for reading parameters from a config and will automatically
@@ -420,7 +426,14 @@ class ModelArguments:
         """
         if not issubclass(self._model, config_base.BaseConfig):
             raise TypeError(f"cannot use config parse with {type(self._model)}")
-        return self._model.load_yaml(args.config_path)  # type: ignore[attr-defined]
+        config = self._model.load_yaml(args.config_path)  # type: ignore[attr-defined]
+        if config is None:
+            raise TypeError(
+                "Loading YAML returned None, Check any validators return statements."
+            )
+        if not isinstance(config, config_base.BaseConfig):
+            warnings.warn(f"expected config to be BaseConfig not {type(config)}", stacklevel=1)
+        return config
 
 
 class TidyUsageArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
