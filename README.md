@@ -1,5 +1,8 @@
-
-![Transport for the North Logo](https://github.com/Transport-for-the-North/caf.toolkit/blob/main/docs/TFN_Landscape_Colour_CMYK.png)
+<div align="center">
+<a href="https://www.transportforthenorth.com/">
+<img src="https://raw.githubusercontent.com/Transport-for-the-North/.github/refs/heads/main/profile/tfn-logo.svg" alt="Transport for the North logo">
+</a>
+</div>
 
 <h1 align="center">CAF.Toolkit</h1>
 
