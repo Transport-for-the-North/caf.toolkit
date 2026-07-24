@@ -32,7 +32,7 @@ more widely available and easily accessible.
 
 ## Common Analytical Framework
 
-This package is sits within the [Common Analytical Framework (CAF)](https://github.com/Transport-for-the-North#common-analytical-framework-caf),
+This package sits within the [Common Analytical Framework (CAF)](https://github.com/Transport-for-the-North#common-analytical-framework-caf),
 which is a collaboration between transport bodies in the UK to develop and maintain commonly used
 transport analytics and appraisal tools.
 
