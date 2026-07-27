@@ -679,7 +679,7 @@ def read_matrix(
             )
 
         matrix = long_matrix.unstack()  # noqa: PD010
-        matrix = matrix.droplevel(0)
+        matrix = matrix.droplevel(0, axis=1)
     else:
         raise ValueError(f"unknown format {format_}")
 
