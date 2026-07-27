@@ -418,7 +418,7 @@ def read_csv_matrix(
 
         # Matrix has MultiIndex so this returns a DataFrame
         matrix = matrix.unstack()  # type: ignore[assignment]  # noqa: PD010
-        matrix.columns = matrix.columns.droplevel(0)
+        matrix = matrix.droplevel(0, axis=1)
 
     else:
         raise ValueError(f"unknown format {format_}")
@@ -679,7 +679,7 @@ def read_matrix(
             )
 
         matrix = long_matrix.unstack()  # noqa: PD010
-        matrix.columns = matrix.columns.droplevel(0)
+        matrix = matrix.droplevel(0)
     else:
         raise ValueError(f"unknown format {format_}")
 

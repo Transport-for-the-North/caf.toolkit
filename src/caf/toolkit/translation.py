@@ -447,7 +447,7 @@ def numpy_vector_zone_translation(
     return out_vector
 
 
-def pandas_long_matrix_zone_translation(  # noqa: PLR0913
+def pandas_long_matrix_zone_translation(  # noqa: PLR0913, PLR0917
     matrix: pd.DataFrame | pd.Series,
     index_col_1_name: str,
     index_col_2_name: str,

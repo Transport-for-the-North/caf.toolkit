@@ -142,7 +142,7 @@ class TestCreateConfig:
         assert isinstance(val, type_iter)
 
     @pytest.mark.parametrize("param, type_iter", [("default", True), ("option", None)])
-    def test_default(self, basic: ConfigTestClass, param: str, type_iter: None | bool) -> None:
+    def test_default(self, basic: ConfigTestClass, param: str, type_iter: bool | None) -> None:
         """
         Tests default values are correctly written.
 

@@ -77,7 +77,7 @@ class TestIsNoneLike:
     """Tests for caf.toolkit.toolbox.is_none_like."""
 
     @pytest.mark.parametrize("obj", [None, "none", "NONE", " None   "])
-    def test_true_none_items(self, obj: None | str) -> None:
+    def test_true_none_items(self, obj: str | None) -> None:
         """Test single items are identified as None."""
         assert toolbox.is_none_like(obj)
 
@@ -87,7 +87,7 @@ class TestIsNoneLike:
         assert not toolbox.is_none_like(obj)
 
     @pytest.mark.parametrize("obj", [[], [None], [None, None], [None, "none"]])
-    def test_true_list_items(self, obj: list[None | str]) -> None:
+    def test_true_list_items(self, obj: list[str | None]) -> None:
         """Test lists of items are identified as None."""
         assert toolbox.is_none_like(obj)
 
