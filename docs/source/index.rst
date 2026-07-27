@@ -13,7 +13,7 @@ Over time, alongside adding extras functionality to enhance other CAF packages, 
 Common Analytical Framework
 ---------------------------
 
-This package is part of the `Common Analytical Framework (CAF) <https://transport-for-the-north.github.io/CAF-Handbook/>`_,
+This package is part of the `Common Analytical Framework (CAF) <https://github.com/Transport-for-the-North#common-analytical-framework-caf>`_,
 which is a collaboration between transport bodies in the UK to develop and maintain commonly used transport analytics and appraisal tools.
 The aim is to make useful transport planning functionalities more widely available and easy to use.
 

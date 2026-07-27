@@ -1,6 +1,8 @@
 <div align="center">
 <a href="https://www.transportforthenorth.com/">
-<img src="https://raw.githubusercontent.com/Transport-for-the-North/.github/refs/heads/main/profile/tfn-logo.svg" alt="Transport for the North logo">
+<img
+    src="https://raw.githubusercontent.com/Transport-for-the-North/.github/refs/heads/main/profile/tfn-banner.svg"
+    alt="Transport for the North logo">
 </a>
 </div>
 
@@ -30,7 +32,7 @@ more widely available and easily accessible.
 
 ## Common Analytical Framework
 
-This package is sits within the [Common Analytical Framework (CAF)](https://transport-for-the-north.github.io/caf_homepage/intro.html),
+This package sits within the [Common Analytical Framework (CAF)](https://github.com/Transport-for-the-North#common-analytical-framework-caf),
 which is a collaboration between transport bodies in the UK to develop and maintain commonly used
 transport analytics and appraisal tools.
 

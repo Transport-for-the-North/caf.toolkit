@@ -1,0 +1,5 @@
+/* Navbar logo limit width */
+.navbar-brand img {
+    height: auto;
+    width: 100px;
+}

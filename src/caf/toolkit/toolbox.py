@@ -58,7 +58,7 @@ def list_safe_remove(
     return lst
 
 
-def is_none_like(obj: None | str | list) -> bool:
+def is_none_like(obj: str | list | None) -> bool:
     """Check if an object is None-like.
 
     An object is considered None-like if one of the following is True:
