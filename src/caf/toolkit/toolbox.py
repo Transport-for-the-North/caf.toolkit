@@ -185,12 +185,13 @@ def is_unique_list(unique_vals: Collection) -> bool:
 
 
 _Key = TypeVar("_Key", bound=Hashable)
+_Value = TypeVar("_Value")
 
 
 def combine_dict_list(
-    dict_list: list[dict[_Key, int]],
-    operation: Callable[[int, int], int],
-) -> dict[_Key, int]:
+    dict_list: list[dict[_Key, _Value]],
+    operation: Callable[[_Value, _Value], _Value],
+) -> dict[_Key, _Value]:
     """Combine a list of dictionaries.
 
     Parameters
@@ -210,9 +211,14 @@ def combine_dict_list(
     """
 
     # Define the accumulator function to call in functools.reduce
-    def reducer(accumulator: dict[_Key, int], item: dict[_Key, int]) -> dict[_Key, int]:
+    def reducer(
+        accumulator: dict[_Key, _Value], item: dict[_Key, _Value]
+    ) -> dict[_Key, _Value]:
         for key, value in item.items():
-            accumulator[key] = operation(accumulator.get(key, 0), value)
+            if key in accumulator:
+                accumulator[key] = operation(accumulator[key], value)
+            else:
+                accumulator[key] = value
         return accumulator
 
     return functools.reduce(reducer, dict_list)
