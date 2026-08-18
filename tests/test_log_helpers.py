@@ -7,6 +7,7 @@ import collections
 import dataclasses
 import functools
 import getpass
+import json
 import logging
 import os
 import platform
@@ -213,6 +214,12 @@ def _load_log(log_file: pathlib.Path) -> str:
     assert log_file.is_file(), "log file not created"
     with log_file.open("rt", encoding="utf-8") as file:
         return file.read()
+
+
+def _load_json_log(log_file: pathlib.Path) -> list[dict[str, str | int | None]]:
+    """Assert JSON log file exists and parse each non-empty line as JSON."""
+    lines = [i.strip() for i in _load_log(log_file).splitlines() if i.strip()]
+    return [json.loads(i) for i in lines]
 
 
 def _run_warnings() -> None:
@@ -438,6 +445,28 @@ class TestLogHelper:
 
         assert log_init.details_message in text, "incorrect tool details"
         assert log_init.system_message in text, "incorrect system information"
+
+    def test_file_initialisation_json(
+        self, tmp_path: pathlib.Path, log_init: LogInitDetails
+    ) -> None:
+        """Test initialising the logger with JSON file output."""
+        log_file = tmp_path / "test.jsonl"
+
+        LogHelper(
+            "test_file_initialisation_json",
+            log_init.details,
+            console=False,
+            log_file=log_file,
+            json_file_format=True,
+            warning_capture=False,
+        )
+
+        records = _load_json_log(log_file)
+        output_messages = [record["message"] for record in records]
+
+        assert any("***  test tool  ***" in msg for msg in output_messages)
+        assert any("Tool Information" in msg for msg in output_messages)
+        assert any("System Information" in msg for msg in output_messages)
 
     @pytest.mark.parametrize(
         ["level", "answer"],
@@ -690,6 +719,29 @@ class TestTemporaryLogFile:
         for i, msg in unlogged_messages:
             assert msg not in text, f"logged after closing class level {i}"
 
+    def test_log_file_json(self, tmp_path: pathlib.Path) -> None:
+        """Test temporary log file supports JSON records."""
+        base_log_file = tmp_path / "base_log_file.log"
+        log_file = tmp_path / "test.jsonl"
+        logger = logging.getLogger("test_temporary_json")
+        logger.setLevel(logging.DEBUG)
+
+        with TemporaryLogFile(
+            logger,
+            log_file,
+            base_log_file=base_log_file,
+            json_format=True,
+        ):
+            messages = _log_messages(logger)
+
+        records = _load_json_log(log_file)
+        output_messages = [record["message"] for record in records]
+
+        assert f'Base log file: "{base_log_file}"' in output_messages
+
+        for _, msg in messages:
+            assert msg in output_messages
+
 
 class TestGetLogger:
     """Tests for `get_logger` function."""
@@ -717,6 +769,24 @@ class TestGetLogger:
 
         assert log_file.is_file(), "log file not created"
         assert isinstance(logger.handlers[0], logging.FileHandler), "incorrect file handler"
+
+    def test_file_handler_json(self, tmp_path: pathlib.Path) -> None:
+        """Test JSON file handler can be requested from get_logger."""
+        logger_name = "test_file_handler_json"
+        log_file = tmp_path / "test.jsonl"
+
+        logger = get_logger(
+            logger_name,
+            "1.2.3",
+            console_handler=False,
+            log_file_path=log_file,
+            json_file_format=True,
+        )
+        logger.setLevel(logging.INFO)
+        logger.info("json message")
+
+        records = _load_json_log(log_file)
+        assert any(record["message"] == "json message" for record in records)
 
     def test_instantiate_message(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test instantiation message and code version are logged."""
@@ -761,6 +831,23 @@ class TestCaptureWarnings:
         assert isinstance(warnings_logger.handlers[0], logging.FileHandler), (
             "error with file handler"
         )
+
+    @pytest.mark.filterwarnings("ignore:testing warning")
+    def test_file_handler_logger_json(
+        self, tmp_path: pathlib.Path, warnings_logger: logging.Logger
+    ) -> None:
+        """Test warning capture can write JSON records."""
+        log_file = tmp_path / "test.jsonl"
+
+        capture_warnings(
+            stream_handler=False,
+            file_handler_args={"log_file": log_file, "json_format": True},
+        )
+        warnings_logger.warning("test json warning message")
+
+        assert len(warnings_logger.handlers) == 1, "incorrect number of handlers"
+        records = _load_json_log(log_file)
+        assert any(record["message"] == "test json warning message" for record in records)
 
     @pytest.mark.filterwarnings("ignore:testing warning")
     @pytest.mark.skip(

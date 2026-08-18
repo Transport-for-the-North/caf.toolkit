@@ -283,6 +283,9 @@ class LogHelper:
     log_file
         If given output log messages to a file with default
         settings.
+    json_file_format
+        If False (default) write plain text records.
+        If True write JSON records.
     warning_capture
         If True (default) capture, and log, Python warnings.
     redirect
@@ -376,6 +379,7 @@ class LogHelper:
         *,
         console: bool = True,
         log_file: os.PathLike | None = None,
+        json_file_format: bool = False,
         warning_capture: bool = True,
         allowed_packages: Sequence[str] | None = None,
         redirect: bool = True,
@@ -411,7 +415,7 @@ class LogHelper:
             self._redirect = False
 
         if log_file is not None:
-            self.add_file_handler(log_file)
+            self.add_file_handler(log_file, json_format=json_file_format)
 
         if len(self.logger.handlers) > 0:
             self.write_instantiate_message()
@@ -480,6 +484,7 @@ class LogHelper:
         fh_format: str = DEFAULT_FILE_FORMAT,
         datetime_format: str = DEFAULT_FILE_DATETIME,
         log_level: int = logging.DEBUG,
+        json_format: bool = False,
     ) -> None:
         """Add custom file handler to the logger.
 
@@ -500,11 +505,21 @@ class LogHelper:
         log_level:
             The logging level to give to the FileHandler.
 
+        json_format:
+            If False (default) write plain text records.
+            If True write JSON records.
+
         See Also
         --------
         `get_file_handler`
         """
-        handler = get_file_handler(log_file, fh_format, datetime_format, log_level)
+        handler = get_file_handler(
+            log_file,
+            fh_format,
+            datetime_format,
+            log_level,
+            json_format,
+        )
         self.add_handler(handler)
 
     def capture_warnings(self) -> None:
@@ -748,6 +763,44 @@ class PackageFilter(logging.Filter):
         return hash(self._pattern)
 
 
+class JsonLogRecord(pydantic.BaseModel):
+    """Schema for a single line in the JSON log format."""
+
+    timestamp: str
+    logger: str
+    level: str
+    message: str
+    module: str
+    function: str
+    line: int
+    process: int | None
+    thread: int | None
+    exception: str | None
+
+
+class JsonLogFormatter(logging.Formatter):
+    """Format log records as one JSON object per line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format a log record to a JSON string."""
+        message = JsonLogRecord(
+            timestamp=self.formatTime(record, self.datefmt),
+            logger=record.name,
+            level=record.levelname,
+            message=record.getMessage(),
+            module=record.module,
+            function=record.funcName,
+            line=record.lineno,
+            process=record.process,
+            thread=record.thread,
+            exception=None
+            if record.exc_info is None
+            else self.formatException(record.exc_info),
+        )
+
+        return message.model_dump_json()
+
+
 # # # FUNCTIONS # # #
 def write_information(
     logger: logging.Logger,
@@ -865,6 +918,7 @@ def get_logger(
     console_handler: bool = True,
     instantiate_msg: str | None = None,
     log_file_path: os.PathLike | None = None,
+    json_file_format: bool = False,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
 
@@ -894,6 +948,10 @@ def get_logger(
         Whether to attach a default logging.StreamHandler object, generated
         by `get_console_handler()`.
 
+    json_file_format:
+        If False (default) write plain text records.
+        If True write JSON records.
+
     Returns
     -------
     logger:
@@ -907,7 +965,7 @@ def get_logger(
     """
     log_handlers: list[logging.Handler] = list()
     if log_file_path is not None:
-        log_handlers.append(get_file_handler(log_file_path))
+        log_handlers.append(get_file_handler(log_file_path, json_format=json_file_format))
 
     if console_handler:
         log_handlers.append(get_console_handler())
@@ -956,6 +1014,7 @@ def get_file_handler(
     fh_format: str = DEFAULT_FILE_FORMAT,
     datetime_format: str = DEFAULT_FILE_DATETIME,
     log_level: int = logging.DEBUG,
+    json_format: bool = False,
 ) -> logging.FileHandler:
     """Create a file handler for a logger.
 
@@ -975,10 +1034,18 @@ def get_file_handler(
 
     log_level:
         The logging level to give to the FileHandler.
+
+    json_format:
+        If False (default) write plain text records.
+        If True write JSON records.
     """
     handler = logging.FileHandler(log_file, encoding="utf-8")
     handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
+    if json_format:
+        handler.setFormatter(JsonLogFormatter(datefmt=datetime_format))
+    else:
+        handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
+
     return handler
 
 
