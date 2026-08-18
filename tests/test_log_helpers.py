@@ -9,6 +9,7 @@ import functools
 import getpass
 import json
 import logging
+import logging.handlers
 import os
 import platform
 import subprocess
@@ -467,6 +468,58 @@ class TestLogHelper:
         assert any("***  test tool  ***" in msg for msg in output_messages)
         assert any("Tool Information" in msg for msg in output_messages)
         assert any("System Information" in msg for msg in output_messages)
+
+    def test_file_initialisation_existing_file_handler(self, tmp_path: pathlib.Path) -> None:
+        """Test passing an existing FileHandler instance to `log_file`."""
+        log_file = tmp_path / "existing_handler.log"
+        details = ToolDetails("test", "1.2.3")
+
+        fh = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=1000,
+            backupCount=1,
+        )
+        try:
+            with LogHelper(
+                "test_file_initialisation_existing_file_handler",
+                details,
+                console=False,
+                log_file=fh,
+                warning_capture=False,
+            ) as helper:
+                assert len(helper.logger.handlers) == 1
+                assert helper.logger.handlers[0] is fh
+                assert isinstance(
+                    helper.logger.handlers[0],
+                    logging.handlers.RotatingFileHandler,
+                )
+        finally:
+            fh.close()
+
+    def test_file_initialisation_existing_file_handler_json_format(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Test JSON formatter is set on an existing FileHandler instance."""
+        log_file = tmp_path / "existing_handler.jsonl"
+        details = ToolDetails("test", "1.2.3")
+
+        fh = logging.handlers.TimedRotatingFileHandler(log_file, when="S", interval=1)
+        fh.setFormatter(logging.Formatter("%(message)s"))
+
+        try:
+            with LogHelper(
+                "test_file_initialisation_existing_file_handler_json_format",
+                details,
+                console=False,
+                log_file=fh,
+                json_file_format=True,
+                warning_capture=False,
+            ) as helper:
+                assert len(helper.logger.handlers) == 1
+                formatter = helper.logger.handlers[0].formatter
+                assert isinstance(formatter, log_helpers.JsonLogFormatter)
+        finally:
+            fh.close()
 
     @pytest.mark.parametrize(
         ["level", "answer"],

@@ -281,8 +281,13 @@ class LogHelper:
         If True (default) output log messages to the console
         with default settings.
     log_file
-        If given output log messages to a file with default
-        settings.
+        If given output log messages to a file. This can be either:
+        - a path to a file, which will create a new file handler with
+            default settings
+        - an existing :class:`logging.FileHandler` instance (or subclass
+            e.g. :class:`logging.handlers.RotatingFileHandler` or
+            :class:`logging.handlers.TimedRotatingFileHandler`),
+            which will be used directly.
     json_file_format
         If False (default) write plain text records.
         If True write JSON records.
@@ -378,7 +383,7 @@ class LogHelper:
         tool_details: ToolDetails,
         *,
         console: bool = True,
-        log_file: os.PathLike | None = None,
+        log_file: os.PathLike | logging.FileHandler | None = None,
         json_file_format: bool = False,
         warning_capture: bool = True,
         allowed_packages: Sequence[str] | None = None,
@@ -480,7 +485,7 @@ class LogHelper:
 
     def add_file_handler(
         self,
-        log_file: os.PathLike,
+        log_file: os.PathLike | logging.FileHandler,
         fh_format: str = DEFAULT_FILE_FORMAT,
         datetime_format: str = DEFAULT_FILE_DATETIME,
         log_level: int = logging.DEBUG,
@@ -491,7 +496,13 @@ class LogHelper:
         Parameters
         ----------
         log_file:
-            The path to a file to output the log
+            If given output log messages to a file. This can be either:
+            - a path to a file, which will create a new file handler with
+                default settings
+            - an existing :class:`logging.FileHandler` instance (or subclass
+                e.g. :class:`logging.handlers.RotatingFileHandler` or
+                :class:`logging.handlers.TimedRotatingFileHandler`),
+                which will be used directly.
 
         fh_format:
             A string defining a custom formatting to use for the StreamHandler().
@@ -513,13 +524,17 @@ class LogHelper:
         --------
         `get_file_handler`
         """
-        handler = get_file_handler(
-            log_file,
-            fh_format,
-            datetime_format,
-            log_level,
-            json_format,
-        )
+        if isinstance(log_file, logging.FileHandler):
+            handler = log_file
+        else:
+            handler = logging.FileHandler(log_file, encoding="utf-8")
+
+        if json_format:
+            handler.setFormatter(JsonLogFormatter(datefmt=datetime_format))
+        else:
+            handler.setFormatter(logging.Formatter(fh_format, datefmt=datetime_format))
+
+        handler.setLevel(log_level)
         self.add_handler(handler)
 
     def capture_warnings(self) -> None:
