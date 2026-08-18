@@ -215,7 +215,10 @@ def combine_dict_list(
         accumulator: dict[_Key, _Value], item: dict[_Key, _Value]
     ) -> dict[_Key, _Value]:
         for key, value in item.items():
-            accumulator[key] = operation(accumulator.get(key, 0), value)
+            if key in accumulator:
+                accumulator[key] = operation(accumulator[key], value)
+            else:
+                accumulator[key] = value
         return accumulator
 
     return functools.reduce(reducer, dict_list)
