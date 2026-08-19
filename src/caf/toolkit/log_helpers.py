@@ -933,6 +933,7 @@ def get_logger(
     console_handler: bool = True,
     instantiate_msg: str | None = None,
     log_file_path: os.PathLike | None = None,
+    *,
     json_file_format: bool = False,
 ) -> logging.Logger:
     """Create a standard logger using the CAF template.
