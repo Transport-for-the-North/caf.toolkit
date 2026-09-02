@@ -30,11 +30,12 @@ import warnings
 
 # Built-Ins
 from collections.abc import Collection, Hashable, Mapping
-from typing import TYPE_CHECKING, Annotated, ClassVar, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Protocol
 
 # Third Party
 import psutil
 import pydantic
+import pydantic_core
 import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
@@ -45,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from dataclasses import Field
     from types import TracebackType
-    from typing import Any, Self
+    from typing import Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -54,6 +55,15 @@ DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(messag
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 LOG = logging.getLogger(__name__)
 _WARNINGS_LOGGER_NAME = "py.warnings"
+
+# fmt: off
+_EXCLUDED_JSON_EXTRA = (
+    "msg", "args", "name", "levelname", "levelno", "created", "msecs", "relativeCreated",
+    "funcName", "lineno", "module", "pathname", "filename", "exc_info", "exc_text",
+    "stack_info", "process", "processName", "thread","threadName", "taskName",
+)
+"""Specific keys in `LogRecord.__dict__` to exclude from JSON output."""
+# fmt: on
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
@@ -788,9 +798,24 @@ class JsonLogRecord(pydantic.BaseModel):
     module: str
     function: str
     line: int
-    process: int | None
-    thread: int | None
     exception: str | None
+    extra: dict[str, Any]
+
+
+def _is_json_serializable(obj: Any) -> bool:  # noqa: ANN401
+    try:
+        pydantic.TypeAdapter(type(obj)).dump_json(obj)
+    except pydantic_core.PydanticSerializationError:
+        return False
+    else:
+        return True
+
+
+def _filter_extra(item: tuple[str, Any]) -> bool:
+    key_, value = item
+    if key_.startswith("_") or key_ in _EXCLUDED_JSON_EXTRA:
+        return False
+    return _is_json_serializable(value)
 
 
 class JsonLogFormatter(logging.Formatter):
@@ -806,11 +831,10 @@ class JsonLogFormatter(logging.Formatter):
             module=record.module,
             function=record.funcName,
             line=record.lineno,
-            process=record.process,
-            thread=record.thread,
             exception=None
             if record.exc_info is None
             else self.formatException(record.exc_info),
+            extra=dict(filter(_filter_extra, record.__dict__.items())),
         )
 
         return message.model_dump_json()
