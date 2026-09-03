@@ -58,8 +58,9 @@ _WARNINGS_LOGGER_NAME = "py.warnings"
 
 # fmt: off
 _EXCLUDED_JSON_EXTRA = (
-    "msg", "args", "name", "levelname", "levelno", "created", "msecs", "relativeCreated",
-    "funcName", "lineno", "module", "pathname", "filename", "exc_info", "exc_text",
+    "msg", "message", "args", "name", "levelname", "levelno",
+    "asctime", "created", "msecs", "relativeCreated", "funcName",
+    "lineno", "module", "pathname", "filename", "exc_info", "exc_text",
     "stack_info", "process", "processName", "thread","threadName", "taskName",
 )
 """Specific keys in `LogRecord.__dict__` to exclude from JSON output."""
@@ -807,8 +808,7 @@ def _is_json_serializable(obj: Any) -> bool:  # noqa: ANN401
         pydantic.TypeAdapter(type(obj)).dump_json(obj)
     except pydantic_core.PydanticSerializationError:
         return False
-    else:
-        return True
+    return True
 
 
 def _filter_extra(item: tuple[str, Any]) -> bool:
