@@ -633,13 +633,15 @@ class LogHelper:
         exc_tb: TracebackType | None,
     ) -> None:
         """Write any error to the logger and closes the file."""
-        if exc_type is not None or exc is not None or exc_tb is not None:
+        sys_exit = isinstance(exc, SystemExit) and exc.code == 0
+        exception = exc_type is not None or exc is not None or exc_tb is not None
+        if sys_exit or not exception:
+            self.logger.info("Program completed without any critical errors")
+        else:
             self.logger.critical(
                 "Oh no a critical error occurred",
                 exc_info=True,  # noqa: LOG014
             )
-        else:
-            self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
         if self._stack is not None:
