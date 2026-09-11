@@ -409,6 +409,7 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
         self._stack: contextlib.ExitStack | None = None
         self._redirect = redirect
+        self._original_warning_format = None
 
         if allowed_packages is None:
             self.package_filter = None
@@ -557,11 +558,16 @@ class LogHelper:
         handler.setLevel(log_level)
         self.add_handler(handler)
 
-    def capture_warnings(self) -> None:
+    def capture_warnings(self, simple: bool = True) -> None:
         """Capture warnings using logging.
 
         Runs `logging.captureWarnings(True)` to capture warnings then
         adds all the handlers from the root `logger`.
+
+        Parameters
+        ----------
+        simple
+            Switch to simple warnings format for logging.
 
         See Also
         --------
@@ -576,6 +582,10 @@ class LogHelper:
                 continue
 
             self._warning_logger.addHandler(handler)
+
+        if simple:
+            self._original_warning_format = warnings.formatwarning
+            warnings.formatwarning = simple_warning_format
 
     def write_instantiate_message(self) -> None:
         """Log instatiation message with tool and system information."""
@@ -655,6 +665,9 @@ class LogHelper:
         self.logger.info("Closing log file")
         if self._stack is not None:
             self._stack.__exit__(exc_type, exc, exc_tb)
+
+        if self._original_warning_format is not None:
+            warnings.formatwarning = self._original_warning_format
 
         self.cleanup_handlers()
         logging.shutdown()
@@ -1263,3 +1276,34 @@ def write_metadata(
         format_comment=format_comment,
     )
     return path
+
+
+def simple_warning_format(
+    message: Warning | str,
+    category: type[Warning],
+    filename: str,
+    lineno: int,
+    *args,
+    **kwargs,
+) -> str:
+    """Replace `warnings.formatwarning` with single line message.
+
+    New format is as follows: `{filename}:{lineno}: {category}: {message}`
+
+    Examples
+    --------
+    Replace the original function with this but keep track of the
+    original so it can be reset if needed.
+
+    >>> original_format_warning = warnings.formatwarning
+    >>> warnings.formatwarning = simple_warning_format
+
+    Revert back to the original when needed.
+
+    >>> warnings.formatwarning = original_format_warning
+
+    Example output from this function:
+    `/full/path/to/file.py:10: UserWarning: warning message`
+    """
+    del args, kwargs
+    return f"{filename}:{lineno}: {category.__name__}: {message}"
