@@ -471,6 +471,7 @@ class LogHelper:
         ch_format: str = DEFAULT_CONSOLE_FORMAT,
         datetime_format: str = DEFAULT_CONSOLE_DATETIME,
         log_level: int = logging.INFO,
+        json_format: bool = False,
     ) -> None:
         """Add custom console handler to the logger.
 
@@ -479,6 +480,7 @@ class LogHelper:
         ch_format:
             A string defining a custom formatting to use for the StreamHandler().
             Defaults to "[%(levelname)-8.8s] %(message)s".
+            **Ignored if `json_format` is True.**
 
         datetime_format:
             The datetime format to use when logging to the console.
@@ -487,11 +489,17 @@ class LogHelper:
         log_level:
             The logging level to give to the StreamHandler.
 
+        json_format:
+            If False (default) write plain text records.
+            If True write JSON records.
+
         See Also
         --------
         `get_console_handler`
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
+        if json_format:
+            handler.setFormatter(JsonLogFormatter(datefmt=datetime_format))
         self.add_handler(handler)
 
     def add_file_handler(
@@ -519,6 +527,7 @@ class LogHelper:
             A string defining a custom formatting to use for the StreamHandler().
             Defaults to
             "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s".
+            **Ignored if `json_format` is True.**
 
         datetime_format:
             The datetime format to use when logging to the console.
