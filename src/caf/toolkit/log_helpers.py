@@ -29,7 +29,7 @@ import sys
 import warnings
 
 # Built-Ins
-from collections.abc import Collection, Hashable, Mapping
+from collections.abc import Callable, Collection, Hashable, Mapping
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Protocol
 
 # Third Party
@@ -278,6 +278,9 @@ class SystemInformation:
         return "\n".join(message)
 
 
+_FormatWarningFunc = Callable[[Warning | str, type[Warning], str, int, str | None], str]
+
+
 class LogHelper:
     """Class for managing Python loggers.
 
@@ -409,7 +412,7 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
         self._stack: contextlib.ExitStack | None = None
         self._redirect = redirect
-        self._original_warning_format = None
+        self._original_warning_format: _FormatWarningFunc | None = None
 
         if allowed_packages is None:
             self.package_filter = None
