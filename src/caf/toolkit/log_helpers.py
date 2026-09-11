@@ -29,12 +29,13 @@ import sys
 import warnings
 
 # Built-Ins
-from collections.abc import Collection, Hashable, Mapping
-from typing import TYPE_CHECKING, Annotated, ClassVar, Protocol
+from collections.abc import Callable, Collection, Hashable, Mapping
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Protocol
 
 # Third Party
 import psutil
 import pydantic
+import pydantic_core
 import tqdm.contrib.logging as tqdm_log
 from psutil import _common
 from pydantic import dataclasses, types
@@ -45,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from dataclasses import Field
     from types import TracebackType
-    from typing import Any, Self
+    from typing import Self
 
 # # # CONSTANTS # # #
 DEFAULT_CONSOLE_FORMAT = "[%(asctime)s - %(levelname)-8.8s] %(message)s"
@@ -54,6 +55,16 @@ DEFAULT_FILE_FORMAT = "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(messag
 DEFAULT_FILE_DATETIME = "%d-%m-%Y %H:%M:%S"
 LOG = logging.getLogger(__name__)
 _WARNINGS_LOGGER_NAME = "py.warnings"
+
+# fmt: off
+_EXCLUDED_JSON_EXTRA = (
+    "msg", "message", "args", "name", "levelname", "levelno",
+    "asctime", "created", "msecs", "relativeCreated", "funcName",
+    "lineno", "module", "pathname", "filename", "exc_info", "exc_text",
+    "stack_info", "process", "processName", "thread","threadName", "taskName",
+)
+"""Specific keys in `LogRecord.__dict__` to exclude from JSON output."""
+# fmt: on
 
 # Get lookup between name of level and integer value
 _LEVEL_LOOKUP: dict[str, int]
@@ -267,6 +278,9 @@ class SystemInformation:
         return "\n".join(message)
 
 
+_FormatWarningFunc = Callable[[Warning | str, type[Warning], str, int, str | None], str]
+
+
 class LogHelper:
     """Class for managing Python loggers.
 
@@ -398,6 +412,7 @@ class LogHelper:
         self._warning_logger: logging.Logger | None = None
         self._stack: contextlib.ExitStack | None = None
         self._redirect = redirect
+        self._original_warning_format: _FormatWarningFunc | None = None
 
         if allowed_packages is None:
             self.package_filter = None
@@ -460,6 +475,7 @@ class LogHelper:
         ch_format: str = DEFAULT_CONSOLE_FORMAT,
         datetime_format: str = DEFAULT_CONSOLE_DATETIME,
         log_level: int = logging.INFO,
+        json_format: bool = False,
     ) -> None:
         """Add custom console handler to the logger.
 
@@ -468,6 +484,7 @@ class LogHelper:
         ch_format:
             A string defining a custom formatting to use for the StreamHandler().
             Defaults to "[%(levelname)-8.8s] %(message)s".
+            **Ignored if `json_format` is True.**
 
         datetime_format:
             The datetime format to use when logging to the console.
@@ -476,11 +493,17 @@ class LogHelper:
         log_level:
             The logging level to give to the StreamHandler.
 
+        json_format:
+            If False (default) write plain text records.
+            If True write JSON records.
+
         See Also
         --------
         `get_console_handler`
         """
         handler = get_console_handler(ch_format, datetime_format, log_level)
+        if json_format:
+            handler.setFormatter(JsonLogFormatter(datefmt=datetime_format))
         self.add_handler(handler)
 
     def add_file_handler(
@@ -508,6 +531,7 @@ class LogHelper:
             A string defining a custom formatting to use for the StreamHandler().
             Defaults to
             "%(asctime)s [%(name)-40.40s] [%(levelname)-8.8s] %(message)s".
+            **Ignored if `json_format` is True.**
 
         datetime_format:
             The datetime format to use when logging to the console.
@@ -537,11 +561,16 @@ class LogHelper:
         handler.setLevel(log_level)
         self.add_handler(handler)
 
-    def capture_warnings(self) -> None:
+    def capture_warnings(self, simple: bool = True) -> None:
         """Capture warnings using logging.
 
         Runs `logging.captureWarnings(True)` to capture warnings then
         adds all the handlers from the root `logger`.
+
+        Parameters
+        ----------
+        simple
+            Switch to simple warnings format for logging.
 
         See Also
         --------
@@ -556,6 +585,10 @@ class LogHelper:
                 continue
 
             self._warning_logger.addHandler(handler)
+
+        if simple:
+            self._original_warning_format = warnings.formatwarning
+            warnings.formatwarning = simple_warning_format
 
     def write_instantiate_message(self) -> None:
         """Log instatiation message with tool and system information."""
@@ -622,17 +655,22 @@ class LogHelper:
         exc_tb: TracebackType | None,
     ) -> None:
         """Write any error to the logger and closes the file."""
-        if exc_type is not None or exc is not None or exc_tb is not None:
+        sys_exit = isinstance(exc, SystemExit) and exc.code == 0
+        exception = exc_type is not None or exc is not None or exc_tb is not None
+        if sys_exit or not exception:
+            self.logger.info("Program completed without any critical errors")
+        else:
             self.logger.critical(
                 "Oh no a critical error occurred",
                 exc_info=True,  # noqa: LOG014
             )
-        else:
-            self.logger.info("Program completed without any critical errors")
 
         self.logger.info("Closing log file")
         if self._stack is not None:
             self._stack.__exit__(exc_type, exc, exc_tb)
+
+        if self._original_warning_format is not None:
+            warnings.formatwarning = self._original_warning_format
 
         self.cleanup_handlers()
         logging.shutdown()
@@ -788,9 +826,23 @@ class JsonLogRecord(pydantic.BaseModel):
     module: str
     function: str
     line: int
-    process: int | None
-    thread: int | None
     exception: str | None
+    extra: dict[str, Any]
+
+
+def _is_json_serializable(obj: Any) -> bool:  # noqa: ANN401
+    try:
+        pydantic.TypeAdapter(type(obj)).dump_json(obj)
+    except pydantic_core.PydanticSerializationError:
+        return False
+    return True
+
+
+def _filter_extra(item: tuple[str, Any]) -> bool:
+    key_, value = item
+    if key_.startswith("_") or key_ in _EXCLUDED_JSON_EXTRA:
+        return False
+    return _is_json_serializable(value)
 
 
 class JsonLogFormatter(logging.Formatter):
@@ -806,11 +858,10 @@ class JsonLogFormatter(logging.Formatter):
             module=record.module,
             function=record.funcName,
             line=record.lineno,
-            process=record.process,
-            thread=record.thread,
             exception=None
             if record.exc_info is None
             else self.formatException(record.exc_info),
+            extra=dict(filter(_filter_extra, record.__dict__.items())),
         )
 
         return message.model_dump_json()
@@ -1228,3 +1279,34 @@ def write_metadata(
         format_comment=format_comment,
     )
     return path
+
+
+def simple_warning_format(
+    message: Warning | str,
+    category: type[Warning],
+    filename: str,
+    lineno: int,
+    *args,
+    **kwargs,
+) -> str:
+    """Replace `warnings.formatwarning` with single line message.
+
+    New format is as follows: `{filename}:{lineno}: {category}: {message}`
+
+    Examples
+    --------
+    Replace the original function with this but keep track of the
+    original so it can be reset if needed.
+
+    >>> original_format_warning = warnings.formatwarning
+    >>> warnings.formatwarning = simple_warning_format
+
+    Revert back to the original when needed.
+
+    >>> warnings.formatwarning = original_format_warning
+
+    Example output from this function:
+    `/full/path/to/file.py:10: UserWarning: warning message`
+    """
+    del args, kwargs
+    return f"{filename}:{lineno}: {category.__name__}: {message}"
