@@ -14,7 +14,7 @@ import logging
 import pathlib
 import warnings
 from collections.abc import Collection, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict, TypeVar, get_args, overload
 
 # Third Party
 import numpy as np
@@ -34,6 +34,7 @@ _T = TypeVar("_T")
 LOG = logging.getLogger(__name__)
 DP_TOLERANCE = 6
 ValidZoneIdDtype = str | int
+ZoneRelationship = Literal["one-to-one", "one-to-many", "many-to-one", "many-to-many"]
 
 
 # # # CLASSES # # #
@@ -1301,7 +1302,11 @@ class ZoneCorrespondencePath:
         return cols
 
     def read(
-        self, *, factors_mandatory: bool = True, generic_column_names: bool = False
+        self,
+        *,
+        factors_mandatory: bool = True,
+        generic_column_names: bool = False,
+        expected_relationship: ZoneRelationship | None = None,
     ) -> ZoneCorrespondence:
         """Read the translation file.
 
@@ -1313,6 +1318,9 @@ class ZoneCorrespondencePath:
         generic_column_names
             If True (default), the columns will be renamed
             to "from", "to" and "factors".
+        expected_relationship
+            If provided, require this exact relationship between the from and to
+            zones. By default, no relationship validation is performed.
 
         Returns
         -------
@@ -1360,12 +1368,15 @@ class ZoneCorrespondencePath:
         if factors_col is None:
             raise ValueError("Should not be None here.")
 
-        return ZoneCorrespondence(
+        correspondence = ZoneCorrespondence(
             translation,
             from_col,
             to_col,
             factors_col,
         )
+        if expected_relationship is not None:
+            correspondence.validate_relationship(expected_relationship)
+        return correspondence
 
 
 @dataclasses.dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -1452,6 +1463,62 @@ class ZoneCorrespondence:
     def translation_vector(self) -> pd.DataFrame:
         """Translation vector table."""
         return self.vector.set_index([self.from_col_name, self.to_col_name])
+
+    def get_relationship(self) -> ZoneRelationship:
+        """Classify the relationship between the from and to zones.
+
+        Returns
+        -------
+        ZoneRelationship
+            "one-to-one", "one-to-many", "many-to-one" or "many-to-many".
+            The direction is from the from-zone column to the to-zone column.
+
+        Raises
+        ------
+        ValueError
+            If the correspondence is empty or either zone column contains missing IDs.
+
+        Notes
+        -----
+        Classification uses distinct pairs of zone IDs, including pairs with zero
+        factors. Repeated identical pairs do not change the relationship. The vector
+        is not modified and the result is recomputed on each call.
+        """
+        pairs = self.vector[[self.from_col_name, self.to_col_name]].drop_duplicates()
+        if pairs.empty:
+            raise ValueError("Cannot classify an empty zone correspondence.")
+        if pairs.isna().any().any():
+            raise ValueError("Cannot classify a zone correspondence with missing zone IDs.")
+
+        from_repeated = pairs[self.from_col_name].duplicated().any()
+        to_repeated = pairs[self.to_col_name].duplicated().any()
+        if from_repeated:
+            return "many-to-many" if to_repeated else "one-to-many"
+        return "many-to-one" if to_repeated else "one-to-one"
+
+    def validate_relationship(self, expected_relationship: ZoneRelationship) -> None:
+        """Require an exact relationship between the from and to zones.
+
+        Parameters
+        ----------
+        expected_relationship
+            The relationship required by the caller. A one-to-one mapping does not
+            satisfy a request for one-to-many (or vice versa).
+
+        Raises
+        ------
+        ValueError
+            If the relationship name is unknown, the mapping cannot be classified,
+            or the actual relationship differs from the required relationship.
+        """
+        if expected_relationship not in get_args(ZoneRelationship):
+            raise ValueError(f"Unknown zone relationship: {expected_relationship!r}.")
+        actual_relationship = self.get_relationship()
+        if actual_relationship != expected_relationship:
+            raise ValueError(
+                f"Expected {expected_relationship} zone correspondence, "
+                f"got {actual_relationship}."
+            )
 
     @property
     def from_column(self) -> pd.Series:
